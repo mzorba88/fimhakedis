@@ -277,13 +277,19 @@ export default function WorkEntries() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Sözleşme No / İş Kalemi
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proje
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    İş Kalemi
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Altyüklenici
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Tarih
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Sözleşme No
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Tutar
@@ -310,17 +316,6 @@ export default function WorkEntries() {
                         className="group hover:bg-muted/30"
                       >
                         <td className="px-4 py-4">
-                          <div className="max-w-xs">
-                            <p className="text-xs text-muted-foreground">{entry.contractNo}</p>
-                            <p className="font-medium text-foreground truncate">
-                              {entry.workCategory}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {entry.subcontractor}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
                           <p className="text-sm font-medium text-foreground">
                             {project?.projectCode}
                           </p>
@@ -329,10 +324,25 @@ export default function WorkEntries() {
                           </p>
                         </td>
                         <td className="px-4 py-4">
+                          <p className="text-sm font-medium text-foreground truncate max-w-[150px]">
+                            {entry.workCategory}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-sm text-foreground">
+                            {entry.subcontractor}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
                             {formatDate(entry.date)}
                           </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <p className="text-sm font-medium text-primary">
+                            {entry.contractNo}
+                          </p>
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className="text-sm font-semibold text-foreground">
