@@ -7,8 +7,6 @@ import {
   formatDate, 
   contractTypeLabels,
   currencySymbols,
-  calculateVAT,
-  calculateTotalWithVAT,
   SubcontractorHakedis as HakedisType,
   HakedisItem,
   Currency
@@ -90,13 +88,13 @@ export default function SubcontractorHakedis() {
     if (!selectedContractId) return 0;
     return subcontractorHakedisler
       .filter(h => h.contractId === selectedContractId)
-      .reduce((sum, h) => sum + h.subtotal, 0);
+      .reduce((sum, h) => sum + h.totalAmount, 0);
   }, [subcontractorHakedisler, selectedContractId]);
 
   // Calculate remaining amount for götürü bedel
   const remainingAmount = useMemo(() => {
     if (!selectedContract) return 0;
-    return selectedContract.subtotal - paidAmountForContract;
+    return selectedContract.totalAmount - paidAmountForContract;
   }, [selectedContract, paidAmountForContract]);
 
   // Calculate totals for birim fiyat
@@ -173,27 +171,24 @@ export default function SubcontractorHakedis() {
     const contract = workEntries.find(e => e.id === selectedContractId);
     if (!contract) return;
 
-    let subtotal = 0;
+    let totalAmount = 0;
     if (contract.contractType === 'goturu_bedel') {
-      subtotal = parseFloat(paymentAmount) || 0;
-      if (subtotal <= 0) {
+      totalAmount = parseFloat(paymentAmount) || 0;
+      if (totalAmount <= 0) {
         toast.error('Lütfen geçerli bir ödeme tutarı girin');
         return;
       }
-      if (subtotal > remainingAmount) {
+      if (totalAmount > remainingAmount) {
         toast.error('Ödeme tutarı kalan tutardan fazla olamaz');
         return;
       }
     } else {
-      subtotal = birimFiyatTotal;
-      if (subtotal <= 0) {
+      totalAmount = birimFiyatTotal;
+      if (totalAmount <= 0) {
         toast.error('Lütfen en az bir kalem için miktar girin');
         return;
       }
     }
-
-    const vatAmount = calculateVAT(subtotal);
-    const totalAmount = calculateTotalWithVAT(subtotal);
 
     // Generate hakediş number
     const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
@@ -209,10 +204,8 @@ export default function SubcontractorHakedis() {
       contractType: contract.contractType,
       currency: contract.currency,
       date: hakedisDate,
-      paymentAmount: contract.contractType === 'goturu_bedel' ? subtotal : undefined,
+      paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
       hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-      subtotal,
-      vatAmount,
       totalAmount,
       createdBy: currentUser.id,
       approvalStatus: 'onay_bekliyor',
@@ -338,9 +331,6 @@ export default function SubcontractorHakedis() {
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrencyWithType(hakedis.vatAmount, hakedis.currency)}
-                          </p>
                         </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.approvalStatus} />
@@ -462,7 +452,7 @@ export default function SubcontractorHakedis() {
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
                         <p className="font-semibold">
-                          {formatCurrencyWithType(selectedContract.subtotal, selectedContract.currency)}
+                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
                         </p>
                       </div>
                       <div>
@@ -491,17 +481,9 @@ export default function SubcontractorHakedis() {
                     />
                     {paymentAmount && (
                       <div className="rounded-lg border bg-accent/50 p-3 text-sm">
-                        <div className="flex justify-between">
-                          <span>Ara Toplam:</span>
-                          <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
-                        </div>
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>KDV (%20):</span>
-                          <span>{formatCurrencyWithType(calculateVAT(parseFloat(paymentAmount) || 0), selectedContract.currency)}</span>
-                        </div>
-                        <div className="flex justify-between font-semibold border-t mt-2 pt-2">
+                        <div className="flex justify-between font-semibold">
                           <span>Toplam:</span>
-                          <span>{formatCurrencyWithType(calculateTotalWithVAT(parseFloat(paymentAmount) || 0), selectedContract.currency)}</span>
+                          <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
                         </div>
                       </div>
                     )}
@@ -546,17 +528,9 @@ export default function SubcontractorHakedis() {
 
                   {birimFiyatTotal > 0 && (
                     <div className="rounded-lg border bg-accent/50 p-3 text-sm">
-                      <div className="flex justify-between">
-                        <span>Ara Toplam:</span>
-                        <span>{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
-                      </div>
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>KDV (%20):</span>
-                        <span>{formatCurrencyWithType(calculateVAT(birimFiyatTotal), selectedContract.currency)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold border-t mt-2 pt-2">
+                      <div className="flex justify-between font-semibold">
                         <span>Toplam:</span>
-                        <span>{formatCurrencyWithType(calculateTotalWithVAT(birimFiyatTotal), selectedContract.currency)}</span>
+                        <span>{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
                       </div>
                     </div>
                   )}

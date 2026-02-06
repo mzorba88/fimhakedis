@@ -65,11 +65,9 @@ export default function Reports() {
       return entryDate < start;
     });
 
-    const previousTotal = previousEntries.reduce((sum, e) => sum + e.subtotal, 0);
-    const currentPeriodTotal = entries.reduce((sum, e) => sum + e.subtotal, 0);
+    const previousTotal = previousEntries.reduce((sum, e) => sum + e.totalAmount, 0);
+    const currentPeriodTotal = entries.reduce((sum, e) => sum + e.totalAmount, 0);
     const cumulativeTotal = previousTotal + currentPeriodTotal;
-    const vatAmount = cumulativeTotal * 0.20;
-    const grandTotal = cumulativeTotal + vatAmount;
 
     return {
       project: selectedProject,
@@ -77,8 +75,7 @@ export default function Reports() {
       previousTotal,
       currentPeriodTotal,
       cumulativeTotal,
-      vatAmount,
-      grandTotal,
+      grandTotal: cumulativeTotal,
       periodStart,
       periodEnd,
     };
@@ -117,7 +114,7 @@ export default function Reports() {
       entry.workCategory,
       entry.subcontractor,
       contractTypeLabels[entry.contractType],
-      formatCurrencyWithType(entry.subtotal, entry.currency),
+      formatCurrencyWithType(entry.totalAmount, entry.currency),
     ]);
 
     autoTable(doc, {
@@ -138,7 +135,6 @@ export default function Reports() {
         ['Onceki Toplam', formatCurrency(data.previousTotal)],
         ['Bu Donem', formatCurrency(data.currentPeriodTotal)],
         ['Kumulatif Toplam', formatCurrency(data.cumulativeTotal)],
-        ['KDV (%20)', formatCurrency(data.vatAmount)],
         ['GENEL TOPLAM', formatCurrency(data.grandTotal)],
       ],
       theme: 'plain',
@@ -190,7 +186,7 @@ export default function Reports() {
       entry.workCategory,
       entry.subcontractor,
       contractTypeLabels[entry.contractType],
-      entry.subtotal,
+      entry.totalAmount,
     ]);
 
     // Summary
@@ -199,7 +195,6 @@ export default function Reports() {
       ['Onceki Toplam', data.previousTotal],
       ['Bu Donem', data.currentPeriodTotal],
       ['Kumulatif Toplam', data.cumulativeTotal],
-      ['KDV (%20)', data.vatAmount],
       ['GENEL TOPLAM', data.grandTotal],
     ];
 

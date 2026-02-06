@@ -93,8 +93,6 @@ export interface WorkEntry {
   approvedBy?: string;
   approvalDate?: string;
   rejectionReason?: string;
-  subtotal: number;
-  vatAmount: number;
   totalAmount: number;
   paymentStatus: PaymentStatus;
   paidDate?: string;
@@ -117,8 +115,6 @@ export interface SubcontractorHakedis {
   paymentAmount?: number;
   // For Birim Fiyat - work items with quantities
   hakedisItems?: HakedisItem[];
-  subtotal: number;
-  vatAmount: number;
   totalAmount: number;
   createdBy: string;
   approvalStatus: ApprovalStatus;
