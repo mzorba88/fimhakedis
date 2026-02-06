@@ -57,7 +57,8 @@ export default function SubcontractorHakedis() {
     subcontractorHakedisler,
     addSubcontractorHakedis,
     deleteSubcontractorHakedis,
-    currentUser 
+    currentUser,
+    addActivityLog
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,6 +232,13 @@ export default function SubcontractorHakedis() {
     };
 
     addSubcontractorHakedis(newHakedis);
+    addActivityLog(
+      'hakedis_created',
+      `${newHakedis.hakedisNo} hakediş oluşturuldu`,
+      `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
+      newHakedis.id,
+      'hakedis'
+    );
     toast.success('Hakediş kaydı oluşturuldu');
     setIsDialogOpen(false);
     resetForm();

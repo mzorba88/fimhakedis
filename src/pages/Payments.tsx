@@ -34,7 +34,8 @@ export default function Payments() {
     subcontractorHakedisler,
     markAsPaid,
     markHakedisAsPaid,
-    currentUser 
+    currentUser,
+    addActivityLog
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,7 +71,17 @@ export default function Payments() {
   const totalUnpaidHakedis = totalApprovedHakedis - totalPaidHakedis;
 
   const handleMarkHakedisAsPaid = (hakedisId: string) => {
+    const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
     markHakedisAsPaid(hakedisId);
+    if (hakedis) {
+      addActivityLog(
+        'hakedis_paid',
+        `${hakedis.hakedisNo} hakediş ödendi olarak işaretlendi`,
+        `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+        hakedisId,
+        'hakedis'
+      );
+    }
     toast.success('Hakediş ödendi olarak işaretlendi');
   };
 

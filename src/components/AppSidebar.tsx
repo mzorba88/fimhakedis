@@ -5,7 +5,8 @@ import {
   ClipboardList, 
   CheckCircle2, 
   Wallet,
-  FileText
+  FileText,
+  History
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import formanLogo from '@/assets/forman-logo.png';
@@ -18,6 +19,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -29,6 +31,10 @@ const navigation = [
   { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2 },
   { name: 'Ödemeler', href: '/odemeler', icon: Wallet },
   { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
+];
+
+const bottomNavigation = [
+  { name: 'İşlem Geçmişi', href: '/islem-gecmisi', icon: History },
 ];
 
 export function AppSidebar() {
@@ -83,6 +89,37 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="border-t">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {bottomNavigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive}
+                      tooltip={item.name}
+                    >
+                      <NavLink 
+                        to={item.href} 
+                        end 
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-muted/50"
+                        activeClassName="bg-primary/10 text-primary font-medium"
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span>{item.name}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   );
 }

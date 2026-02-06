@@ -7,7 +7,8 @@ import {
   ApprovalStatus,
   PaymentStatus,
   ProjectStatus,
-  SubcontractorHakedis
+  SubcontractorHakedis,
+  roleLabels
 } from '@/types/hakedis';
 import { 
   mockProjects, 
@@ -15,6 +16,7 @@ import {
   mockUsers,
   defaultSubcontractors
 } from '@/data/mockData';
+import { ActivityLog, ActivityType } from '@/types/activityLog';
 
 interface HakedisState {
   // Current user
@@ -53,6 +55,10 @@ interface HakedisState {
 
   // Users
   users: User[];
+
+  // Activity Logs
+  activityLogs: ActivityLog[];
+  addActivityLog: (type: ActivityType, description: string, details?: string, entityId?: string, entityType?: 'project' | 'contract' | 'hakedis') => void;
 }
 
 export const useHakedisStore = create<HakedisState>((set, get) => ({
@@ -64,6 +70,7 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   subcontractors: defaultSubcontractors,
   contractCounter: 1000,
   subcontractorHakedisler: [],
+  activityLogs: [],
 
   setCurrentUser: (user) => set({ currentUser: user }),
   
@@ -202,4 +209,22 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   addSubcontractor: (name) => set((state) => ({
     subcontractors: [...state.subcontractors, name].sort()
   })),
+
+  // Activity Logs
+  addActivityLog: (type, description, details, entityId, entityType) => {
+    const state = get();
+    const newLog: ActivityLog = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      userId: state.currentUser.id,
+      userName: state.currentUser.name,
+      userRole: roleLabels[state.currentUser.role],
+      description,
+      details,
+      entityId,
+      entityType,
+      timestamp: new Date().toISOString(),
+    };
+    set({ activityLogs: [...state.activityLogs, newLog] });
+  },
 }));
