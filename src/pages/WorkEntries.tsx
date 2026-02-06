@@ -617,18 +617,10 @@ export default function WorkEntries() {
 
             {/* Amount Preview */}
             {amounts.subtotal > 0 && (
-              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+              <div className="rounded-lg bg-muted/50 p-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ara Toplam</span>
-                  <span className="font-medium">{formatCurrencyWithType(amounts.subtotal, newEntry.currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">KDV (%20)</span>
-                  <span className="font-medium">{formatCurrencyWithType(amounts.vatAmount, newEntry.currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t">
-                  <span className="font-medium">Toplam</span>
-                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
+                  <span className="font-medium">Ara Toplam</span>
+                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.subtotal, newEntry.currency)}</span>
                 </div>
               </div>
             )}
