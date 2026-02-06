@@ -40,7 +40,8 @@ export default function Approvals() {
     subcontractorHakedisler,
     approveHakedis,
     rejectHakedis,
-    currentUser 
+    currentUser,
+    addActivityLog
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,14 +71,34 @@ export default function Approvals() {
   );
 
   const handleApproveHakedis = (hakedisId: string) => {
+    const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
     approveHakedis(hakedisId, currentUser.id);
+    if (hakedis) {
+      addActivityLog(
+        'hakedis_approved',
+        `${hakedis.hakedisNo} hakediş onaylandı`,
+        `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+        hakedisId,
+        'hakedis'
+      );
+    }
     toast.success('Hakediş onaylandı');
   };
 
   const handleReject = () => {
     if (!selectedHakedisId || !rejectionReason.trim()) return;
     
+    const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisId);
     rejectHakedis(selectedHakedisId, rejectionReason);
+    if (hakedis) {
+      addActivityLog(
+        'hakedis_rejected',
+        `${hakedis.hakedisNo} hakediş revize için geri gönderildi`,
+        `Altyüklenici: ${hakedis.subcontractor} - Neden: ${rejectionReason}`,
+        selectedHakedisId,
+        'hakedis'
+      );
+    }
     toast.info('Hakediş revize için geri gönderildi');
     
     setRejectDialogOpen(false);

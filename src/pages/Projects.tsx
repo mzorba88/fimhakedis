@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function Projects() {
-  const { projects, addProject, updateProject } = useHakedisStore();
+  const { projects, addProject, updateProject, addActivityLog } = useHakedisStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'aktif' | 'tamamlandi'>('aktif');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,6 +82,13 @@ export default function Projects() {
     };
 
     addProject(project);
+    addActivityLog(
+      'project_created',
+      `${project.projectCode} projesi oluşturuldu`,
+      `Proje: ${project.projectName} - Lokasyon: ${project.location || 'Belirtilmedi'}`,
+      project.id,
+      'project'
+    );
     handleCloseDialog();
   };
 
@@ -95,6 +102,13 @@ export default function Projects() {
       startDate: newProject.startDate,
       status: newProject.status,
     });
+    addActivityLog(
+      'project_updated',
+      `${newProject.projectCode} projesi güncellendi`,
+      `Proje: ${newProject.projectName}`,
+      editingProject.id,
+      'project'
+    );
 
     handleCloseDialog();
   };
