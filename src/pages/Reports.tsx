@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrency, formatDate, HakedisReport } from '@/types/hakedis';
+import { formatCurrency, formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
 import { 
   FileText, 
   Download, 
@@ -33,7 +33,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 export default function Reports() {
-  const { projects, workItems, milestones, workEntries, currentUser } = useHakedisStore();
+  const { projects, workEntries } = useHakedisStore();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -106,55 +106,28 @@ export default function Reports() {
     const infoY = 40;
     doc.text(`Proje Adi: ${data.project.projectName}`, 20, infoY);
     doc.text(`Proje Kodu: ${data.project.projectCode}`, 20, infoY + 6);
-    doc.text(`Altyuklenici: ${data.project.subcontractorName}`, 20, infoY + 12);
+    doc.text(`Lokasyon: ${data.project.location}`, 20, infoY + 12);
     
     const dateStr = new Date().toLocaleDateString('tr-TR');
     doc.text(`Tarih: ${dateStr}`, pageWidth - 60, infoY);
     doc.text(`Donem: ${data.periodStart || 'Baslangic'} - ${data.periodEnd || 'Bugun'}`, pageWidth - 60, infoY + 6);
 
-    // Table for Birim Fiyat
-    if (data.project.contractType === 'birim_fiyat') {
-      const tableData = data.entries.map(entry => {
-        const workItem = workItems.find(wi => wi.id === entry.workItemId);
-        return [
-          workItem?.itemCode || '-',
-          workItem?.description || entry.description,
-          workItem?.unit || '-',
-          entry.quantity?.toString() || '-',
-          formatCurrency(workItem?.unitPrice || 0),
-          formatCurrency(entry.subtotal),
-        ];
-      });
+    // Table
+    const tableData = data.entries.map(entry => [
+      entry.workCategory,
+      entry.subcontractor,
+      contractTypeLabels[entry.contractType],
+      formatCurrencyWithType(entry.subtotal, entry.currency),
+    ]);
 
-      autoTable(doc, {
-        startY: 65,
-        head: [['Poz No', 'Aciklama', 'Birim', 'Miktar', 'Birim Fiyat', 'Tutar']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [79, 70, 229] },
-        styles: { fontSize: 8 },
-      });
-    } else {
-      // Table for Götürü Bedel
-      const tableData = data.entries.map(entry => {
-        const milestone = milestones.find(m => m.id === entry.milestoneId);
-        return [
-          milestone?.name || entry.description,
-          `%${entry.completionPercentage || 0}`,
-          formatCurrency(milestone?.amount || 0),
-          formatCurrency(entry.subtotal),
-        ];
-      });
-
-      autoTable(doc, {
-        startY: 65,
-        head: [['Kilometre Tasi', 'Tamamlanma', 'Toplam Bedel', 'Tutar']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [79, 70, 229] },
-        styles: { fontSize: 8 },
-      });
-    }
+    autoTable(doc, {
+      startY: 65,
+      head: [['Is Kalemi', 'Altyuklenici', 'Sozlesme Tipi', 'Tutar']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229] },
+      styles: { fontSize: 8 },
+    });
 
     // Summary
     const finalY = (doc as any).lastAutoTable.finalY + 10;
@@ -206,40 +179,19 @@ export default function Reports() {
       [],
       ['Proje Adi', data.project.projectName],
       ['Proje Kodu', data.project.projectCode],
-      ['Altyuklenici', data.project.subcontractorName],
+      ['Lokasyon', data.project.location],
       ['Donem', `${data.periodStart || 'Baslangic'} - ${data.periodEnd || 'Bugun'}`],
       [],
     ];
 
     // Table data
-    let tableHeader: string[];
-    let tableData: any[][];
-
-    if (data.project.contractType === 'birim_fiyat') {
-      tableHeader = ['Poz No', 'Aciklama', 'Birim', 'Miktar', 'Birim Fiyat', 'Tutar'];
-      tableData = data.entries.map(entry => {
-        const workItem = workItems.find(wi => wi.id === entry.workItemId);
-        return [
-          workItem?.itemCode || '-',
-          workItem?.description || entry.description,
-          workItem?.unit || '-',
-          entry.quantity || 0,
-          workItem?.unitPrice || 0,
-          entry.subtotal,
-        ];
-      });
-    } else {
-      tableHeader = ['Kilometre Tasi', 'Tamamlanma %', 'Toplam Bedel', 'Tutar'];
-      tableData = data.entries.map(entry => {
-        const milestone = milestones.find(m => m.id === entry.milestoneId);
-        return [
-          milestone?.name || entry.description,
-          entry.completionPercentage || 0,
-          milestone?.amount || 0,
-          entry.subtotal,
-        ];
-      });
-    }
+    const tableHeader = ['Is Kalemi', 'Altyuklenici', 'Sozlesme Tipi', 'Tutar'];
+    const tableData = data.entries.map(entry => [
+      entry.workCategory,
+      entry.subcontractor,
+      contractTypeLabels[entry.contractType],
+      entry.subtotal,
+    ]);
 
     // Summary
     const summaryData = [
@@ -428,7 +380,7 @@ export default function Reports() {
                 <p className="text-sm font-medium text-foreground mb-2">Rapor Özeti</p>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Proje: {selectedProject.projectCode}</p>
-                  <p>Altyüklenici: {selectedProject.subcontractorName}</p>
+                  <p>Lokasyon: {selectedProject.location}</p>
                   <p>Onaylı Kayıt: {getProjectEntries(selectedProjectId).length} adet</p>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrency, formatDate } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
 import { 
   Search, 
   CheckCircle2,
@@ -36,8 +36,6 @@ import { toast } from 'sonner';
 export default function Approvals() {
   const { 
     projects, 
-    workItems, 
-    milestones, 
     workEntries, 
     approveEntry,
     rejectEntry,
@@ -56,7 +54,8 @@ export default function Approvals() {
   const filteredEntries = pendingEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
     const matchesSearch = 
-      entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
@@ -149,8 +148,6 @@ export default function Approvals() {
           <AnimatePresence>
             {sortedEntries.map((entry, index) => {
               const project = projects.find(p => p.id === entry.projectId);
-              const workItem = workItems.find(wi => wi.id === entry.workItemId);
-              const milestone = milestones.find(m => m.id === entry.milestoneId);
               const isExpanded = expandedEntry === entry.id;
 
               return (
@@ -171,8 +168,11 @@ export default function Approvals() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-foreground">
-                              {entry.description}
+                              {entry.workCategory}
                             </h3>
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                              {entry.subcontractor}
+                            </p>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {project?.projectCode} - {project?.projectName}
                             </p>
@@ -186,7 +186,7 @@ export default function Approvals() {
                       <div className="flex flex-col items-end gap-3">
                         <div className="text-right">
                           <p className="text-lg font-semibold text-foreground">
-                            {formatCurrency(entry.totalAmount)}
+                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             (KDV dahil)
@@ -228,48 +228,54 @@ export default function Approvals() {
                                 <p className="text-xs text-muted-foreground">İş Tarihi</p>
                                 <p className="text-sm font-medium">{formatDate(entry.date)}</p>
                               </div>
-                              {workItem && (
-                                <>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">İş Kalemi</p>
-                                    <p className="text-sm font-medium">{workItem.itemCode}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Miktar</p>
-                                    <p className="text-sm font-medium">{entry.quantity} {workItem.unit}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Birim Fiyat</p>
-                                    <p className="text-sm font-medium">{formatCurrency(workItem.unitPrice)}</p>
-                                  </div>
-                                </>
-                              )}
-                              {milestone && (
-                                <>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Kilometre Taşı</p>
-                                    <p className="text-sm font-medium">{milestone.name}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Tamamlanma</p>
-                                    <p className="text-sm font-medium">%{entry.completionPercentage}</p>
-                                  </div>
-                                </>
-                              )}
+                              <div>
+                                <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
+                                <p className="text-sm font-medium">{contractTypeLabels[entry.contractType]}</p>
+                              </div>
                             </div>
+
+                            {/* Show payment plan for götürü bedel */}
+                            {entry.paymentPlan && entry.paymentPlan.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-2">Ödeme Planı</p>
+                                <div className="space-y-1">
+                                  {entry.paymentPlan.map((p, i) => (
+                                    <div key={i} className="flex justify-between text-sm">
+                                      <span>{p.description || `Taksit ${i + 1}`}</span>
+                                      <span className="font-medium">{formatCurrencyWithType(p.amount, entry.currency)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Show work items for birim fiyat */}
+                            {entry.workItemEntries && entry.workItemEntries.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-2">İş Kalemleri</p>
+                                <div className="space-y-1">
+                                  {entry.workItemEntries.map((w, i) => (
+                                    <div key={i} className="flex justify-between text-sm">
+                                      <span>{w.description} ({w.quantity} {w.unit})</span>
+                                      <span className="font-medium">{formatCurrencyWithType(w.quantity * w.unitPrice, entry.currency)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Ara Toplam</span>
-                                <span className="font-medium">{formatCurrency(entry.subtotal)}</span>
+                                <span className="font-medium">{formatCurrencyWithType(entry.subtotal, entry.currency)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">KDV (%20)</span>
-                                <span className="font-medium">{formatCurrency(entry.vatAmount)}</span>
+                                <span className="font-medium">{formatCurrencyWithType(entry.vatAmount, entry.currency)}</span>
                               </div>
                               <div className="flex justify-between text-sm pt-2 border-t font-semibold">
                                 <span>Toplam</span>
-                                <span className="text-primary">{formatCurrency(entry.totalAmount)}</span>
+                                <span className="text-primary">{formatCurrencyWithType(entry.totalAmount, entry.currency)}</span>
                               </div>
                             </div>
                           </div>

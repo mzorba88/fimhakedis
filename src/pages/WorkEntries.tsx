@@ -3,24 +3,30 @@ import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 
-  formatCurrency, 
+  formatCurrencyWithType, 
   formatDate, 
   WorkEntry,
+  PaymentInstallment,
+  WorkItemEntry,
   calculateVAT,
-  calculateTotalWithVAT
+  calculateTotalWithVAT,
+  workCategories,
+  Currency,
+  ContractType,
+  currencySymbols
 } from '@/types/hakedis';
 import { 
   Plus, 
   Search, 
   ClipboardList,
   Calendar,
-  FileText
+  Trash2,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +45,10 @@ import {
 export default function WorkEntries() {
   const { 
     projects, 
-    workItems, 
-    milestones, 
     workEntries, 
     addWorkEntry,
+    subcontractors,
+    addSubcontractor,
     currentUser 
   } = useHakedisStore();
   
@@ -51,24 +57,30 @@ export default function WorkEntries() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Form state
   const [newEntry, setNewEntry] = useState({
     projectId: '',
-    workItemId: '',
-    milestoneId: '',
-    quantity: '',
-    completionPercentage: '',
-    description: '',
+    workCategory: '',
+    subcontractor: '',
+    newSubcontractor: '',
+    contractType: 'birim_fiyat' as ContractType,
     date: new Date().toISOString().split('T')[0],
+    currency: 'TRY' as Currency,
   });
 
-  const selectedProject = projects.find(p => p.id === newEntry.projectId);
-  const projectWorkItems = workItems.filter(wi => wi.projectId === newEntry.projectId);
-  const projectMilestones = milestones.filter(m => m.projectId === newEntry.projectId);
+  // Götürü Bedel - Payment Plan
+  const [paymentPlan, setPaymentPlan] = useState<PaymentInstallment[]>([]);
+
+  // Birim Fiyat - Work Items
+  const [workItemEntries, setWorkItemEntries] = useState<WorkItemEntry[]>([]);
+
+  const activeProjects = projects.filter(p => p.status === 'aktif');
 
   const filteredEntries = workEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
     const matchesSearch = 
-      entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
@@ -80,21 +92,13 @@ export default function WorkEntries() {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  const calculateEntryAmount = () => {
-    if (!selectedProject) return { subtotal: 0, vatAmount: 0, totalAmount: 0 };
-
+  const calculateTotals = () => {
     let subtotal = 0;
 
-    if (selectedProject.contractType === 'birim_fiyat' && newEntry.workItemId) {
-      const workItem = workItems.find(wi => wi.id === newEntry.workItemId);
-      if (workItem && newEntry.quantity) {
-        subtotal = parseFloat(newEntry.quantity) * workItem.unitPrice;
-      }
-    } else if (selectedProject.contractType === 'goturu_bedel' && newEntry.milestoneId) {
-      const milestone = milestones.find(m => m.id === newEntry.milestoneId);
-      if (milestone && newEntry.completionPercentage) {
-        subtotal = milestone.amount * (parseFloat(newEntry.completionPercentage) / 100);
-      }
+    if (newEntry.contractType === 'goturu_bedel') {
+      subtotal = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
+    } else {
+      subtotal = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
     }
 
     const vatAmount = calculateVAT(subtotal);
@@ -103,20 +107,80 @@ export default function WorkEntries() {
     return { subtotal, vatAmount, totalAmount };
   };
 
-  const handleCreateEntry = () => {
-    if (!newEntry.projectId || !newEntry.description) return;
+  const addPaymentInstallment = () => {
+    setPaymentPlan([
+      ...paymentPlan,
+      {
+        id: `pi${Date.now()}`,
+        description: '',
+        amount: 0,
+        currency: newEntry.currency,
+        isPaid: false,
+      }
+    ]);
+  };
 
-    const amounts = calculateEntryAmount();
+  const removePaymentInstallment = (id: string) => {
+    setPaymentPlan(paymentPlan.filter(p => p.id !== id));
+  };
+
+  const updatePaymentInstallment = (id: string, field: keyof PaymentInstallment, value: any) => {
+    setPaymentPlan(paymentPlan.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
+
+  const addWorkItemEntry = () => {
+    setWorkItemEntries([
+      ...workItemEntries,
+      {
+        id: `wie${Date.now()}`,
+        workCategory: '',
+        description: '',
+        unit: '',
+        quantity: 0,
+        unitPrice: 0,
+        currency: newEntry.currency,
+      }
+    ]);
+  };
+
+  const removeWorkItemEntry = (id: string) => {
+    setWorkItemEntries(workItemEntries.filter(w => w.id !== id));
+  };
+
+  const updateWorkItemEntry = (id: string, field: keyof WorkItemEntry, value: any) => {
+    setWorkItemEntries(workItemEntries.map(w => 
+      w.id === id ? { ...w, [field]: value } : w
+    ));
+  };
+
+  const handleCreateEntry = () => {
+    if (!newEntry.projectId || !newEntry.workCategory) return;
+
+    const selectedSubcontractor = newEntry.subcontractor === 'new' 
+      ? newEntry.newSubcontractor 
+      : newEntry.subcontractor;
+
+    if (!selectedSubcontractor) return;
+
+    // Add new subcontractor if needed
+    if (newEntry.subcontractor === 'new' && newEntry.newSubcontractor) {
+      addSubcontractor(newEntry.newSubcontractor);
+    }
+
+    const amounts = calculateTotals();
 
     const entry: WorkEntry = {
       id: `we${Date.now()}`,
       projectId: newEntry.projectId,
-      workItemId: selectedProject?.contractType === 'birim_fiyat' ? newEntry.workItemId : undefined,
-      milestoneId: selectedProject?.contractType === 'goturu_bedel' ? newEntry.milestoneId : undefined,
-      quantity: newEntry.quantity ? parseFloat(newEntry.quantity) : undefined,
-      completionPercentage: newEntry.completionPercentage ? parseFloat(newEntry.completionPercentage) : undefined,
-      description: newEntry.description,
+      workCategory: newEntry.workCategory,
+      subcontractor: selectedSubcontractor,
+      contractType: newEntry.contractType,
       date: newEntry.date,
+      currency: newEntry.currency,
+      paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+      workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
       createdBy: currentUser.id,
       approvalStatus: 'onay_bekliyor',
       subtotal: amounts.subtotal,
@@ -128,19 +192,25 @@ export default function WorkEntries() {
     };
 
     addWorkEntry(entry);
+    handleCloseDialog();
+  };
+
+  const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setNewEntry({
       projectId: '',
-      workItemId: '',
-      milestoneId: '',
-      quantity: '',
-      completionPercentage: '',
-      description: '',
+      workCategory: '',
+      subcontractor: '',
+      newSubcontractor: '',
+      contractType: 'birim_fiyat',
       date: new Date().toISOString().split('T')[0],
+      currency: 'TRY',
     });
+    setPaymentPlan([]);
+    setWorkItemEntries([]);
   };
 
-  const amounts = calculateEntryAmount();
+  const amounts = calculateTotals();
 
   return (
     <MainLayout>
@@ -153,12 +223,10 @@ export default function WorkEntries() {
               Tüm yapılan iş kayıtlarını görüntüleyin ve yönetin
             </p>
           </div>
-          {currentUser.role === 'saha_sorumlusu' && (
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Yeni Kayıt
-            </Button>
-          )}
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Yeni Kayıt
+          </Button>
         </div>
 
         {/* Filters */}
@@ -205,7 +273,7 @@ export default function WorkEntries() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Açıklama
+                    İş Kalemi / Altyüklenici
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proje
@@ -228,8 +296,6 @@ export default function WorkEntries() {
                 <AnimatePresence>
                   {sortedEntries.map((entry) => {
                     const project = projects.find(p => p.id === entry.projectId);
-                    const workItem = workItems.find(wi => wi.id === entry.workItemId);
-                    const milestone = milestones.find(m => m.id === entry.milestoneId);
                     
                     return (
                       <motion.tr
@@ -242,18 +308,11 @@ export default function WorkEntries() {
                         <td className="px-4 py-4">
                           <div className="max-w-xs">
                             <p className="font-medium text-foreground truncate">
-                              {entry.description}
+                              {entry.workCategory}
                             </p>
-                            {workItem && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {workItem.itemCode}: {entry.quantity} {workItem.unit}
-                              </p>
-                            )}
-                            {milestone && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {milestone.name}: %{entry.completionPercentage}
-                              </p>
-                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {entry.subcontractor}
+                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-4">
@@ -272,10 +331,10 @@ export default function WorkEntries() {
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(entry.totalAmount)}
+                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrency(entry.vatAmount)}
+                            KDV: {formatCurrencyWithType(entry.vatAmount, entry.currency)}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-center">
@@ -305,30 +364,24 @@ export default function WorkEntries() {
       </div>
 
       {/* New Entry Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Yeni Yapılan İş Kaydı</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Project Selection */}
             <div className="space-y-2">
               <Label>Proje *</Label>
               <Select
                 value={newEntry.projectId}
-                onValueChange={(value) => setNewEntry({ 
-                  ...newEntry, 
-                  projectId: value,
-                  workItemId: '',
-                  milestoneId: '',
-                  quantity: '',
-                  completionPercentage: ''
-                })}
+                onValueChange={(value) => setNewEntry({ ...newEntry, projectId: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Proje seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
+                  {activeProjects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.projectCode} - {project.projectName}
                     </SelectItem>
@@ -337,72 +390,98 @@ export default function WorkEntries() {
               </Select>
             </div>
 
-            {selectedProject?.contractType === 'birim_fiyat' && (
-              <>
-                <div className="space-y-2">
-                  <Label>İş Kalemi *</Label>
-                  <Select
-                    value={newEntry.workItemId}
-                    onValueChange={(value) => setNewEntry({ ...newEntry, workItemId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="İş kalemi seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projectWorkItems.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.itemCode} - {item.description} ({formatCurrency(item.unitPrice)}/{item.unit})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Miktar</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={newEntry.quantity}
-                    onChange={(e) => setNewEntry({ ...newEntry, quantity: e.target.value })}
-                  />
-                </div>
-              </>
-            )}
+            {/* Work Category */}
+            <div className="space-y-2">
+              <Label>İş Kalemi *</Label>
+              <Select
+                value={newEntry.workCategory}
+                onValueChange={(value) => setNewEntry({ ...newEntry, workCategory: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="İş kalemi seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            {selectedProject?.contractType === 'goturu_bedel' && (
-              <>
-                <div className="space-y-2">
-                  <Label>Kilometre Taşı *</Label>
-                  <Select
-                    value={newEntry.milestoneId}
-                    onValueChange={(value) => setNewEntry({ ...newEntry, milestoneId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kilometre taşı seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projectMilestones.map((milestone) => (
-                        <SelectItem key={milestone.id} value={milestone.id}>
-                          {milestone.name} - %{milestone.percentage} ({formatCurrency(milestone.amount)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Tamamlanma Yüzdesi (%)</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    max="100"
-                    value={newEntry.completionPercentage}
-                    onChange={(e) => setNewEntry({ ...newEntry, completionPercentage: e.target.value })}
-                  />
-                </div>
-              </>
-            )}
+            {/* Subcontractor */}
+            <div className="space-y-2">
+              <Label>Altyüklenici *</Label>
+              <Select
+                value={newEntry.subcontractor}
+                onValueChange={(value) => setNewEntry({ ...newEntry, subcontractor: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Altyüklenici seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcontractors.map((sub) => (
+                    <SelectItem key={sub} value={sub}>
+                      {sub}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new">+ Yeni Altyüklenici Ekle</SelectItem>
+                </SelectContent>
+              </Select>
+              {newEntry.subcontractor === 'new' && (
+                <Input
+                  placeholder="Yeni altyüklenici adı"
+                  value={newEntry.newSubcontractor}
+                  onChange={(e) => setNewEntry({ ...newEntry, newSubcontractor: e.target.value })}
+                  className="mt-2"
+                />
+              )}
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              {/* Contract Type */}
+              <div className="space-y-2">
+                <Label>Sözleşme Tipi</Label>
+                <Select
+                  value={newEntry.contractType}
+                  onValueChange={(value: ContractType) => {
+                    setNewEntry({ ...newEntry, contractType: value });
+                    setPaymentPlan([]);
+                    setWorkItemEntries([]);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="goturu_bedel">Götürü Bedel</SelectItem>
+                    <SelectItem value="birim_fiyat">Birim Fiyat</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Currency */}
+              <div className="space-y-2">
+                <Label>Para Birimi</Label>
+                <Select
+                  value={newEntry.currency}
+                  onValueChange={(value: Currency) => setNewEntry({ ...newEntry, currency: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TRY">TRY (₺)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Date */}
             <div className="space-y-2">
               <Label>Tarih</Label>
               <Input
@@ -412,40 +491,142 @@ export default function WorkEntries() {
               />
             </div>
 
+            {/* Contract File Upload */}
             <div className="space-y-2">
-              <Label>Açıklama *</Label>
-              <Textarea
-                placeholder="Yapılan iş açıklaması"
-                value={newEntry.description}
-                onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
-                rows={3}
-              />
+              <Label>Sözleşme Dosyası</Label>
+              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  PDF veya resim dosyası yüklemek için tıklayın
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  (Bu özellik için backend gerekli)
+                </p>
+              </div>
             </div>
+
+            {/* Götürü Bedel - Payment Plan */}
+            {newEntry.contractType === 'goturu_bedel' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Ödeme Planı (Taksitler)</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addPaymentInstallment}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Taksit Ekle
+                  </Button>
+                </div>
+                {paymentPlan.map((installment, index) => (
+                  <div key={installment.id} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg">
+                    <div className="flex-1 grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Açıklama"
+                        value={installment.description}
+                        onChange={(e) => updatePaymentInstallment(installment.id, 'description', e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Tutar"
+                          value={installment.amount || ''}
+                          onChange={(e) => updatePaymentInstallment(installment.id, 'amount', parseFloat(e.target.value) || 0)}
+                        />
+                        <span className="flex items-center text-sm text-muted-foreground">
+                          {currencySymbols[newEntry.currency]}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePaymentInstallment(installment.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Birim Fiyat - Work Items */}
+            {newEntry.contractType === 'birim_fiyat' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>İş Kalemleri ve Birim Fiyatlar</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addWorkItemEntry}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Kalem Ekle
+                  </Button>
+                </div>
+                {workItemEntries.map((item) => (
+                  <div key={item.id} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Açıklama"
+                        value={item.description}
+                        onChange={(e) => updateWorkItemEntry(item.id, 'description', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeWorkItemEntry(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <Input
+                        placeholder="Birim"
+                        value={item.unit}
+                        onChange={(e) => updateWorkItemEntry(item.id, 'unit', e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Miktar"
+                        value={item.quantity || ''}
+                        onChange={(e) => updateWorkItemEntry(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Birim Fiyat"
+                        value={item.unitPrice || ''}
+                        onChange={(e) => updateWorkItemEntry(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      />
+                      <div className="flex items-center justify-end text-sm font-medium">
+                        {formatCurrencyWithType(item.quantity * item.unitPrice, newEntry.currency)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Amount Preview */}
             {amounts.subtotal > 0 && (
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Ara Toplam</span>
-                  <span className="font-medium">{formatCurrency(amounts.subtotal)}</span>
+                  <span className="font-medium">{formatCurrencyWithType(amounts.subtotal, newEntry.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">KDV (%20)</span>
-                  <span className="font-medium">{formatCurrency(amounts.vatAmount)}</span>
+                  <span className="font-medium">{formatCurrencyWithType(amounts.vatAmount, newEntry.currency)}</span>
                 </div>
                 <div className="flex justify-between text-sm pt-2 border-t">
                   <span className="font-medium">Toplam</span>
-                  <span className="font-semibold text-primary">{formatCurrency(amounts.totalAmount)}</span>
+                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
                 </div>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={handleCloseDialog}>
               İptal
             </Button>
             <Button onClick={handleCreateEntry}>
-              Kayıt Oluştur
+              Kaydet
             </Button>
           </DialogFooter>
         </DialogContent>

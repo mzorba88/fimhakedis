@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrency, formatDate } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
 import { 
   Search, 
   Wallet,
@@ -22,12 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/types/hakedis';
 
 export default function Payments() {
   const { 
     projects, 
-    workItems, 
-    milestones, 
     workEntries, 
     markAsPaid,
     currentUser 
@@ -42,7 +41,8 @@ export default function Payments() {
   const filteredEntries = approvedEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
     const matchesSearch = 
-      entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
@@ -54,7 +54,7 @@ export default function Payments() {
     (a, b) => new Date(b.approvalDate || b.createdAt).getTime() - new Date(a.approvalDate || a.createdAt).getTime()
   );
 
-  // Summary Stats
+  // Summary Stats (TRY for display)
   const totalApproved = approvedEntries.reduce((sum, e) => sum + e.totalAmount, 0);
   const totalPaid = approvedEntries
     .filter(e => e.paymentStatus === 'odendi')
@@ -188,7 +188,7 @@ export default function Payments() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Açıklama
+                    İş Kalemi / Altyüklenici
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proje
@@ -213,8 +213,6 @@ export default function Payments() {
                 <AnimatePresence>
                   {sortedEntries.map((entry) => {
                     const project = projects.find(p => p.id === entry.projectId);
-                    const workItem = workItems.find(wi => wi.id === entry.workItemId);
-                    const milestone = milestones.find(m => m.id === entry.milestoneId);
                     const isPaid = entry.paymentStatus === 'odendi';
                     
                     return (
@@ -228,18 +226,14 @@ export default function Payments() {
                         <td className="px-4 py-4">
                           <div className="max-w-xs">
                             <p className="font-medium text-foreground truncate">
-                              {entry.description}
+                              {entry.workCategory}
                             </p>
-                            {workItem && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {workItem.itemCode}: {entry.quantity} {workItem.unit}
-                              </p>
-                            )}
-                            {milestone && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {milestone.name}: %{entry.completionPercentage}
-                              </p>
-                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {entry.subcontractor}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {contractTypeLabels[entry.contractType]}
+                            </p>
                           </div>
                         </td>
                         <td className="px-4 py-4">
@@ -255,10 +249,10 @@ export default function Payments() {
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(entry.totalAmount)}
+                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrency(entry.vatAmount)}
+                            KDV: {formatCurrencyWithType(entry.vatAmount, entry.currency)}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-center">

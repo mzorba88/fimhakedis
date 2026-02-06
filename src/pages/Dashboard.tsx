@@ -3,28 +3,29 @@ import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { calculateDashboardStats } from '@/data/mockData';
-import { formatCurrency, formatDate, contractTypeLabels } from '@/types/hakedis';
+import { formatCurrency, formatDate, projectStatusLabels } from '@/types/hakedis';
 import { 
   FolderKanban, 
   Clock, 
   CheckCircle2, 
   Wallet, 
-  TrendingUp,
   ArrowRight,
-  Building2
+  Building2,
+  MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 export default function Dashboard() {
   const { projects, workEntries } = useHakedisStore();
-  const stats = calculateDashboardStats();
+  const stats = calculateDashboardStats(projects, workEntries);
 
   const recentEntries = [...workEntries]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
   const pendingEntries = workEntries.filter(e => e.approvalStatus === 'onay_bekliyor');
+  const activeProjects = projects.filter(p => p.status === 'aktif');
 
   return (
     <MainLayout>
@@ -89,7 +90,7 @@ export default function Dashboard() {
                   <div key={entry.id} className="flex items-center justify-between p-4">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {entry.description}
+                        {entry.workCategory} - {entry.subcontractor}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {project?.projectCode} • {formatDate(entry.date)}
@@ -135,7 +136,7 @@ export default function Dashboard() {
                   <div key={entry.id} className="flex items-center justify-between p-4">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {entry.description}
+                        {entry.workCategory} - {entry.subcontractor}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {project?.projectName}
@@ -178,17 +179,16 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects.slice(0, 3).map((project) => {
+            {activeProjects.slice(0, 6).map((project) => {
               const projectEntries = workEntries.filter(e => e.projectId === project.id);
               const approvedTotal = projectEntries
                 .filter(e => e.approvalStatus === 'onaylandi')
                 .reduce((sum, e) => sum + e.totalAmount, 0);
-              const progress = (approvedTotal / project.totalContractValue) * 100;
 
               return (
                 <Link
                   key={project.id}
-                  to={`/projeler/${project.id}`}
+                  to={`/projeler`}
                   className="group rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
                 >
                   <div className="flex items-start gap-3">
@@ -202,21 +202,13 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">{project.projectCode}</p>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">İlerleme</span>
-                      <span className="font-medium text-foreground">{progress.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-muted">
-                      <div 
-                        className="h-2 rounded-full bg-primary transition-all" 
-                        style={{ width: `${Math.min(progress, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{contractTypeLabels[project.contractType]}</span>
-                      <span>{formatCurrency(project.totalContractValue)}</span>
-                    </div>
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span className="truncate">{project.location}</span>
+                  </div>
+                  <div className="mt-3 flex justify-between text-xs">
+                    <span className="text-muted-foreground">Onaylanan</span>
+                    <span className="font-medium">{formatCurrency(approvedTotal)}</span>
                   </div>
                 </Link>
               );
