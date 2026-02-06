@@ -2,95 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Altyüklenici Hakediş Sistemi - Stripe-inspired Design System */
+/* All colors in HSL format */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
+    /* Core Colors - Stripe-inspired palette */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Indigo 600 */
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Slate 100 */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 25% 27%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted - Slate 50/500 */
+    --muted: 210 40% 98%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Indigo 50 */
+    --accent: 226 100% 97%;
+    --accent-foreground: 239 84% 67%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 239 84% 67%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Semantic Status Colors */
+    --status-pending: 43 96% 56%;
+    --status-pending-bg: 48 100% 96%;
+    --status-approved: 142 71% 45%;
+    --status-approved-bg: 142 76% 96%;
+    --status-rejected: 0 84% 60%;
+    --status-rejected-bg: 0 86% 97%;
+    --status-paid: 142 71% 45%;
+    --status-paid-bg: 142 76% 96%;
+    --status-unpaid: 215 16% 47%;
+    --status-unpaid-bg: 210 40% 96%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Chart Colors */
+    --chart-1: 239 84% 67%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 199 89% 48%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Sidebar */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 226 100% 97%;
+    --sidebar-accent-foreground: 239 84% 67%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 239 84% 67%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 239 84% 20%;
+    --accent-foreground: 239 84% 67%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 239 84% 67%;
+
+    --status-pending: 43 96% 56%;
+    --status-pending-bg: 43 50% 15%;
+    --status-approved: 142 71% 45%;
+    --status-approved-bg: 142 50% 15%;
+    --status-rejected: 0 84% 60%;
+    --status-rejected-bg: 0 50% 15%;
+    --status-paid: 142 71% 45%;
+    --status-paid-bg: 142 50% 15%;
+    --status-unpaid: 215 20% 65%;
+    --status-unpaid-bg: 217 33% 17%;
+
+    --sidebar-background: 222 47% 5%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 239 84% 67%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 239 84% 20%;
+    --sidebar-accent-foreground: 239 84% 80%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 239 84% 67%;
   }
 }
 
@@ -99,7 +136,114 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .card-elevated {
+    @apply bg-card rounded-lg border shadow-sm;
+    box-shadow: var(--shadow-card);
+  }
+
+  .stat-card {
+    @apply bg-card rounded-xl border p-6 transition-all duration-200 hover:shadow-md;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-all duration-200 hover:bg-secondary/80;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+
+  .table-header {
+    @apply bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .status-pending {
+    @apply bg-[hsl(var(--status-pending-bg))] text-[hsl(var(--status-pending))];
+  }
+
+  .status-approved {
+    @apply bg-[hsl(var(--status-approved-bg))] text-[hsl(var(--status-approved))];
+  }
+
+  .status-rejected {
+    @apply bg-[hsl(var(--status-rejected-bg))] text-[hsl(var(--status-rejected))];
+  }
+
+  .status-paid {
+    @apply bg-[hsl(var(--status-paid-bg))] text-[hsl(var(--status-paid))];
+  }
+
+  .status-unpaid {
+    @apply bg-[hsl(var(--status-unpaid-bg))] text-[hsl(var(--status-unpaid))];
+  }
+
+  .page-container {
+    @apply mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-foreground;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors;
+  }
+
+  .nav-link-active {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .nav-link-inactive {
+    @apply text-muted-foreground hover:bg-muted hover:text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
