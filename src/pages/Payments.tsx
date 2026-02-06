@@ -264,9 +264,6 @@ export default function Payments() {
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrencyWithType(hakedis.vatAmount, hakedis.currency)}
-                          </p>
                         </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.paymentStatus} />

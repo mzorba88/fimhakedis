@@ -321,16 +321,8 @@ export default function Approvals() {
                                 </div>
                               )}
 
-                              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Ara Toplam</span>
-                                  <span className="font-medium">{formatCurrencyWithType(entry.subtotal, entry.currency)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">KDV (%20)</span>
-                                  <span className="font-medium">{formatCurrencyWithType(entry.vatAmount, entry.currency)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+                              <div className="rounded-lg bg-muted/50 p-4">
+                                <div className="flex justify-between text-sm font-semibold">
                                   <span>Toplam</span>
                                   <span className="text-primary">{formatCurrencyWithType(entry.totalAmount, entry.currency)}</span>
                                 </div>
@@ -490,16 +482,8 @@ export default function Approvals() {
                                 </div>
                               )}
 
-                              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">Ara Toplam</span>
-                                  <span className="font-medium">{formatCurrencyWithType(hakedis.subtotal, hakedis.currency)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-muted-foreground">KDV (%20)</span>
-                                  <span className="font-medium">{formatCurrencyWithType(hakedis.vatAmount, hakedis.currency)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+                              <div className="rounded-lg bg-muted/50 p-4">
+                                <div className="flex justify-between text-sm font-semibold">
                                   <span>Toplam</span>
                                   <span className="text-primary">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
                                 </div>

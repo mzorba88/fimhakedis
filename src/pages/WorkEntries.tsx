@@ -8,8 +8,6 @@ import {
   WorkEntry,
   PaymentInstallment,
   WorkItemEntry,
-  calculateVAT,
-  calculateTotalWithVAT,
   workCategories,
   Currency,
   ContractType,
@@ -117,18 +115,15 @@ export default function WorkEntries() {
   );
 
   const calculateTotals = () => {
-    let subtotal = 0;
+    let totalAmount = 0;
 
     if (newEntry.contractType === 'goturu_bedel') {
-      subtotal = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
+      totalAmount = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
     } else {
-      subtotal = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
+      totalAmount = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
     }
 
-    const vatAmount = calculateVAT(subtotal);
-    const totalAmount = calculateTotalWithVAT(subtotal);
-
-    return { subtotal, vatAmount, totalAmount };
+    return { totalAmount };
   };
 
   const addPaymentInstallment = () => {
@@ -195,35 +190,72 @@ export default function WorkEntries() {
 
     const amounts = calculateTotals();
 
-    const contractNo = getNextContractNo();
+    if (isEditMode && selectedEntry) {
+      // Update existing entry
+      updateWorkEntry(selectedEntry.id, {
+        projectId: newEntry.projectId,
+        workCategory: newEntry.workCategory,
+        subcontractor: selectedSubcontractor,
+        contractType: newEntry.contractType,
+        date: newEntry.date,
+        currency: newEntry.currency,
+        paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+        workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+        totalAmount: amounts.totalAmount,
+      });
+      toast.success('Sözleşme güncellendi');
+    } else {
+      // Create new entry
+      const contractNo = getNextContractNo();
 
-    const entry: WorkEntry = {
-      id: `we${Date.now()}`,
-      contractNo,
-      projectId: newEntry.projectId,
-      workCategory: newEntry.workCategory,
-      subcontractor: selectedSubcontractor,
-      contractType: newEntry.contractType,
-      date: newEntry.date,
-      currency: newEntry.currency,
-      paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
-      workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
-      createdBy: currentUser.id,
-      approvalStatus: 'onay_bekliyor',
-      subtotal: amounts.subtotal,
-      vatAmount: amounts.vatAmount,
-      totalAmount: amounts.totalAmount,
-      paymentStatus: 'odenmedi',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      const entry: WorkEntry = {
+        id: `we${Date.now()}`,
+        contractNo,
+        projectId: newEntry.projectId,
+        workCategory: newEntry.workCategory,
+        subcontractor: selectedSubcontractor,
+        contractType: newEntry.contractType,
+        date: newEntry.date,
+        currency: newEntry.currency,
+        paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+        workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+        createdBy: currentUser.id,
+        approvalStatus: 'onay_bekliyor',
+        totalAmount: amounts.totalAmount,
+        paymentStatus: 'odenmedi',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    addWorkEntry(entry);
+      addWorkEntry(entry);
+      toast.success('Sözleşme oluşturuldu');
+    }
+    
     handleCloseDialog();
+  };
+
+  const handleEditEntry = (entry: WorkEntry) => {
+    setSelectedEntry(entry);
+    setIsEditMode(true);
+    setNewEntry({
+      projectId: entry.projectId,
+      workCategory: entry.workCategory,
+      subcontractor: entry.subcontractor,
+      newSubcontractor: '',
+      contractType: entry.contractType,
+      date: entry.date,
+      currency: entry.currency,
+    });
+    setPaymentPlan(entry.paymentPlan || []);
+    setWorkItemEntries(entry.workItemEntries || []);
+    setIsDetailDialogOpen(false);
+    setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
+    setIsEditMode(false);
+    setSelectedEntry(null);
     setNewEntry({
       projectId: '',
       workCategory: '',
@@ -415,7 +447,7 @@ export default function WorkEntries() {
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Yapılan İş Kaydı</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Sözleşme Düzenle' : 'Yeni Sözleşme Kaydı'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Project Selection */}
@@ -652,11 +684,11 @@ export default function WorkEntries() {
             )}
 
             {/* Amount Preview */}
-            {amounts.subtotal > 0 && (
+            {amounts.totalAmount > 0 && (
               <div className="rounded-lg bg-muted/50 p-4">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Ara Toplam</span>
-                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.subtotal, newEntry.currency)}</span>
+                  <span className="font-medium">Toplam</span>
+                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
                 </div>
               </div>
             )}
@@ -666,7 +698,7 @@ export default function WorkEntries() {
               İptal
             </Button>
             <Button onClick={handleCreateEntry}>
-              Kaydet
+              {isEditMode ? 'Güncelle' : 'Kaydet'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -798,16 +830,8 @@ export default function WorkEntries() {
               )}
 
               {/* Totals */}
-              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ara Toplam</span>
-                  <span className="font-medium">{formatCurrencyWithType(selectedEntry.subtotal, selectedEntry.currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">KDV (%20)</span>
-                  <span className="font-medium">{formatCurrencyWithType(selectedEntry.vatAmount, selectedEntry.currency)}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+              <div className="rounded-lg bg-muted/50 p-4">
+                <div className="flex justify-between text-sm font-semibold">
                   <span>Toplam</span>
                   <span className="text-primary">{formatCurrencyWithType(selectedEntry.totalAmount, selectedEntry.currency)}</span>
                 </div>
@@ -828,8 +852,9 @@ export default function WorkEntries() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  // TODO: Implement edit functionality
-                  toast.info('Düzenleme özelliği yakında eklenecek');
+                  if (selectedEntry) {
+                    handleEditEntry(selectedEntry);
+                  }
                 }}
                 className="gap-1.5"
               >
