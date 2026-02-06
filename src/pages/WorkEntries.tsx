@@ -13,7 +13,8 @@ import {
   workCategories,
   Currency,
   ContractType,
-  currencySymbols
+  currencySymbols,
+  contractTypeLabels
 } from '@/types/hakedis';
 import { 
   Plus, 
@@ -291,14 +292,11 @@ export default function WorkEntries() {
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Sözleşme No
                   </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Sözleşme Tipi
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Tutar
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Onay Durumu
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Ödeme
                   </th>
                 </tr>
               </thead>
@@ -344,6 +342,11 @@ export default function WorkEntries() {
                             {entry.contractNo}
                           </p>
                         </td>
+                        <td className="px-4 py-4">
+                          <p className="text-sm text-foreground">
+                            {contractTypeLabels[entry.contractType]}
+                          </p>
+                        </td>
                         <td className="px-4 py-4 text-right">
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrencyWithType(entry.totalAmount, entry.currency)}
@@ -351,12 +354,6 @@ export default function WorkEntries() {
                           <p className="text-xs text-muted-foreground">
                             KDV: {formatCurrencyWithType(entry.vatAmount, entry.currency)}
                           </p>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <StatusBadge status={entry.approvalStatus} />
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <StatusBadge status={entry.paymentStatus} />
                         </td>
                       </motion.tr>
                     );
