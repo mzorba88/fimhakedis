@@ -1,20 +1,18 @@
 import { create } from 'zustand';
 import { 
   Project, 
-  WorkItem, 
-  Milestone, 
   WorkEntry, 
   User, 
   UserRole,
   ApprovalStatus,
-  PaymentStatus 
+  PaymentStatus,
+  ProjectStatus
 } from '@/types/hakedis';
 import { 
   mockProjects, 
-  mockWorkItems, 
-  mockMilestones, 
   mockWorkEntries, 
-  mockUsers 
+  mockUsers,
+  defaultSubcontractors
 } from '@/data/mockData';
 
 interface HakedisState {
@@ -29,16 +27,6 @@ interface HakedisState {
   updateProject: (id: string, project: Partial<Project>) => void;
   deleteProject: (id: string) => void;
 
-  // Work Items
-  workItems: WorkItem[];
-  addWorkItem: (item: WorkItem) => void;
-  updateWorkItem: (id: string, item: Partial<WorkItem>) => void;
-
-  // Milestones
-  milestones: Milestone[];
-  addMilestone: (milestone: Milestone) => void;
-  updateMilestone: (id: string, milestone: Partial<Milestone>) => void;
-
   // Work Entries
   workEntries: WorkEntry[];
   addWorkEntry: (entry: WorkEntry) => void;
@@ -46,6 +34,10 @@ interface HakedisState {
   approveEntry: (id: string, approvedBy: string) => void;
   rejectEntry: (id: string, reason: string) => void;
   markAsPaid: (id: string) => void;
+
+  // Subcontractors
+  subcontractors: string[];
+  addSubcontractor: (name: string) => void;
 
   // Users
   users: User[];
@@ -55,10 +47,9 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   // Initialize with mock data
   currentUser: mockUsers[0],
   projects: mockProjects,
-  workItems: mockWorkItems,
-  milestones: mockMilestones,
   workEntries: mockWorkEntries,
   users: mockUsers,
+  subcontractors: defaultSubcontractors,
 
   setCurrentUser: (user) => set({ currentUser: user }),
   
@@ -80,28 +71,6 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   
   deleteProject: (id) => set((state) => ({
     projects: state.projects.filter(p => p.id !== id)
-  })),
-
-  // Work Items
-  addWorkItem: (item) => set((state) => ({ 
-    workItems: [...state.workItems, item] 
-  })),
-  
-  updateWorkItem: (id, itemUpdate) => set((state) => ({
-    workItems: state.workItems.map(wi => 
-      wi.id === id ? { ...wi, ...itemUpdate } : wi
-    )
-  })),
-
-  // Milestones
-  addMilestone: (milestone) => set((state) => ({ 
-    milestones: [...state.milestones, milestone] 
-  })),
-  
-  updateMilestone: (id, milestoneUpdate) => set((state) => ({
-    milestones: state.milestones.map(m => 
-      m.id === id ? { ...m, ...milestoneUpdate } : m
-    )
   })),
 
   // Work Entries
@@ -153,5 +122,10 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
           } 
         : we
     )
+  })),
+
+  // Subcontractors
+  addSubcontractor: (name) => set((state) => ({
+    subcontractors: [...state.subcontractors, name]
   })),
 }));

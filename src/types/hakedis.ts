@@ -8,6 +8,10 @@ export type ApprovalStatus = 'onay_bekliyor' | 'onaylandi' | 'revize';
 
 export type PaymentStatus = 'odendi' | 'odenmedi';
 
+export type ProjectStatus = 'aktif' | 'tamamlandi';
+
+export type Currency = 'TRY' | 'USD' | 'EUR' | 'GBP';
+
 export interface User {
   id: string;
   name: string;
@@ -19,13 +23,9 @@ export interface Project {
   id: string;
   projectName: string;
   projectCode: string;
-  contractType: ContractType;
-  subcontractorName: string;
-  subcontractorTaxId?: string;
-  totalContractValue: number;
+  location: string;
   startDate: string;
-  endDate?: string;
-  description?: string;
+  status: ProjectStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,16 +52,41 @@ export interface Milestone {
   order: number;
 }
 
+// Payment installment for Götürü Bedel
+export interface PaymentInstallment {
+  id: string;
+  description: string;
+  amount: number;
+  currency: Currency;
+  dueDate?: string;
+  isPaid: boolean;
+}
+
+// Work item entry for Birim Fiyat
+export interface WorkItemEntry {
+  id: string;
+  workCategory: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  currency: Currency;
+}
+
 // Work Entry (Yapılan İş)
 export interface WorkEntry {
   id: string;
   projectId: string;
-  workItemId?: string; // For Birim Fiyat
-  milestoneId?: string; // For Götürü Bedel
-  quantity?: number; // For Birim Fiyat
-  completionPercentage?: number; // For Götürü Bedel
-  description: string;
+  workCategory: string;
+  subcontractor: string;
+  contractType: ContractType;
+  contractFile?: string;
   date: string;
+  currency: Currency;
+  // For Götürü Bedel
+  paymentPlan?: PaymentInstallment[];
+  // For Birim Fiyat
+  workItemEntries?: WorkItemEntry[];
   createdBy: string;
   approvalStatus: ApprovalStatus;
   approvedBy?: string;
@@ -147,8 +172,80 @@ export const contractTypeLabels: Record<ContractType, string> = {
   birim_fiyat: 'Birim Fiyat',
 };
 
+export const projectStatusLabels: Record<ProjectStatus, string> = {
+  aktif: 'Aktif',
+  tamamlandi: 'Tamamlandı',
+};
+
+export const currencySymbols: Record<Currency, string> = {
+  TRY: '₺',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
 export const roleLabels: Record<UserRole, string> = {
   saha_sorumlusu: 'Saha Sorumlusu',
   direktor: 'Direktör',
   muhasebe: 'Muhasebe',
+};
+
+// Work categories list
+export const workCategories = [
+  'Ahşap',
+  'Alçı Saten Sıva',
+  'Alçıpan',
+  'Aluminyum ve Cam',
+  'Altyapı',
+  'Aplikasyon',
+  'Beton Döküm',
+  'Boya ve Dekorasyon',
+  'Cephe Kaplama',
+  'Çelik İşleri',
+  'Çatı İşleri',
+  'Betonarme Demir İşçilik',
+  'Dozer, Kazı ve Hafriyat',
+  'Dolgu İşleri',
+  'Döşeme Kaplama İşleri',
+  'Elektrik İşleri',
+  'Forklift İşleri',
+  'Su İzolasyon',
+  'Kalıp İşleri',
+  'Karot İşleri',
+  'Kuyu Kazı',
+  'Laminant Parke',
+  'Mantolama',
+  'Mekanik Sıhhi Tesiat İşleri',
+  'Mekanik Isıtma Soğutma İşleri',
+  'Mekanik Havalandırma İşleri',
+  'Mekanik İşler',
+  'Seramik ve Mermer İşçilik',
+  'Nakliye İşleri',
+  'Beton Parke İşleri',
+  'Peyzaj İşleri',
+  'Çimento Sıva İşleri',
+  'Sulama İşleri',
+  'Şap Beton İşleri',
+  'Şömine İşleri',
+  'Taş Duvar İşleri',
+  'Temizlik İşleri',
+  'Tuğla Duvar İşleri',
+  'Yapı İşleri',
+  'Yapısal Çelik İşleri',
+  'Zayıf Akım Elektrik İşleri',
+];
+
+// Format currency with specific currency type
+export const formatCurrencyWithType = (amount: number, currency: Currency): string => {
+  const locales: Record<Currency, string> = {
+    TRY: 'tr-TR',
+    USD: 'en-US',
+    EUR: 'de-DE',
+    GBP: 'en-GB',
+  };
+  return new Intl.NumberFormat(locales[currency], {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
 };
