@@ -75,7 +75,7 @@ export default function Dashboard() {
             className="card-elevated"
           >
             <div className="flex items-center justify-between border-b p-4">
-              <h2 className="section-title">Son Yapılan İşler</h2>
+              <h2 className="section-title">Son Altyüklenici Sözleşmeleri</h2>
               <Link 
                 to="/yapilanisler" 
                 className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
