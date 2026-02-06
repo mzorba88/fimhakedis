@@ -22,7 +22,8 @@ import {
   ClipboardList,
   Calendar,
   Trash2,
-  Upload
+  Upload,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,8 @@ export default function WorkEntries() {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<WorkEntry | null>(null);
   
   // Form state
   const [newEntry, setNewEntry] = useState({
@@ -298,6 +301,9 @@ export default function WorkEntries() {
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Tutar
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    İşlem
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -351,9 +357,20 @@ export default function WorkEntries() {
                           <p className="text-sm font-semibold text-foreground">
                             {formatCurrencyWithType(entry.totalAmount, entry.currency)}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrencyWithType(entry.vatAmount, entry.currency)}
-                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEntry(entry);
+                              setIsDetailDialogOpen(true);
+                            }}
+                            className="gap-1.5"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Detay
+                          </Button>
                         </td>
                       </motion.tr>
                     );
@@ -631,6 +648,131 @@ export default function WorkEntries() {
             </Button>
             <Button onClick={handleCreateEntry}>
               Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Sözleşme Detayı</DialogTitle>
+          </DialogHeader>
+          
+          {selectedEntry && (
+            <div className="space-y-6 py-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Sözleşme No</p>
+                  <p className="text-sm font-medium text-primary">{selectedEntry.contractNo}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tarih</p>
+                  <p className="text-sm font-medium">{formatDate(selectedEntry.date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Proje</p>
+                  <p className="text-sm font-medium">
+                    {projects.find(p => p.id === selectedEntry.projectId)?.projectCode} - {projects.find(p => p.id === selectedEntry.projectId)?.projectName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
+                  <p className="text-sm font-medium">{contractTypeLabels[selectedEntry.contractType]}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">İş Kalemi</p>
+                  <p className="text-sm font-medium">{selectedEntry.workCategory}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Altyüklenici</p>
+                  <p className="text-sm font-medium">{selectedEntry.subcontractor}</p>
+                </div>
+              </div>
+
+              {/* Payment Plan for Götürü Bedel */}
+              {selectedEntry.contractType === 'goturu_bedel' && selectedEntry.paymentPlan && selectedEntry.paymentPlan.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Ödeme Planı</h4>
+                  <div className="rounded-lg border overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Açıklama</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Tutar</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {selectedEntry.paymentPlan.map((payment, index) => (
+                          <tr key={payment.id}>
+                            <td className="px-3 py-2 text-sm">{payment.description || `Taksit ${index + 1}`}</td>
+                            <td className="px-3 py-2 text-sm text-right font-medium">
+                              {formatCurrencyWithType(payment.amount, selectedEntry.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Work Items for Birim Fiyat */}
+              {selectedEntry.contractType === 'birim_fiyat' && selectedEntry.workItemEntries && selectedEntry.workItemEntries.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">İş Kalemleri</h4>
+                  <div className="rounded-lg border overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Açıklama</th>
+                          <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Miktar</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Birim Fiyat</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Tutar</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {selectedEntry.workItemEntries.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-3 py-2 text-sm">{item.description}</td>
+                            <td className="px-3 py-2 text-sm text-center">{item.quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-sm text-right">
+                              {formatCurrencyWithType(item.unitPrice, selectedEntry.currency)}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-right font-medium">
+                              {formatCurrencyWithType(item.quantity * item.unitPrice, selectedEntry.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Totals */}
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Ara Toplam</span>
+                  <span className="font-medium">{formatCurrencyWithType(selectedEntry.subtotal, selectedEntry.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">KDV (%20)</span>
+                  <span className="font-medium">{formatCurrencyWithType(selectedEntry.vatAmount, selectedEntry.currency)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-2 border-t font-semibold">
+                  <span>Toplam</span>
+                  <span className="text-primary">{formatCurrencyWithType(selectedEntry.totalAmount, selectedEntry.currency)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+              Kapat
             </Button>
           </DialogFooter>
         </DialogContent>
