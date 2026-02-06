@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
@@ -8,15 +8,13 @@ import {
   CheckCircle2, 
   Wallet,
   FileText,
-  Settings,
   Menu,
-  X,
-  Building2
+  X
 } from 'lucide-react';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { roleLabels, UserRole } from '@/types/hakedis';
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import formanLogo from '@/assets/forman-logo.png';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -50,12 +48,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link to="/" className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary p-2">
-                <Building2 className="h-5 w-5 text-primary-foreground" />
-              </div>
+            <Link to="/" className="flex items-center gap-3">
+              <img src={formanLogo} alt="Forman International" className="h-10 w-auto" />
               <span className="hidden text-lg font-semibold text-foreground sm:block">
-                Hakediş Sistemi
+                FIM-Hakedişler
               </span>
             </Link>
           </div>

@@ -12,12 +12,9 @@ import {
   Banknote,
   FileDown
 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -26,6 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import formanLogo from '@/assets/forman-logo.png';
 
 export default function Payments() {
   const { 
@@ -74,9 +74,17 @@ export default function Payments() {
     toast.success('Hakediş ödendi olarak işaretlendi');
   };
 
-  const generatePaymentPdf = (hakedis: typeof approvedHakedisler[0]) => {
+  const generatePaymentPdf = async (hakedis: typeof approvedHakedisler[0]) => {
     const project = projects.find(p => p.id === hakedis.projectId);
     const doc = new jsPDF();
+    
+    // Load and add logo
+    const img = new Image();
+    img.src = formanLogo;
+    await new Promise((resolve) => {
+      img.onload = resolve;
+    });
+    doc.addImage(img, 'PNG', 14, 10, 50, 15);
     
     // Header
     doc.setFontSize(18);
