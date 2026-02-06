@@ -33,6 +33,7 @@ interface HakedisState {
   contractCounter: number;
   addWorkEntry: (entry: WorkEntry) => void;
   updateWorkEntry: (id: string, entry: Partial<WorkEntry>) => void;
+  deleteWorkEntry: (id: string) => void;
   approveEntry: (id: string, approvedBy: string) => void;
   rejectEntry: (id: string, reason: string) => void;
   markAsPaid: (id: string) => void;
@@ -101,6 +102,10 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
     workEntries: state.workEntries.map(we => 
       we.id === id ? { ...we, ...entryUpdate, updatedAt: new Date().toISOString() } : we
     )
+  })),
+
+  deleteWorkEntry: (id) => set((state) => ({
+    workEntries: state.workEntries.filter(we => we.id !== id)
   })),
   
   approveEntry: (id, approvedBy) => set((state) => ({
