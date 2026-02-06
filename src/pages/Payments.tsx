@@ -10,9 +10,10 @@ import {
   Clock,
   AlertTriangle,
   Banknote,
-  FileText,
-  ClipboardList
+  FileDown
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,83 @@ export default function Payments() {
   const handleMarkHakedisAsPaid = (hakedisId: string) => {
     markHakedisAsPaid(hakedisId);
     toast.success('Hakediş ödendi olarak işaretlendi');
+  };
+
+  const generatePaymentPdf = (hakedis: typeof approvedHakedisler[0]) => {
+    const project = projects.find(p => p.id === hakedis.projectId);
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('ÖDEME RAPORU', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString())}`, 105, 28, { align: 'center' });
+    
+    // Hakediş Bilgileri
+    doc.setFontSize(12);
+    doc.text('Hakediş Bilgileri', 14, 45);
+    
+    autoTable(doc, {
+      startY: 50,
+      head: [['Alan', 'Değer']],
+      body: [
+        ['Hakediş No', hakedis.hakedisNo],
+        ['Sözleşme No', hakedis.contractNo],
+        ['Altyüklenici', hakedis.subcontractor],
+        ['Proje', `${project?.projectCode} - ${project?.projectName}`],
+        ['Sözleşme Tipi', contractTypeLabels[hakedis.contractType]],
+        ['Tarih', formatDate(hakedis.date)],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+    
+    // Tutar Bilgileri
+    const lastY = (doc as any).lastAutoTable.finalY + 15;
+    doc.text('Tutar Bilgileri', 14, lastY);
+    
+    autoTable(doc, {
+      startY: lastY + 5,
+      head: [['Açıklama', 'Tutar']],
+      body: [
+        ['Toplam Tutar', formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)],
+        ['Ödeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Ödendi' : 'Ödenmedi'],
+        ...(hakedis.paidDate ? [['Ödeme Tarihi', formatDate(hakedis.paidDate)]] : []),
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [34, 197, 94] },
+    });
+    
+    // Onay Bilgileri
+    const lastY2 = (doc as any).lastAutoTable.finalY + 15;
+    doc.text('Onay Bilgileri', 14, lastY2);
+    
+    autoTable(doc, {
+      startY: lastY2 + 5,
+      head: [['Alan', 'Değer']],
+      body: [
+        ['Onay Durumu', 'Onaylandı'],
+        ['Onaylayan', hakedis.approvedBy || '-'],
+        ['Onay Tarihi', hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [99, 102, 241] },
+    });
+    
+    // İmza Alanı
+    const signatureY = (doc as any).lastAutoTable.finalY + 30;
+    doc.setFontSize(10);
+    doc.text('Direktör Onayı:', 14, signatureY);
+    doc.line(14, signatureY + 20, 80, signatureY + 20);
+    doc.text('İmza / Tarih', 14, signatureY + 25);
+    
+    doc.text('Muhasebe Onayı:', 120, signatureY);
+    doc.line(120, signatureY + 20, 186, signatureY + 20);
+    doc.text('İmza / Tarih', 120, signatureY + 25);
+    
+    doc.save(`odeme-raporu-${hakedis.hakedisNo}.pdf`);
+    toast.success('PDF raporu oluşturuldu');
   };
 
   const isAccountant = currentUser.role === 'muhasebe';
@@ -275,16 +353,27 @@ export default function Payments() {
                         </td>
                         {isAccountant && (
                           <td className="px-4 py-4 text-center">
-                            {!isPaid && (
+                            <div className="flex items-center justify-center gap-2">
+                              {!isPaid && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
+                                  className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
+                                >
+                                  <Banknote className="h-4 w-4" />
+                                  Ödendi
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
-                                onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
-                                className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
+                                variant="outline"
+                                onClick={() => generatePaymentPdf(hakedis)}
+                                className="gap-1.5"
                               >
-                                <Banknote className="h-4 w-4" />
-                                Ödendi
+                                <FileDown className="h-4 w-4" />
+                                PDF
                               </Button>
-                            )}
+                            </div>
                           </td>
                         )}
                       </motion.tr>
