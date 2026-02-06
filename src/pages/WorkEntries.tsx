@@ -23,7 +23,10 @@ import {
   Calendar,
   Trash2,
   Upload,
-  Eye
+  Eye,
+  Pencil,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -35,7 +38,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -43,12 +57,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 export default function WorkEntries() {
   const { 
     projects, 
     workEntries, 
     addWorkEntry,
+    updateWorkEntry,
+    deleteWorkEntry,
     getNextContractNo,
     subcontractors,
     addSubcontractor,
@@ -60,6 +77,8 @@ export default function WorkEntries() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<WorkEntry | null>(null);
   
   // Form state
@@ -692,6 +711,32 @@ export default function WorkEntries() {
                 </div>
               </div>
 
+              {/* Contract File */}
+              {selectedEntry.contractFile && (
+                <div className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-primary/10 p-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Sözleşme Dosyası</p>
+                        <p className="text-xs text-muted-foreground">Ekli dosya mevcut</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(selectedEntry.contractFile, '_blank')}
+                      className="gap-1.5"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Görüntüle
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Plan for Götürü Bedel */}
               {selectedEntry.contractType === 'goturu_bedel' && selectedEntry.paymentPlan && selectedEntry.paymentPlan.length > 0 && (
                 <div>
@@ -770,13 +815,68 @@ export default function WorkEntries() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                Sil
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // TODO: Implement edit functionality
+                  toast.info('Düzenleme özelliği yakında eklenecek');
+                }}
+                className="gap-1.5"
+              >
+                <Pencil className="h-4 w-4" />
+                Düzenle
+              </Button>
+            </div>
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
               Kapat
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sözleşmeyi Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu sözleşmeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              {selectedEntry && (
+                <span className="block mt-2 font-medium text-foreground">
+                  {selectedEntry.contractNo} - {selectedEntry.workCategory}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedEntry) {
+                  deleteWorkEntry(selectedEntry.id);
+                  toast.success('Sözleşme silindi');
+                  setIsDeleteDialogOpen(false);
+                  setIsDetailDialogOpen(false);
+                  setSelectedEntry(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
