@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency } from '@/types/hakedis';
 import { 
   Search, 
   Wallet,
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Banknote
+  Banknote,
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -22,48 +25,52 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/types/hakedis';
 
 export default function Payments() {
   const { 
     projects, 
-    workEntries, 
+    workEntries,
+    subcontractorHakedisler,
     markAsPaid,
+    markHakedisAsPaid,
     currentUser 
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPayment, setFilterPayment] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState('hakedisler');
 
-  const approvedEntries = workEntries.filter(e => e.approvalStatus === 'onaylandi');
+  // Only show approved hakedisler
+  const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
 
-  const filteredEntries = approvedEntries.filter(entry => {
-    const project = projects.find(p => p.id === entry.projectId);
+  const filteredHakedisler = approvedHakedisler.filter(hakedis => {
+    const project = projects.find(p => p.id === hakedis.projectId);
     const matchesSearch = 
-      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hakedis.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hakedis.hakedisNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hakedis.contractNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
-    const matchesPayment = filterPayment === 'all' || entry.paymentStatus === filterPayment;
+    const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
+    const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
     return matchesSearch && matchesProject && matchesPayment;
   });
 
-  const sortedEntries = [...filteredEntries].sort(
+  const sortedHakedisler = [...filteredHakedisler].sort(
     (a, b) => new Date(b.approvalDate || b.createdAt).getTime() - new Date(a.approvalDate || a.createdAt).getTime()
   );
 
-  // Summary Stats (TRY for display)
-  const totalApproved = approvedEntries.reduce((sum, e) => sum + e.totalAmount, 0);
-  const totalPaid = approvedEntries
-    .filter(e => e.paymentStatus === 'odendi')
-    .reduce((sum, e) => sum + e.totalAmount, 0);
-  const totalUnpaid = totalApproved - totalPaid;
+  // Summary Stats for hakedisler
+  const totalApprovedHakedis = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+  const totalPaidHakedis = approvedHakedisler
+    .filter(h => h.paymentStatus === 'odendi')
+    .reduce((sum, h) => sum + h.totalAmount, 0);
+  const totalUnpaidHakedis = totalApprovedHakedis - totalPaidHakedis;
 
-  const handleMarkAsPaid = (entryId: string) => {
-    markAsPaid(entryId);
-    toast.success('Ödeme yapıldı olarak işaretlendi');
+  const handleMarkHakedisAsPaid = (hakedisId: string) => {
+    markHakedisAsPaid(hakedisId);
+    toast.success('Hakediş ödendi olarak işaretlendi');
   };
 
   const isAccountant = currentUser.role === 'muhasebe';
@@ -93,8 +100,8 @@ export default function Payments() {
                 <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Onaylanan Toplam</p>
-                <p className="text-xl font-semibold">{formatCurrency(totalApproved)}</p>
+                <p className="text-sm text-muted-foreground">Onaylanan Hakedişler</p>
+                <p className="text-xl font-semibold">{formatCurrency(totalApprovedHakedis)}</p>
               </div>
             </div>
           </motion.div>
@@ -111,7 +118,7 @@ export default function Payments() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Ödenen Toplam</p>
-                <p className="text-xl font-semibold text-status-paid">{formatCurrency(totalPaid)}</p>
+                <p className="text-xl font-semibold text-status-paid">{formatCurrency(totalPaidHakedis)}</p>
               </div>
             </div>
           </motion.div>
@@ -128,7 +135,7 @@ export default function Payments() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Bekleyen Ödeme</p>
-                <p className="text-xl font-semibold text-status-pending">{formatCurrency(totalUnpaid)}</p>
+                <p className="text-xl font-semibold text-status-pending">{formatCurrency(totalUnpaidHakedis)}</p>
               </div>
             </div>
           </motion.div>
@@ -150,7 +157,7 @@ export default function Payments() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Kayıt ara..."
+              placeholder="Hakediş ara..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -181,17 +188,20 @@ export default function Payments() {
           </Select>
         </div>
 
-        {/* Payments Table */}
+        {/* Hakedisler Table */}
         <div className="card-elevated overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    İş Kalemi / Altyüklenici
+                    Hakediş No / Altyüklenici
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proje
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Sözleşme No
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Onay Tarihi
@@ -211,13 +221,13 @@ export default function Payments() {
               </thead>
               <tbody className="divide-y">
                 <AnimatePresence>
-                  {sortedEntries.map((entry) => {
-                    const project = projects.find(p => p.id === entry.projectId);
-                    const isPaid = entry.paymentStatus === 'odendi';
+                  {sortedHakedisler.map((hakedis) => {
+                    const project = projects.find(p => p.id === hakedis.projectId);
+                    const isPaid = hakedis.paymentStatus === 'odendi';
                     
                     return (
                       <motion.tr
-                        key={entry.id}
+                        key={hakedis.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -225,14 +235,14 @@ export default function Payments() {
                       >
                         <td className="px-4 py-4">
                           <div className="max-w-xs">
-                            <p className="font-medium text-foreground truncate">
-                              {entry.workCategory}
+                            <p className="font-medium text-foreground">
+                              {hakedis.hakedisNo}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {entry.subcontractor}
+                              {hakedis.subcontractor}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {contractTypeLabels[entry.contractType]}
+                              {contractTypeLabels[hakedis.contractType]}
                             </p>
                           </div>
                         </td>
@@ -244,22 +254,25 @@ export default function Payments() {
                             {project?.projectName}
                           </p>
                         </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {hakedis.contractNo}
+                        </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {entry.approvalDate ? formatDate(entry.approvalDate) : '-'}
+                          {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
+                            {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            KDV: {formatCurrencyWithType(entry.vatAmount, entry.currency)}
+                            KDV: {formatCurrencyWithType(hakedis.vatAmount, hakedis.currency)}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-center">
-                          <StatusBadge status={entry.paymentStatus} />
-                          {isPaid && entry.paidDate && (
+                          <StatusBadge status={hakedis.paymentStatus} />
+                          {isPaid && hakedis.paidDate && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {formatDate(entry.paidDate)}
+                              {formatDate(hakedis.paidDate)}
                             </p>
                           )}
                         </td>
@@ -268,7 +281,7 @@ export default function Payments() {
                             {!isPaid && (
                               <Button
                                 size="sm"
-                                onClick={() => handleMarkAsPaid(entry.id)}
+                                onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
                                 className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
                               >
                                 <Banknote className="h-4 w-4" />
@@ -285,10 +298,10 @@ export default function Payments() {
             </table>
           </div>
 
-          {sortedEntries.length === 0 && (
+          {sortedHakedisler.length === 0 && (
             <div className="p-12 text-center">
               <Wallet className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-medium text-foreground">Kayıt bulunamadı</h3>
+              <h3 className="mt-4 text-lg font-medium text-foreground">Hakediş kaydı bulunamadı</h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Arama kriterlerinize uygun onaylanmış hakediş bulunmuyor.
               </p>

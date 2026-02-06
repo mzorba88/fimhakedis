@@ -73,9 +73,10 @@ export interface WorkItemEntry {
   currency: Currency;
 }
 
-// Work Entry (Yapılan İş)
+// Work Entry (Yapılan İş / Altyüklenici Sözleşmesi)
 export interface WorkEntry {
   id: string;
+  contractNo: string; // Auto-generated contract number
   projectId: string;
   workCategory: string;
   subcontractor: string;
@@ -99,6 +100,47 @@ export interface WorkEntry {
   paidDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Altyüklenici Hakediş (Subcontractor Progress Payment)
+export interface SubcontractorHakedis {
+  id: string;
+  hakedisNo: string; // Auto-generated hakediş number
+  projectId: string;
+  subcontractor: string;
+  contractId: string; // Reference to WorkEntry (contract)
+  contractNo: string;
+  contractType: ContractType;
+  currency: Currency;
+  date: string;
+  // For Götürü Bedel - payment amount
+  paymentAmount?: number;
+  // For Birim Fiyat - work items with quantities
+  hakedisItems?: HakedisItem[];
+  subtotal: number;
+  vatAmount: number;
+  totalAmount: number;
+  createdBy: string;
+  approvalStatus: ApprovalStatus;
+  approvedBy?: string;
+  approvalDate?: string;
+  rejectionReason?: string;
+  paymentStatus: PaymentStatus;
+  paidDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Hakediş item for Birim Fiyat contracts
+export interface HakedisItem {
+  id: string;
+  workItemEntryId: string;
+  workCategory: string;
+  description: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number; // Quantity for this hakediş
+  amount: number;
 }
 
 export interface HakedisReport {

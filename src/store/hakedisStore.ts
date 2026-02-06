@@ -6,7 +6,8 @@ import {
   UserRole,
   ApprovalStatus,
   PaymentStatus,
-  ProjectStatus
+  ProjectStatus,
+  SubcontractorHakedis
 } from '@/types/hakedis';
 import { 
   mockProjects, 
@@ -27,13 +28,22 @@ interface HakedisState {
   updateProject: (id: string, project: Partial<Project>) => void;
   deleteProject: (id: string) => void;
 
-  // Work Entries
+  // Work Entries (Contracts)
   workEntries: WorkEntry[];
+  contractCounter: number;
   addWorkEntry: (entry: WorkEntry) => void;
   updateWorkEntry: (id: string, entry: Partial<WorkEntry>) => void;
   approveEntry: (id: string, approvedBy: string) => void;
   rejectEntry: (id: string, reason: string) => void;
   markAsPaid: (id: string) => void;
+  getNextContractNo: () => string;
+
+  // Subcontractor Hakedisler
+  subcontractorHakedisler: SubcontractorHakedis[];
+  addSubcontractorHakedis: (hakedis: SubcontractorHakedis) => void;
+  approveHakedis: (id: string, approvedBy: string) => void;
+  rejectHakedis: (id: string, reason: string) => void;
+  markHakedisAsPaid: (id: string) => void;
 
   // Subcontractors
   subcontractors: string[];
@@ -50,6 +60,8 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   workEntries: mockWorkEntries,
   users: mockUsers,
   subcontractors: defaultSubcontractors,
+  contractCounter: 1000,
+  subcontractorHakedisler: [],
 
   setCurrentUser: (user) => set({ currentUser: user }),
   
@@ -73,7 +85,14 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
     projects: state.projects.filter(p => p.id !== id)
   })),
 
-  // Work Entries
+  // Work Entries (Contracts)
+  getNextContractNo: () => {
+    const state = get();
+    const nextNo = state.contractCounter + 1;
+    set({ contractCounter: nextNo });
+    return `SZ-${nextNo}`;
+  },
+
   addWorkEntry: (entry) => set((state) => ({ 
     workEntries: [...state.workEntries, entry] 
   })),
@@ -124,8 +143,53 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
     )
   })),
 
+  // Subcontractor Hakedisler
+  addSubcontractorHakedis: (hakedis) => set((state) => ({
+    subcontractorHakedisler: [...state.subcontractorHakedisler, hakedis]
+  })),
+
+  approveHakedis: (id, approvedBy) => set((state) => ({
+    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+      h.id === id 
+        ? { 
+            ...h, 
+            approvalStatus: 'onaylandi' as ApprovalStatus, 
+            approvedBy, 
+            approvalDate: new Date().toISOString(),
+            updatedAt: new Date().toISOString() 
+          } 
+        : h
+    )
+  })),
+
+  rejectHakedis: (id, reason) => set((state) => ({
+    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+      h.id === id 
+        ? { 
+            ...h, 
+            approvalStatus: 'revize' as ApprovalStatus, 
+            rejectionReason: reason,
+            updatedAt: new Date().toISOString() 
+          } 
+        : h
+    )
+  })),
+
+  markHakedisAsPaid: (id) => set((state) => ({
+    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+      h.id === id 
+        ? { 
+            ...h, 
+            paymentStatus: 'odendi' as PaymentStatus, 
+            paidDate: new Date().toISOString(),
+            updatedAt: new Date().toISOString() 
+          } 
+        : h
+    )
+  })),
+
   // Subcontractors
   addSubcontractor: (name) => set((state) => ({
-    subcontractors: [...state.subcontractors, name]
+    subcontractors: [...state.subcontractors, name].sort()
   })),
 }));
