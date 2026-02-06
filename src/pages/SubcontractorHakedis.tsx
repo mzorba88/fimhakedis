@@ -15,9 +15,10 @@ import {
   Plus, 
   Search, 
   FileText,
-  X,
   Calculator,
-  Receipt
+  Receipt,
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 export default function SubcontractorHakedis() {
@@ -44,12 +56,16 @@ export default function SubcontractorHakedis() {
     workEntries,
     subcontractorHakedisler,
     addSubcontractorHakedis,
+    deleteSubcontractorHakedis,
     currentUser 
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedHakedis, setSelectedHakedis] = useState<HakedisType | null>(null);
   
   // Form state
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -290,6 +306,9 @@ export default function SubcontractorHakedis() {
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Ödeme Durumu
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    İşlemler
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -337,6 +356,20 @@ export default function SubcontractorHakedis() {
                         </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.paymentStatus} />
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedHakedis(hakedis);
+                              setIsDetailDialogOpen(true);
+                            }}
+                            className="gap-1"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Detay
+                          </Button>
                         </td>
                       </motion.tr>
                     );
@@ -553,6 +586,175 @@ export default function SubcontractorHakedis() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Detail Dialog */}
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Hakediş Detayı</DialogTitle>
+            </DialogHeader>
+            
+            {selectedHakedis && (
+              <div className="space-y-6 py-4">
+                {/* Header Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Hakediş No</p>
+                    <p className="font-medium">{selectedHakedis.hakedisNo}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Sözleşme No</p>
+                    <p className="font-medium">{selectedHakedis.contractNo}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Proje</p>
+                    <p className="font-medium">
+                      {projects.find(p => p.id === selectedHakedis.projectId)?.projectName || '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Altyüklenici</p>
+                    <p className="font-medium">{selectedHakedis.subcontractor}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
+                    <p className="font-medium">{contractTypeLabels[selectedHakedis.contractType]}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tarih</p>
+                    <p className="font-medium">{formatDate(selectedHakedis.date)}</p>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="flex gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Onay Durumu</p>
+                    <StatusBadge status={selectedHakedis.approvalStatus} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Ödeme Durumu</p>
+                    <StatusBadge status={selectedHakedis.paymentStatus} />
+                  </div>
+                </div>
+
+                {/* Rejection Reason */}
+                {selectedHakedis.rejectionReason && (
+                  <div className="rounded-lg border border-status-rejected/30 bg-status-rejected-bg p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Revize Nedeni</p>
+                    <p className="text-sm text-foreground">{selectedHakedis.rejectionReason}</p>
+                  </div>
+                )}
+
+                {/* Payment Amount for Götürü Bedel */}
+                {selectedHakedis.contractType === 'goturu_bedel' && selectedHakedis.paymentAmount && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Ödeme Tutarı</p>
+                    <p className="text-lg font-semibold">
+                      {formatCurrencyWithType(selectedHakedis.paymentAmount, selectedHakedis.currency)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Hakediş Items for Birim Fiyat */}
+                {selectedHakedis.hakedisItems && selectedHakedis.hakedisItems.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Hakediş Kalemleri</p>
+                    <div className="rounded-lg border divide-y">
+                      {selectedHakedis.hakedisItems.map((item, index) => (
+                        <div key={index} className="p-3 flex justify-between items-center">
+                          <div>
+                            <p className="font-medium text-sm">{item.workCategory}</p>
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.quantity} {item.unit} x {formatCurrencyWithType(item.unitPrice, selectedHakedis.currency)}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-sm">
+                            {formatCurrencyWithType(item.amount, selectedHakedis.currency)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Total */}
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span>Toplam Tutar</span>
+                    <span className="text-primary text-lg">
+                      {formatCurrencyWithType(selectedHakedis.totalAmount, selectedHakedis.currency)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                  <div>
+                    <p>Oluşturulma: {formatDate(selectedHakedis.createdAt)}</p>
+                  </div>
+                  {selectedHakedis.approvalDate && (
+                    <div>
+                      <p>Onay Tarihi: {formatDate(selectedHakedis.approvalDate)}</p>
+                    </div>
+                  )}
+                  {selectedHakedis.paidDate && (
+                    <div>
+                      <p>Ödeme Tarihi: {formatDate(selectedHakedis.paidDate)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setIsDetailDialogOpen(false);
+                  setIsDeleteDialogOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Sil
+              </Button>
+              <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
+                Kapat
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hakediş Kaydını Sil</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{selectedHakedis?.hakedisNo}</strong> numaralı hakediş kaydını silmek istediğinizden emin misiniz?
+                Bu işlem geri alınamaz.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (selectedHakedis) {
+                    deleteSubcontractorHakedis(selectedHakedis.id);
+                    toast.success('Hakediş kaydı silindi');
+                    setIsDeleteDialogOpen(false);
+                    setSelectedHakedis(null);
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Sil
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
