@@ -218,9 +218,9 @@ export default function WorkEntries() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Yapılan İşler</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Altyüklenici Sözleşmeleri</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Tüm yapılan iş kayıtlarını görüntüleyin ve yönetin
+              Tüm altyüklenici sözleşmelerini görüntüleyin ve yönetin
             </p>
           </div>
           <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
