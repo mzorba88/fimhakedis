@@ -47,6 +47,7 @@ export default function WorkEntries() {
     projects, 
     workEntries, 
     addWorkEntry,
+    getNextContractNo,
     subcontractors,
     addSubcontractor,
     currentUser 
@@ -171,8 +172,11 @@ export default function WorkEntries() {
 
     const amounts = calculateTotals();
 
+    const contractNo = getNextContractNo();
+
     const entry: WorkEntry = {
       id: `we${Date.now()}`,
+      contractNo,
       projectId: newEntry.projectId,
       workCategory: newEntry.workCategory,
       subcontractor: selectedSubcontractor,
@@ -273,7 +277,7 @@ export default function WorkEntries() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    İş Kalemi / Altyüklenici
+                    Sözleşme No / İş Kalemi
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proje
@@ -307,6 +311,7 @@ export default function WorkEntries() {
                       >
                         <td className="px-4 py-4">
                           <div className="max-w-xs">
+                            <p className="text-xs text-muted-foreground">{entry.contractNo}</p>
                             <p className="font-medium text-foreground truncate">
                               {entry.workCategory}
                             </p>

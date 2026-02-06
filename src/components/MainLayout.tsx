@@ -26,6 +26,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Projeler', href: '/projeler', icon: FolderKanban },
   { name: 'Altyüklenici Sözleşmeleri', href: '/yapilanisler', icon: ClipboardList },
+  { name: 'Altyüklenici Hakedişleri', href: '/hakedisler', icon: FileText },
   { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2 },
   { name: 'Ödemeler', href: '/odemeler', icon: Wallet },
   { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
