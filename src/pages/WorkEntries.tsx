@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 
   formatCurrencyWithType, 
@@ -72,6 +73,7 @@ export default function WorkEntries() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'desc' });
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -109,9 +111,46 @@ export default function WorkEntries() {
     return matchesSearch && matchesProject;
   });
 
-  const sortedEntries = [...filteredEntries].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const sortedEntries = useMemo(() => {
+    const sorted = [...filteredEntries];
+    if (!sortConfig.key || !sortConfig.direction) {
+      return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    
+    return sorted.sort((a, b) => {
+      const projectA = projects.find(p => p.id === a.projectId);
+      const projectB = projects.find(p => p.id === b.projectId);
+      
+      let comparison = 0;
+      switch (sortConfig.key) {
+        case 'project':
+          comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
+          break;
+        case 'workCategory':
+          comparison = a.workCategory.localeCompare(b.workCategory);
+          break;
+        case 'subcontractor':
+          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          break;
+        case 'date':
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'contractNo':
+          comparison = a.contractNo.localeCompare(b.contractNo);
+          break;
+        case 'contractType':
+          comparison = a.contractType.localeCompare(b.contractType);
+          break;
+        case 'totalAmount':
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredEntries, sortConfig, projects]);
 
   const calculateTotals = () => {
     let totalAmount = 0;
@@ -319,27 +358,13 @@ export default function WorkEntries() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Proje
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    İş Kalemi
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Altyüklenici
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Tarih
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Sözleşme No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Sözleşme Tipi
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Tutar
-                  </th>
+                  <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Sözleşme Tipi" sortKey="contractType" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     İşlem
                   </th>
