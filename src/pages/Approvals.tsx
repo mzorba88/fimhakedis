@@ -103,40 +103,50 @@ export default function Approvals() {
     });
   }, [filteredHakedisler, sortConfig, projects]);
 
-  const handleApproveHakedis = (hakedisId: string) => {
+  const handleApproveHakedis = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
-    approveHakedis(hakedisId, currentUser.id);
-    if (hakedis) {
-      addActivityLog(
-        'hakedis_approved',
-        `${hakedis.hakedisNo} hakediş onaylandı`,
-        `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
-        hakedisId,
-        'hakedis'
-      );
+    try {
+      await approveHakedis(hakedisId, currentUser.id);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_approved',
+          `${hakedis.hakedisNo} hakediş onaylandı`,
+          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+          hakedisId,
+          'hakedis'
+        );
+      }
+      toast.success('Hakediş onaylandı');
+    } catch (error) {
+      console.error('Error approving hakedis:', error);
+      toast.error('Hakediş onaylanamadı');
     }
-    toast.success('Hakediş onaylandı');
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedHakedisId || !rejectionReason.trim()) return;
     
     const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisId);
-    rejectHakedis(selectedHakedisId, rejectionReason);
-    if (hakedis) {
-      addActivityLog(
-        'hakedis_rejected',
-        `${hakedis.hakedisNo} hakediş revize için geri gönderildi`,
-        `Altyüklenici: ${hakedis.subcontractor} - Neden: ${rejectionReason}`,
-        selectedHakedisId,
-        'hakedis'
-      );
+    try {
+      await rejectHakedis(selectedHakedisId, rejectionReason);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_rejected',
+          `${hakedis.hakedisNo} hakediş revize için geri gönderildi`,
+          `Altyüklenici: ${hakedis.subcontractor} - Neden: ${rejectionReason}`,
+          selectedHakedisId,
+          'hakedis'
+        );
+      }
+      toast.info('Hakediş revize için geri gönderildi');
+      
+      setRejectDialogOpen(false);
+      setSelectedHakedisId(null);
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Error rejecting hakedis:', error);
+      toast.error('Hakediş reddedilemedi');
     }
-    toast.info('Hakediş revize için geri gönderildi');
-    
-    setRejectDialogOpen(false);
-    setSelectedHakedisId(null);
-    setRejectionReason('');
   };
 
   const openRejectDialog = (hakedisId: string) => {

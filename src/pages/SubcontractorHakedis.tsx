@@ -335,7 +335,7 @@ export default function SubcontractorHakedis() {
     return { exceeded: false, note: undefined };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
       toast.error('Lütfen tüm alanları doldurun');
       return;
@@ -385,77 +385,78 @@ export default function SubcontractorHakedis() {
       });
     }
 
-    if (isEditMode && editingHakedisId) {
-      // Check if editing a "revize" status hakedis - set it back to pending
-      const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
-      const shouldResetToOnayBekliyor = existingHakedis?.approvalStatus === 'revize';
+    try {
+      if (isEditMode && editingHakedisId) {
+        // Check if editing a "revize" status hakedis - set it back to pending
+        const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
+        const shouldResetToOnayBekliyor = existingHakedis?.approvalStatus === 'revize';
+        
+        // Update existing hakedis
+        await updateSubcontractorHakedis(editingHakedisId, {
+          vatRate: vatRate !== '' ? Number(vatRate) : undefined,
+          date: hakedisDate,
+          description: description || undefined,
+          paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
+          hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+          extraItems: extraItems.length > 0 ? extraItems : undefined,
+          totalAmount,
+          contractExceededNote: exceeded ? contractExceededNote : undefined,
+          // Reset approval status to pending if it was in revision
+          ...(shouldResetToOnayBekliyor && {
+            approvalStatus: 'onay_bekliyor' as const,
+            rejectionReason: undefined,
+          }),
+        });
+        await addActivityLog(
+          'hakedis_updated',
+          `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
+          `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
+          editingHakedisId,
+          'hakedis'
+        );
+        toast.success(shouldResetToOnayBekliyor ? 'Hakediş güncellendi ve onaya sunuldu' : 'Hakediş güncellendi');
+      } else {
+        // Generate hakediş number
+        const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
+        const hakedisNo = `${contract.contractNo}-H${(hakedisCount + 1).toString().padStart(2, '0')}`;
+
+        const newHakedis = await addSubcontractorHakedis({
+          hakedisNo,
+          projectId: selectedProjectId,
+          subcontractor: selectedSubcontractor,
+          contractId: selectedContractId,
+          contractNo: contract.contractNo,
+          contractType: contract.contractType,
+          currency: contract.currency,
+          vatRate: vatRate !== '' ? Number(vatRate) : undefined,
+          date: hakedisDate,
+          description: description || undefined,
+          paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
+          hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+          extraItems: extraItems.length > 0 ? extraItems : undefined,
+          totalAmount,
+          contractExceededNote: exceeded ? contractExceededNote : undefined,
+          createdBy: currentUser.id,
+          approvalStatus: 'onay_bekliyor',
+          paymentStatus: 'odenmedi',
+        });
+
+        await addActivityLog(
+          'hakedis_created',
+          `${newHakedis.hakedisNo} hakediş oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
+          `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
+          newHakedis.id,
+          'hakedis'
+        );
+        toast.success('Hakediş kaydı oluşturuldu');
+      }
       
-      // Update existing hakedis
-      updateSubcontractorHakedis(editingHakedisId, {
-        vatRate: vatRate !== '' ? Number(vatRate) : undefined,
-        date: hakedisDate,
-        description: description || undefined,
-        paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
-        hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-        extraItems: extraItems.length > 0 ? extraItems : undefined,
-        totalAmount,
-        contractExceededNote: exceeded ? contractExceededNote : undefined,
-        // Reset approval status to pending if it was in revision
-        ...(shouldResetToOnayBekliyor && {
-          approvalStatus: 'onay_bekliyor' as const,
-          rejectionReason: undefined,
-        }),
-      });
-      addActivityLog(
-        'hakedis_updated',
-        `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
-        `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
-        editingHakedisId,
-        'hakedis'
-      );
-      toast.success(shouldResetToOnayBekliyor ? 'Hakediş güncellendi ve onaya sunuldu' : 'Hakediş güncellendi');
-    } else {
-      // Generate hakediş number
-      const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
-      const hakedisNo = `${contract.contractNo}-H${(hakedisCount + 1).toString().padStart(2, '0')}`;
-
-      const newHakedis: HakedisType = {
-        id: crypto.randomUUID(),
-        hakedisNo,
-        projectId: selectedProjectId,
-        subcontractor: selectedSubcontractor,
-        contractId: selectedContractId,
-        contractNo: contract.contractNo,
-        contractType: contract.contractType,
-        currency: contract.currency,
-        vatRate: vatRate !== '' ? Number(vatRate) : undefined,
-        date: hakedisDate,
-        description: description || undefined,
-        paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
-        hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-        extraItems: extraItems.length > 0 ? extraItems : undefined,
-        totalAmount,
-        contractExceededNote: exceeded ? contractExceededNote : undefined,
-        createdBy: currentUser.id,
-        approvalStatus: 'onay_bekliyor',
-        paymentStatus: 'odenmedi',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      addSubcontractorHakedis(newHakedis);
-      addActivityLog(
-        'hakedis_created',
-        `${newHakedis.hakedisNo} hakediş oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
-        `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
-        newHakedis.id,
-        'hakedis'
-      );
-      toast.success('Hakediş kaydı oluşturuldu');
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving hakedis:', error);
+      toast.error('Hakediş kaydedilemedi');
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   return (
@@ -1466,12 +1467,17 @@ export default function SubcontractorHakedis() {
             <AlertDialogFooter>
               <AlertDialogCancel>İptal</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
+                onClick={async () => {
                   if (selectedHakedis) {
-                    deleteSubcontractorHakedis(selectedHakedis.id);
-                    toast.success('Hakediş kaydı silindi');
-                    setIsDeleteDialogOpen(false);
-                    setSelectedHakedis(null);
+                    try {
+                      await deleteSubcontractorHakedis(selectedHakedis.id);
+                      toast.success('Hakediş kaydı silindi');
+                      setIsDeleteDialogOpen(false);
+                      setSelectedHakedis(null);
+                    } catch (error) {
+                      console.error('Error deleting hakedis:', error);
+                      toast.error('Hakediş silinemedi');
+                    }
                   }
                 }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
