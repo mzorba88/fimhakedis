@@ -598,11 +598,31 @@ export default function SubcontractorHakedis() {
                       max={remainingAmount}
                     />
                     {paymentAmount && (
-                      <div className="rounded-lg border bg-accent/50 p-3 text-sm">
-                        <div className="flex justify-between font-semibold">
-                          <span>Toplam:</span>
-                          <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
+                      <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
+                        <div className="flex justify-between">
+                          <span>Ara Toplam</span>
+                          <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
                         </div>
+                        {vatRate !== '' && Number(vatRate) > 0 && (
+                          <>
+                            <div className="flex justify-between text-muted-foreground">
+                              <span>KDV (%{vatRate})</span>
+                              <span>{formatCurrencyWithType((parseFloat(paymentAmount) || 0) * Number(vatRate) / 100, selectedContract.currency)}</span>
+                            </div>
+                            <div className="border-t pt-2 flex justify-between">
+                              <span className="font-medium">KDV Dahil Toplam</span>
+                              <span className="font-semibold text-primary">
+                                {formatCurrencyWithType((parseFloat(paymentAmount) || 0) * (1 + Number(vatRate) / 100), selectedContract.currency)}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {(vatRate === '' || Number(vatRate) === 0) && (
+                          <div className="flex justify-between font-semibold">
+                            <span>Toplam</span>
+                            <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -645,11 +665,31 @@ export default function SubcontractorHakedis() {
                   </div>
 
                   {birimFiyatTotal > 0 && (
-                    <div className="rounded-lg border bg-accent/50 p-3 text-sm">
-                      <div className="flex justify-between font-semibold">
-                        <span>Toplam:</span>
-                        <span>{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
+                    <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span>Ara Toplam</span>
+                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
                       </div>
+                      {vatRate !== '' && Number(vatRate) > 0 && (
+                        <>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>KDV (%{vatRate})</span>
+                            <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, selectedContract.currency)}</span>
+                          </div>
+                          <div className="border-t pt-2 flex justify-between">
+                            <span className="font-medium">KDV Dahil Toplam</span>
+                            <span className="font-semibold text-primary">
+                              {formatCurrencyWithType(birimFiyatTotal * (1 + Number(vatRate) / 100), selectedContract.currency)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {(vatRate === '' || Number(vatRate) === 0) && (
+                        <div className="flex justify-between font-semibold">
+                          <span>Toplam</span>
+                          <span>{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

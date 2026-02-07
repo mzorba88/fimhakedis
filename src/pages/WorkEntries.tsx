@@ -741,13 +741,33 @@ export default function WorkEntries() {
               </div>
             )}
 
-            {/* Amount Preview */}
+            {/* Amount Preview with VAT */}
             {amounts.totalAmount > 0 && (
-              <div className="rounded-lg bg-muted/50 p-4">
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">Toplam</span>
-                  <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
+                  <span>Ara Toplam</span>
+                  <span className="font-medium">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
                 </div>
+                {newEntry.vatRate !== '' && Number(newEntry.vatRate) > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>KDV (%{newEntry.vatRate})</span>
+                      <span>{formatCurrencyWithType(amounts.totalAmount * Number(newEntry.vatRate) / 100, newEntry.currency)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between text-sm">
+                      <span className="font-medium">KDV Dahil Toplam</span>
+                      <span className="font-semibold text-primary">
+                        {formatCurrencyWithType(amounts.totalAmount * (1 + Number(newEntry.vatRate) / 100), newEntry.currency)}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {(newEntry.vatRate === '' || Number(newEntry.vatRate) === 0) && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Toplam</span>
+                    <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
