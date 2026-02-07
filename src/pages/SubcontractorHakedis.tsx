@@ -10,6 +10,7 @@ import {
   currencySymbols,
   SubcontractorHakedis as HakedisType,
   HakedisItem,
+  ExtraWorkItem,
   Currency
 } from '@/types/hakedis';
 import { generateHakedisPDF } from '@/utils/pdfGenerator';
@@ -21,7 +22,8 @@ import {
   Receipt,
   Eye,
   Trash2,
-  Pencil
+  Pencil,
+  PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -82,6 +84,14 @@ export default function SubcontractorHakedis() {
   const [selectedContractId, setSelectedContractId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [hakedisItems, setHakedisItems] = useState<HakedisItem[]>([]);
+  const [extraItems, setExtraItems] = useState<ExtraWorkItem[]>([]);
+  const [showAddExtraItem, setShowAddExtraItem] = useState(false);
+  const [newExtraItem, setNewExtraItem] = useState<Partial<ExtraWorkItem>>({
+    description: '',
+    unit: '',
+    unitPrice: 0,
+    quantity: 0
+  });
   const [hakedisDate, setHakedisDate] = useState(new Date().toISOString().split('T')[0]);
   const [vatRate, setVatRate] = useState<string>('10');
   const [description, setDescription] = useState<string>('');
@@ -124,10 +134,12 @@ export default function SubcontractorHakedis() {
     return selectedContract.totalAmount - paidAmountForContract;
   }, [selectedContract, paidAmountForContract]);
 
-  // Calculate totals for birim fiyat
+  // Calculate totals for birim fiyat (including extra items)
   const birimFiyatTotal = useMemo(() => {
-    return hakedisItems.reduce((sum, item) => sum + item.amount, 0);
-  }, [hakedisItems]);
+    const contractItemsTotal = hakedisItems.reduce((sum, item) => sum + item.amount, 0);
+    const extraItemsTotal = extraItems.reduce((sum, item) => sum + item.amount, 0);
+    return contractItemsTotal + extraItemsTotal;
+  }, [hakedisItems, extraItems]);
 
   // Filtered hakedisler
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
@@ -194,6 +206,9 @@ export default function SubcontractorHakedis() {
     setSelectedContractId('');
     setPaymentAmount('');
     setHakedisItems([]);
+    setExtraItems([]);
+    setShowAddExtraItem(false);
+    setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 });
     setHakedisDate(new Date().toISOString().split('T')[0]);
     setVatRate('10');
     setDescription('');
@@ -217,8 +232,10 @@ export default function SubcontractorHakedis() {
         amount: 0
       }));
       setHakedisItems(items);
+      setExtraItems([]);
     } else {
       setHakedisItems([]);
+      setExtraItems([]);
     }
     setPaymentAmount('');
   };
@@ -273,6 +290,12 @@ export default function SubcontractorHakedis() {
         });
         setHakedisItems(items);
       }
+      // Restore extra items if any
+      if (hakedis.extraItems) {
+        setExtraItems(hakedis.extraItems);
+      } else {
+        setExtraItems([]);
+      }
     }
 
     setIsEditMode(true);
@@ -326,6 +349,7 @@ export default function SubcontractorHakedis() {
         description: description || undefined,
         paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+        extraItems: contract.contractType === 'birim_fiyat' && extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
         // Reset approval status to pending if it was in revision
         ...(shouldResetToOnayBekliyor && {
@@ -360,6 +384,7 @@ export default function SubcontractorHakedis() {
         description: description || undefined,
         paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+        extraItems: contract.contractType === 'birim_fiyat' && extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
         createdBy: currentUser.id,
         approvalStatus: 'onay_bekliyor',
@@ -795,6 +820,148 @@ export default function SubcontractorHakedis() {
                     ))}
                   </div>
 
+                  {/* Extra Work Items */}
+                  {extraItems.length > 0 && (
+                    <div className="space-y-3 mt-4">
+                      <Label className="text-amber-600">Sözleşme Harici Ek İşler</Label>
+                      {extraItems.map((item) => (
+                        <div key={item.id} className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{item.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setExtraItems(items => items.filter(i => i.id !== item.id))}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Extra Work Item Button */}
+                  {!showAddExtraItem && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                      onClick={() => setShowAddExtraItem(true)}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Sözleşme Harici Ek İş Ekle
+                    </Button>
+                  )}
+
+                  {/* Add Extra Work Item Form */}
+                  {showAddExtraItem && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-amber-700 font-semibold">Yeni Ek İş Kalemi</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddExtraItem(false);
+                            setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 });
+                          }}
+                        >
+                          İptal
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm">İş Açıklaması</Label>
+                          <Input
+                            placeholder="Örn: Ek boya işleri"
+                            value={newExtraItem.description || ''}
+                            onChange={(e) => setNewExtraItem(prev => ({ ...prev, description: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Miktar</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={newExtraItem.quantity || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim</Label>
+                            <Input
+                              placeholder="m², adet, kg..."
+                              value={newExtraItem.unit || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, unit: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={newExtraItem.unitPrice || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Calculated Total */}
+                        {(newExtraItem.quantity || 0) > 0 && (newExtraItem.unitPrice || 0) > 0 && (
+                          <div className="rounded-lg bg-amber-100 p-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-amber-700">Toplam Tutar:</span>
+                              <span className="font-bold text-amber-900">
+                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          type="button"
+                          className="w-full"
+                          disabled={!newExtraItem.description || !newExtraItem.unit || !newExtraItem.quantity || !newExtraItem.unitPrice}
+                          onClick={() => {
+                            const amount = (newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0);
+                            const extraItem: ExtraWorkItem = {
+                              id: crypto.randomUUID(),
+                              description: newExtraItem.description || '',
+                              unit: newExtraItem.unit || '',
+                              unitPrice: newExtraItem.unitPrice || 0,
+                              quantity: newExtraItem.quantity || 0,
+                              amount
+                            };
+                            setExtraItems(items => [...items, extraItem]);
+                            setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 });
+                            setShowAddExtraItem(false);
+                            toast.success('Ek iş kalemi eklendi');
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ek İş Kalemini Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {birimFiyatTotal > 0 && (
                     <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
                       <div className="flex justify-between">
@@ -927,6 +1094,28 @@ export default function SubcontractorHakedis() {
                             </p>
                           </div>
                           <p className="font-semibold text-sm">
+                            {formatCurrencyWithType(item.amount, selectedHakedis.currency)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Extra Work Items for Birim Fiyat */}
+                {selectedHakedis.extraItems && selectedHakedis.extraItems.length > 0 && (
+                  <div>
+                    <p className="text-xs text-amber-600 mb-2 font-medium">Sözleşme Harici Ek İşler</p>
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/50 divide-y divide-amber-200">
+                      {selectedHakedis.extraItems.map((item, index) => (
+                        <div key={index} className="p-3 flex justify-between items-center">
+                          <div>
+                            <p className="font-medium text-sm">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.quantity} {item.unit} x {formatCurrencyWithType(item.unitPrice, selectedHakedis.currency)}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-sm text-amber-700">
                             {formatCurrencyWithType(item.amount, selectedHakedis.currency)}
                           </p>
                         </div>
