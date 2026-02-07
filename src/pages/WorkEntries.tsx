@@ -31,6 +31,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -93,6 +94,7 @@ export default function WorkEntries() {
     date: new Date().toISOString().split('T')[0],
     currency: 'TRY' as Currency,
     vatRate: '10' as string | number,
+    description: '',
   });
 
   // Götürü Bedel - Payment Plan
@@ -241,6 +243,7 @@ export default function WorkEntries() {
         date: newEntry.date,
         currency: newEntry.currency,
         vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+        description: newEntry.description || undefined,
         paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
         workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
         totalAmount: amounts.totalAmount,
@@ -260,6 +263,7 @@ export default function WorkEntries() {
         date: newEntry.date,
         currency: newEntry.currency,
         vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+        description: newEntry.description || undefined,
         paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
         workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
         createdBy: currentUser.id,
@@ -289,6 +293,7 @@ export default function WorkEntries() {
       date: entry.date,
       currency: entry.currency,
       vatRate: entry.vatRate ?? '',
+      description: entry.description || '',
     });
     setPaymentPlan(entry.paymentPlan || []);
     setWorkItemEntries(entry.workItemEntries || []);
@@ -309,6 +314,7 @@ export default function WorkEntries() {
       date: new Date().toISOString().split('T')[0],
       currency: 'TRY',
       vatRate: '10',
+      description: '',
     });
     setPaymentPlan([]);
     setWorkItemEntries([]);
@@ -643,6 +649,17 @@ export default function WorkEntries() {
               </div>
             </div>
 
+            {/* Contract Description */}
+            <div className="space-y-2">
+              <Label>Sözleşme Açıklaması</Label>
+              <Textarea
+                placeholder="Sözleşme ile ilgili notlarınızı buraya yazabilirsiniz..."
+                value={newEntry.description}
+                onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+
             {/* Contract File Upload */}
             <div className="space-y-2">
               <Label>Sözleşme Dosyası</Label>
@@ -834,6 +851,16 @@ export default function WorkEntries() {
                   <p className="text-sm font-medium">{selectedEntry.subcontractor}</p>
                 </div>
               </div>
+
+              {/* Contract Description */}
+              {selectedEntry.description && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Sözleşme Açıklaması</p>
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{selectedEntry.description}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Contract File */}
               {selectedEntry.contractFile && (
