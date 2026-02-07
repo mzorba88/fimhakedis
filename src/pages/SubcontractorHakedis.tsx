@@ -536,12 +536,24 @@ export default function SubcontractorHakedis() {
                         className="group hover:bg-muted/30"
                       >
                         <td className="px-4 py-4">
-                          <p className="font-medium text-foreground">
-                            {hakedis.hakedisNo}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {contractTypeLabels[hakedis.contractType]}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="font-medium text-foreground">
+                                {hakedis.hakedisNo}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {contractTypeLabels[hakedis.contractType]}
+                              </p>
+                            </div>
+                            {hakedis.contractExceededNote && (
+                              <div className="group relative">
+                                <AlertTriangle className="h-5 w-5 text-destructive animate-pulse" />
+                                <div className="absolute left-0 top-full z-50 mt-1 hidden w-64 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
+                                  Sözleşme tutarı aşıldı
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-sm font-medium text-foreground">
