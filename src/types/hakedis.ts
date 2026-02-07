@@ -223,7 +223,7 @@ export const currencySymbols: Record<Currency, string> = {
 };
 
 export const roleLabels: Record<UserRole, string> = {
-  saha_sorumlusu: 'Saha Sorumlusu',
+  saha_sorumlusu: 'Şantiye Yöneticisi',
   direktor: 'Direktör',
   muhasebe: 'Muhasebe',
 };
