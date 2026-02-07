@@ -6,6 +6,7 @@ export type ActivityType =
   | 'contract_updated'
   | 'contract_deleted'
   | 'hakedis_created'
+  | 'hakedis_updated'
   | 'hakedis_approved'
   | 'hakedis_rejected'
   | 'hakedis_paid'
@@ -33,6 +34,7 @@ export const activityTypeLabels: Record<ActivityType, string> = {
   contract_updated: 'Sözleşme Güncellendi',
   contract_deleted: 'Sözleşme Silindi',
   hakedis_created: 'Hakediş Oluşturuldu',
+  hakedis_updated: 'Hakediş Güncellendi',
   hakedis_approved: 'Hakediş Onaylandı',
   hakedis_rejected: 'Hakediş Reddedildi',
   hakedis_paid: 'Hakediş Ödendi',
@@ -48,6 +50,7 @@ export const activityTypeIcons: Record<ActivityType, string> = {
   contract_updated: 'FileEdit',
   contract_deleted: 'FileMinus',
   hakedis_created: 'FileText',
+  hakedis_updated: 'FileEdit',
   hakedis_approved: 'CheckCircle',
   hakedis_rejected: 'XCircle',
   hakedis_paid: 'Wallet',
