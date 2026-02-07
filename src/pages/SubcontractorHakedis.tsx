@@ -748,14 +748,46 @@ export default function SubcontractorHakedis() {
                   </div>
                 )}
 
-                {/* Total */}
-                <div className="rounded-lg bg-muted/50 p-4">
+                {/* Total and Payment Summary */}
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                   <div className="flex justify-between text-sm font-semibold">
-                    <span>Toplam Tutar</span>
+                    <span>Bu Hakediş Tutarı</span>
                     <span className="text-primary text-lg">
                       {formatCurrencyWithType(selectedHakedis.totalAmount, selectedHakedis.currency)}
                     </span>
                   </div>
+                  {(() => {
+                    const contract = workEntries.find(e => e.id === selectedHakedis.contractId);
+                    if (!contract) return null;
+                    
+                    const totalPaid = subcontractorHakedisler
+                      .filter(h => h.contractId === selectedHakedis.contractId)
+                      .reduce((sum, h) => sum + h.totalAmount, 0);
+                    const remainingBalance = contract.totalAmount - totalPaid;
+                    
+                    return (
+                      <>
+                        <div className="border-t pt-2 mt-2 space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Sözleşme Tutarı</span>
+                            <span className="font-medium">{formatCurrencyWithType(contract.totalAmount, contract.currency)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Toplam Ödenen</span>
+                            <span className="text-green-600 font-medium">{formatCurrencyWithType(totalPaid, contract.currency)}</span>
+                          </div>
+                          {selectedHakedis.contractType === 'goturu_bedel' && (
+                            <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                              <span className="font-semibold">Kalan Bakiye</span>
+                              <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                                {formatCurrencyWithType(remainingBalance, contract.currency)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Dates */}
