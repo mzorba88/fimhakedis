@@ -92,7 +92,7 @@ export default function WorkEntries() {
     contractType: 'birim_fiyat' as ContractType,
     date: new Date().toISOString().split('T')[0],
     currency: 'TRY' as Currency,
-    vatRate: '' as string | number,
+    vatRate: '10' as string | number,
   });
 
   // Götürü Bedel - Payment Plan
@@ -308,7 +308,7 @@ export default function WorkEntries() {
       contractType: 'birim_fiyat',
       date: new Date().toISOString().split('T')[0],
       currency: 'TRY',
-      vatRate: '',
+      vatRate: '10',
     });
     setPaymentPlan([]);
     setWorkItemEntries([]);
