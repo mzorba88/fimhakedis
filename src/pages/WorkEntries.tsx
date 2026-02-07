@@ -91,6 +91,7 @@ export default function WorkEntries() {
     contractType: 'birim_fiyat' as ContractType,
     date: new Date().toISOString().split('T')[0],
     currency: 'TRY' as Currency,
+    vatRate: '' as string | number,
   });
 
   // Götürü Bedel - Payment Plan
@@ -238,6 +239,7 @@ export default function WorkEntries() {
         contractType: newEntry.contractType,
         date: newEntry.date,
         currency: newEntry.currency,
+        vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
         paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
         workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
         totalAmount: amounts.totalAmount,
@@ -256,6 +258,7 @@ export default function WorkEntries() {
         contractType: newEntry.contractType,
         date: newEntry.date,
         currency: newEntry.currency,
+        vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
         paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
         workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
         createdBy: currentUser.id,
@@ -284,6 +287,7 @@ export default function WorkEntries() {
       contractType: entry.contractType,
       date: entry.date,
       currency: entry.currency,
+      vatRate: entry.vatRate ?? '',
     });
     setPaymentPlan(entry.paymentPlan || []);
     setWorkItemEntries(entry.workItemEntries || []);
@@ -303,6 +307,7 @@ export default function WorkEntries() {
       contractType: 'birim_fiyat',
       date: new Date().toISOString().split('T')[0],
       currency: 'TRY',
+      vatRate: '',
     });
     setPaymentPlan([]);
     setWorkItemEntries([]);
@@ -598,14 +603,30 @@ export default function WorkEntries() {
               </div>
             </div>
 
-            {/* Date */}
-            <div className="space-y-2">
-              <Label>Tarih</Label>
-              <Input
-                type="date"
-                value={newEntry.date}
-                onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
-              />
+            {/* VAT Rate and Date */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* VAT Rate */}
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <Input
+                  type="number"
+                  placeholder="Örn: 20"
+                  min="0"
+                  max="100"
+                  value={newEntry.vatRate}
+                  onChange={(e) => setNewEntry({ ...newEntry, vatRate: e.target.value })}
+                />
+              </div>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <Label>Tarih</Label>
+                <Input
+                  type="date"
+                  value={newEntry.date}
+                  onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
+                />
+              </div>
             </div>
 
             {/* Contract File Upload */}
