@@ -82,6 +82,7 @@ export interface WorkEntry {
   subcontractor: string;
   contractType: ContractType;
   contractFile?: string;
+  description?: string; // Contract description/notes
   date: string;
   currency: Currency;
   vatRate?: number; // Custom VAT rate percentage (e.g., 20 for 20%)
