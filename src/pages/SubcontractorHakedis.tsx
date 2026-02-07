@@ -271,7 +271,15 @@ export default function SubcontractorHakedis() {
     setDescription(hakedis.description || '');
     
     if (contract.contractType === 'goturu_bedel') {
-      setPaymentAmount(String(hakedis.totalAmount));
+      // For götürü bedel, set payment amount (subtract extra items if any)
+      const extraTotal = hakedis.extraItems?.reduce((sum, i) => sum + i.amount, 0) || 0;
+      setPaymentAmount(String(hakedis.paymentAmount || (hakedis.totalAmount - extraTotal)));
+      // Restore extra items if any
+      if (hakedis.extraItems) {
+        setExtraItems(hakedis.extraItems);
+      } else {
+        setExtraItems([]);
+      }
     } else if (hakedis.hakedisItems) {
       // For birim fiyat, restore the items with their quantities
       if (contract.workItemEntries) {
@@ -314,10 +322,12 @@ export default function SubcontractorHakedis() {
     if (!contract) return;
 
     let totalAmount = 0;
+    const extraItemsTotal = extraItems.reduce((sum, i) => sum + i.amount, 0);
+    
     if (contract.contractType === 'goturu_bedel') {
-      totalAmount = parseFloat(paymentAmount) || 0;
-      if (totalAmount <= 0) {
-        toast.error('Lütfen geçerli bir ödeme tutarı girin');
+      const paymentBase = parseFloat(paymentAmount) || 0;
+      if (paymentBase <= 0 && extraItemsTotal <= 0) {
+        toast.error('Lütfen geçerli bir ödeme tutarı girin veya ek iş ekleyin');
         return;
       }
       // For edit mode, add current hakedis amount back to remaining
@@ -325,10 +335,11 @@ export default function SubcontractorHakedis() {
         ? subcontractorHakedisler.find(h => h.id === editingHakedisId)?.totalAmount || 0 
         : 0;
       const adjustedRemaining = remainingAmount + currentHakedisAmount;
-      if (totalAmount > adjustedRemaining) {
+      if (paymentBase > adjustedRemaining) {
         toast.error('Ödeme tutarı kalan tutardan fazla olamaz');
         return;
       }
+      totalAmount = paymentBase + extraItemsTotal;
     } else {
       totalAmount = birimFiyatTotal;
       if (totalAmount <= 0) {
@@ -347,9 +358,9 @@ export default function SubcontractorHakedis() {
         vatRate: vatRate !== '' ? Number(vatRate) : undefined,
         date: hakedisDate,
         description: description || undefined,
-        paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
+        paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-        extraItems: contract.contractType === 'birim_fiyat' && extraItems.length > 0 ? extraItems : undefined,
+        extraItems: extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
         // Reset approval status to pending if it was in revision
         ...(shouldResetToOnayBekliyor && {
@@ -382,9 +393,9 @@ export default function SubcontractorHakedis() {
         vatRate: vatRate !== '' ? Number(vatRate) : undefined,
         date: hakedisDate,
         description: description || undefined,
-        paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
+        paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-        extraItems: contract.contractType === 'birim_fiyat' && extraItems.length > 0 ? extraItems : undefined,
+        extraItems: extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
         createdBy: currentUser.id,
         approvalStatus: 'onay_bekliyor',
@@ -782,6 +793,182 @@ export default function SubcontractorHakedis() {
                       </div>
                     )}
                   </div>
+
+                  {/* Extra Work Items for Götürü Bedel */}
+                  {extraItems.length > 0 && (
+                    <div className="space-y-3 mt-4">
+                      <Label className="text-amber-600">Sözleşme Harici Ek İşler</Label>
+                      {extraItems.map((item) => (
+                        <div key={item.id} className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{item.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setExtraItems(items => items.filter(i => i.id !== item.id))}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Extra Work Item Button for Götürü Bedel */}
+                  {!showAddExtraItem && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                      onClick={() => setShowAddExtraItem(true)}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Sözleşme Harici Ek İş Ekle
+                    </Button>
+                  )}
+
+                  {/* Add Extra Work Item Form for Götürü Bedel */}
+                  {showAddExtraItem && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-amber-700 font-semibold">Yeni Ek İş Kalemi</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddExtraItem(false);
+                            setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 });
+                          }}
+                        >
+                          İptal
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm">İş Açıklaması</Label>
+                          <Input
+                            placeholder="Örn: Ek boya işleri"
+                            value={newExtraItem.description || ''}
+                            onChange={(e) => setNewExtraItem(prev => ({ ...prev, description: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Miktar</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={newExtraItem.quantity || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim</Label>
+                            <Input
+                              placeholder="m², adet, kg..."
+                              value={newExtraItem.unit || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, unit: e.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={newExtraItem.unitPrice || ''}
+                              onChange={(e) => setNewExtraItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Calculated Total */}
+                        {(newExtraItem.quantity || 0) > 0 && (newExtraItem.unitPrice || 0) > 0 && (
+                          <div className="rounded-lg bg-amber-100 p-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-amber-700">Toplam Tutar:</span>
+                              <span className="font-bold text-amber-900">
+                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          type="button"
+                          className="w-full"
+                          disabled={!newExtraItem.description || !newExtraItem.unit || !newExtraItem.quantity || !newExtraItem.unitPrice}
+                          onClick={() => {
+                            const amount = (newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0);
+                            const extraItem: ExtraWorkItem = {
+                              id: crypto.randomUUID(),
+                              description: newExtraItem.description || '',
+                              unit: newExtraItem.unit || '',
+                              unitPrice: newExtraItem.unitPrice || 0,
+                              quantity: newExtraItem.quantity || 0,
+                              amount
+                            };
+                            setExtraItems(items => [...items, extraItem]);
+                            setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 });
+                            setShowAddExtraItem(false);
+                            toast.success('Ek iş kalemi eklendi');
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Ek İş Kalemini Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Updated Summary with Extra Items for Götürü Bedel */}
+                  {extraItems.length > 0 && (
+                    <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span>Sözleşme Ödemesi</span>
+                        <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-amber-600">
+                        <span>Ek İşler Toplamı</span>
+                        <span className="font-medium">{formatCurrencyWithType(extraItems.reduce((sum, i) => sum + i.amount, 0), selectedContract.currency)}</span>
+                      </div>
+                      <div className="border-t pt-2 flex justify-between">
+                        <span className="font-medium">Ara Toplam</span>
+                        <span className="font-semibold">
+                          {formatCurrencyWithType((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0), selectedContract.currency)}
+                        </span>
+                      </div>
+                      {vatRate !== '' && Number(vatRate) > 0 && (
+                        <>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>KDV (%{vatRate})</span>
+                            <span>{formatCurrencyWithType(((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0)) * Number(vatRate) / 100, selectedContract.currency)}</span>
+                          </div>
+                          <div className="border-t pt-2 flex justify-between">
+                            <span className="font-medium">KDV Dahil Toplam</span>
+                            <span className="font-semibold text-primary">
+                              {formatCurrencyWithType(((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0)) * (1 + Number(vatRate) / 100), selectedContract.currency)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
