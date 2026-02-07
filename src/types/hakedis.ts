@@ -131,6 +131,8 @@ export interface SubcontractorHakedis {
   paidDate?: string;
   createdAt: string;
   updatedAt: string;
+  // Warning note when total hakedis exceeds contract amount
+  contractExceededNote?: string;
 }
 
 // Hakediş item for Birim Fiyat contracts

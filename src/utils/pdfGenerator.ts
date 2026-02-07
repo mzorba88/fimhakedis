@@ -419,6 +419,17 @@ export const generateHakedisPDF = async (
       </table>
     </div>
     
+    ${hakedis.contractExceededNote ? `
+    <div style="margin-bottom: 25px; padding: 15px; background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px;">
+      <h2 style="font-size: 16px; margin-bottom: 10px; color: #dc2626; display: flex; align-items: center; gap: 8px;">
+        ⚠️ UYARI
+      </h2>
+      <p style="font-size: 13px; color: #991b1b; margin: 0; font-weight: bold;">
+        ${hakedis.contractExceededNote}
+      </p>
+    </div>
+    ` : ''}
+    
     ${contractSummaryHtml}
     
     <div style="display: flex; justify-content: space-between; margin-top: 60px;">

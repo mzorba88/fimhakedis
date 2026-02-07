@@ -23,7 +23,8 @@ import {
   Eye,
   Trash2,
   Pencil,
-  PlusCircle
+  PlusCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -312,6 +313,28 @@ export default function SubcontractorHakedis() {
     setIsDialogOpen(true);
   };
 
+  // Check if contract amount is exceeded
+  const checkContractExceeded = (newTotalAmount: number, contractId: string, editingId?: string | null) => {
+    const contract = workEntries.find(e => e.id === contractId);
+    if (!contract) return { exceeded: false, note: undefined };
+
+    // Calculate total hakedis amount for this contract (excluding current if editing)
+    const existingHakedisTotal = subcontractorHakedisler
+      .filter(h => h.contractId === contractId && h.id !== editingId)
+      .reduce((sum, h) => sum + h.totalAmount, 0);
+
+    const totalHakedisAmount = existingHakedisTotal + newTotalAmount;
+    const contractAmount = contract.totalAmount;
+
+    if (totalHakedisAmount > contractAmount) {
+      const exceededAmount = totalHakedisAmount - contractAmount;
+      const note = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contractAmount, contract.currency)}, Toplam Hakediş: ${formatCurrencyWithType(totalHakedisAmount, contract.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceededAmount, contract.currency)}`;
+      return { exceeded: true, note };
+    }
+
+    return { exceeded: false, note: undefined };
+  };
+
   const handleSubmit = () => {
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
       toast.error('Lütfen tüm alanları doldurun');
@@ -348,6 +371,20 @@ export default function SubcontractorHakedis() {
       }
     }
 
+    // Check if contract amount is exceeded
+    const { exceeded, note: contractExceededNote } = checkContractExceeded(
+      totalAmount, 
+      selectedContractId, 
+      isEditMode ? editingHakedisId : null
+    );
+
+    // Show warning if exceeded (but don't block)
+    if (exceeded && contractExceededNote) {
+      toast.warning('⚠️ SÖZLEŞME TUTARI MİKTARI AŞILDI - Bu bilgi rapora not olarak eklenecektir.', {
+        duration: 5000,
+      });
+    }
+
     if (isEditMode && editingHakedisId) {
       // Check if editing a "revize" status hakedis - set it back to pending
       const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
@@ -362,6 +399,7 @@ export default function SubcontractorHakedis() {
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
         extraItems: extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
+        contractExceededNote: exceeded ? contractExceededNote : undefined,
         // Reset approval status to pending if it was in revision
         ...(shouldResetToOnayBekliyor && {
           approvalStatus: 'onay_bekliyor' as const,
@@ -370,7 +408,7 @@ export default function SubcontractorHakedis() {
       });
       addActivityLog(
         'hakedis_updated',
-        `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}`,
+        `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
         `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
         editingHakedisId,
         'hakedis'
@@ -397,6 +435,7 @@ export default function SubcontractorHakedis() {
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
         extraItems: extraItems.length > 0 ? extraItems : undefined,
         totalAmount,
+        contractExceededNote: exceeded ? contractExceededNote : undefined,
         createdBy: currentUser.id,
         approvalStatus: 'onay_bekliyor',
         paymentStatus: 'odenmedi',
@@ -407,7 +446,7 @@ export default function SubcontractorHakedis() {
       addSubcontractorHakedis(newHakedis);
       addActivityLog(
         'hakedis_created',
-        `${newHakedis.hakedisNo} hakediş oluşturuldu`,
+        `${newHakedis.hakedisNo} hakediş oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
         `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
         newHakedis.id,
         'hakedis'
@@ -1253,6 +1292,17 @@ export default function SubcontractorHakedis() {
                   <div className="rounded-lg border border-status-rejected/30 bg-status-rejected-bg p-4">
                     <p className="text-xs text-muted-foreground mb-1">Revize Nedeni</p>
                     <p className="text-sm text-foreground">{selectedHakedis.rejectionReason}</p>
+                  </div>
+                )}
+
+                {/* Contract Exceeded Warning */}
+                {selectedHakedis.contractExceededNote && (
+                  <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      <p className="font-semibold text-destructive">UYARI</p>
+                    </div>
+                    <p className="text-sm text-foreground">{selectedHakedis.contractExceededNote}</p>
                   </div>
                 )}
 
