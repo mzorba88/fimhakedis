@@ -322,11 +322,8 @@ function ProjectGrid({
                   </div>
                   <div>
                     <h3 className="font-medium text-foreground line-clamp-2">
-                      {project.projectName}
+                      {project.projectCode} - {project.projectName}
                     </h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {project.projectCode}
-                    </p>
                   </div>
                 </div>
                 <DropdownMenu>
