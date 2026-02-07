@@ -1,17 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
 import { 
   Search, 
   Wallet,
-  CheckCircle2,
   Clock,
   AlertTriangle,
   Banknote,
-  FileDown
+  FileDown,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,23 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import formanLogo from '@/assets/forman-logo.png';
+
+// Exchange rate types
+type ExchangeRates = {
+  [key: string]: number;
+};
+
+const fetchExchangeRates = async (): Promise<ExchangeRates> => {
+  try {
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/GBP');
+    if (!response.ok) throw new Error('Failed to fetch exchange rates');
+    const data = await response.json();
+    return data.rates;
+  } catch (error) {
+    console.error('Error fetching exchange rates:', error);
+    return {};
+  }
+};
 
 export default function Payments() {
   const { 
@@ -99,12 +116,47 @@ export default function Payments() {
     });
   }, [filteredHakedisler, sortConfig, projects]);
 
-  // Summary Stats for hakedisler
-  const totalApprovedHakedis = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
-  const totalPaidHakedis = approvedHakedisler
-    .filter(h => h.paymentStatus === 'odendi')
-    .reduce((sum, h) => sum + h.totalAmount, 0);
-  const totalUnpaidHakedis = totalApprovedHakedis - totalPaidHakedis;
+  // Exchange rates state
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({});
+  const [isLoadingRates, setIsLoadingRates] = useState(true);
+
+  // Fetch exchange rates on mount
+  useEffect(() => {
+    const loadRates = async () => {
+      setIsLoadingRates(true);
+      const rates = await fetchExchangeRates();
+      setExchangeRates(rates);
+      setIsLoadingRates(false);
+    };
+    loadRates();
+  }, []);
+
+  const refreshRates = async () => {
+    setIsLoadingRates(true);
+    const rates = await fetchExchangeRates();
+    setExchangeRates(rates);
+    setIsLoadingRates(false);
+    toast.success('Döviz kurları güncellendi');
+  };
+
+  // Calculate total unpaid in GBP
+  const totalUnpaidGBP = useMemo(() => {
+    const unpaidHakedisler = approvedHakedisler.filter(h => h.paymentStatus === 'odenmedi');
+    
+    return unpaidHakedisler.reduce((sum, h) => {
+      const currency = h.currency as Currency;
+      let amountInGBP = h.totalAmount;
+      
+      if (currency === 'GBP') {
+        amountInGBP = h.totalAmount;
+      } else if (exchangeRates[currency]) {
+        // Convert from currency to GBP: amount / rate
+        amountInGBP = h.totalAmount / exchangeRates[currency];
+      }
+      
+      return sum + amountInGBP;
+    }, 0);
+  }, [approvedHakedisler, exchangeRates]);
 
   const handleMarkHakedisAsPaid = (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
@@ -296,55 +348,42 @@ export default function Payments() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* Summary Card - Only Pending Payments */}
+        <div className="grid grid-cols-1 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="stat-card"
           >
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-accent p-2.5">
-                <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-status-pending-bg p-2.5">
+                  <Clock className="h-5 w-5 text-status-pending" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Bekleyen Ödeme (GBP)</p>
+                  <p className="text-xl font-semibold text-status-pending">
+                    {isLoadingRates ? (
+                      <span className="text-muted-foreground">Yükleniyor...</span>
+                    ) : (
+                      `£${totalUnpaidGBP.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {approvedHakedisler.filter(h => h.paymentStatus === 'odenmedi').length} adet bekleyen hakediş
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Onaylanan Hakedişler</p>
-                <p className="text-xl font-semibold">{formatCurrency(totalApprovedHakedis)}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="stat-card"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-status-paid-bg p-2.5">
-                <Wallet className="h-5 w-5 text-status-paid" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ödenen Toplam</p>
-                <p className="text-xl font-semibold text-status-paid">{formatCurrency(totalPaidHakedis)}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="stat-card"
-          >
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-status-pending-bg p-2.5">
-                <Clock className="h-5 w-5 text-status-pending" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Bekleyen Ödeme</p>
-                <p className="text-xl font-semibold text-status-pending">{formatCurrency(totalUnpaidHakedis)}</p>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshRates}
+                disabled={isLoadingRates}
+                className="gap-1.5"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoadingRates ? 'animate-spin' : ''}`} />
+                Kurları Güncelle
+              </Button>
             </div>
           </motion.div>
         </div>
