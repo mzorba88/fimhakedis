@@ -84,6 +84,7 @@ export interface WorkEntry {
   contractFile?: string;
   date: string;
   currency: Currency;
+  vatRate?: number; // Custom VAT rate percentage (e.g., 20 for 20%)
   // For Götürü Bedel
   paymentPlan?: PaymentInstallment[];
   // For Birim Fiyat
@@ -110,6 +111,7 @@ export interface SubcontractorHakedis {
   contractNo: string;
   contractType: ContractType;
   currency: Currency;
+  vatRate?: number; // Custom VAT rate percentage (e.g., 20 for 20%)
   date: string;
   // For Götürü Bedel - payment amount
   paymentAmount?: number;

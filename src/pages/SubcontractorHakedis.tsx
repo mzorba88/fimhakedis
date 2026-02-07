@@ -77,6 +77,7 @@ export default function SubcontractorHakedis() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [hakedisItems, setHakedisItems] = useState<HakedisItem[]>([]);
   const [hakedisDate, setHakedisDate] = useState(new Date().toISOString().split('T')[0]);
+  const [vatRate, setVatRate] = useState<string>('');
 
   // Get unique subcontractors from contracts
   const contractSubcontractors = useMemo(() => {
@@ -187,6 +188,7 @@ export default function SubcontractorHakedis() {
     setPaymentAmount('');
     setHakedisItems([]);
     setHakedisDate(new Date().toISOString().split('T')[0]);
+    setVatRate('');
   };
 
   const handleContractSelect = (contractId: string) => {
@@ -265,6 +267,7 @@ export default function SubcontractorHakedis() {
       contractNo: contract.contractNo,
       contractType: contract.contractType,
       currency: contract.currency,
+      vatRate: vatRate !== '' ? Number(vatRate) : undefined,
       date: hakedisDate,
       paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
       hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
@@ -534,15 +537,28 @@ export default function SubcontractorHakedis() {
                 </div>
               )}
 
-              {/* Date */}
+              {/* Date and VAT Rate */}
               {selectedContractId && (
-                <div className="space-y-2">
-                  <Label>Tarih</Label>
-                  <Input
-                    type="date"
-                    value={hakedisDate}
-                    onChange={(e) => setHakedisDate(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tarih</Label>
+                    <Input
+                      type="date"
+                      value={hakedisDate}
+                      onChange={(e) => setHakedisDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>KDV Oranı (%)</Label>
+                    <Input
+                      type="number"
+                      placeholder="Örn: 20"
+                      min="0"
+                      max="100"
+                      value={vatRate}
+                      onChange={(e) => setVatRate(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
