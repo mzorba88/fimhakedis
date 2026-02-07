@@ -118,6 +118,8 @@ export interface SubcontractorHakedis {
   paymentAmount?: number;
   // For Birim Fiyat - work items with quantities
   hakedisItems?: HakedisItem[];
+  // Extra work items outside contract
+  extraItems?: ExtraWorkItem[];
   totalAmount: number;
   createdBy: string;
   approvalStatus: ApprovalStatus;
@@ -139,6 +141,16 @@ export interface HakedisItem {
   unit: string;
   unitPrice: number;
   quantity: number; // Quantity for this hakediş
+  amount: number;
+}
+
+// Extra work item outside contract (Sözleşme Harici Ek İş)
+export interface ExtraWorkItem {
+  id: string;
+  description: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
   amount: number;
 }
 
