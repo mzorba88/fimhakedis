@@ -68,6 +68,7 @@ export default function WorkEntries() {
     getNextContractNo,
     subcontractors,
     addSubcontractor,
+    subcontractorHakedisler,
     currentUser 
   } = useHakedisStore();
   
@@ -866,11 +867,37 @@ export default function WorkEntries() {
               )}
 
               {/* Totals */}
-              <div className="rounded-lg bg-muted/50 p-4">
+              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <div className="flex justify-between text-sm font-semibold">
-                  <span>Toplam</span>
+                  <span>Sözleşme Tutarı</span>
                   <span className="text-primary">{formatCurrencyWithType(selectedEntry.totalAmount, selectedEntry.currency)}</span>
                 </div>
+                {(() => {
+                  const paidAmount = subcontractorHakedisler
+                    .filter(h => h.contractId === selectedEntry.id)
+                    .reduce((sum, h) => sum + h.totalAmount, 0);
+                  const remainingBalance = selectedEntry.totalAmount - paidAmount;
+                  
+                  if (paidAmount > 0 || selectedEntry.contractType === 'goturu_bedel') {
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Ödenen Miktar</span>
+                          <span className="text-green-600 font-medium">{formatCurrencyWithType(paidAmount, selectedEntry.currency)}</span>
+                        </div>
+                        {selectedEntry.contractType === 'goturu_bedel' && (
+                          <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                            <span className="font-semibold">Kalan Bakiye</span>
+                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                              {formatCurrencyWithType(remainingBalance, selectedEntry.currency)}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           )}
