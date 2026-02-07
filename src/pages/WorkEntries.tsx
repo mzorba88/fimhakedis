@@ -581,6 +581,17 @@ export default function WorkEntries() {
               )}
             </div>
 
+            {/* Contract Description */}
+            <div className="space-y-2">
+              <Label>Sözleşme Açıklaması</Label>
+              <Textarea
+                placeholder="Sözleşme ile ilgili notlarınızı buraya yazabilirsiniz..."
+                value={newEntry.description}
+                onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               {/* Contract Type */}
               <div className="space-y-2">
@@ -647,17 +658,6 @@ export default function WorkEntries() {
                   onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
                 />
               </div>
-            </div>
-
-            {/* Contract Description */}
-            <div className="space-y-2">
-              <Label>Sözleşme Açıklaması</Label>
-              <Textarea
-                placeholder="Sözleşme ile ilgili notlarınızı buraya yazabilirsiniz..."
-                value={newEntry.description}
-                onChange={(e) => setNewEntry({ ...newEntry, description: e.target.value })}
-                rows={3}
-              />
             </div>
 
             {/* Contract File Upload */}
