@@ -45,6 +45,7 @@ interface HakedisState {
   // Subcontractor Hakedisler
   subcontractorHakedisler: SubcontractorHakedis[];
   addSubcontractorHakedis: (hakedis: SubcontractorHakedis) => void;
+  updateSubcontractorHakedis: (id: string, hakedis: Partial<SubcontractorHakedis>) => void;
   deleteSubcontractorHakedis: (id: string) => void;
   approveHakedis: (id: string, approvedBy: string) => void;
   rejectHakedis: (id: string, reason: string) => void;
@@ -160,6 +161,12 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   // Subcontractor Hakedisler
   addSubcontractorHakedis: (hakedis) => set((state) => ({
     subcontractorHakedisler: [...state.subcontractorHakedisler, hakedis]
+  })),
+
+  updateSubcontractorHakedis: (id, hakedisUpdate) => set((state) => ({
+    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+      h.id === id ? { ...h, ...hakedisUpdate, updatedAt: new Date().toISOString() } : h
+    )
   })),
 
   deleteSubcontractorHakedis: (id) => set((state) => ({

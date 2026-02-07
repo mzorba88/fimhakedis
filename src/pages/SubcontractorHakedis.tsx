@@ -20,7 +20,8 @@ import {
   Calculator,
   Receipt,
   Eye,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ export default function SubcontractorHakedis() {
     workEntries,
     subcontractorHakedisler,
     addSubcontractorHakedis,
+    updateSubcontractorHakedis,
     deleteSubcontractorHakedis,
     currentUser,
     addActivityLog
@@ -69,6 +71,8 @@ export default function SubcontractorHakedis() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingHakedisId, setEditingHakedisId] = useState<string | null>(null);
   const [selectedHakedis, setSelectedHakedis] = useState<HakedisType | null>(null);
   
   // Form state
@@ -190,6 +194,8 @@ export default function SubcontractorHakedis() {
     setHakedisItems([]);
     setHakedisDate(new Date().toISOString().split('T')[0]);
     setVatRate('');
+    setIsEditMode(false);
+    setEditingHakedisId(null);
   };
 
   const handleContractSelect = (contractId: string) => {
@@ -227,6 +233,50 @@ export default function SubcontractorHakedis() {
     }));
   };
 
+  const handleEditHakedis = (hakedis: HakedisType) => {
+    // Only allow editing for pending approval hakedis
+    if (hakedis.approvalStatus !== 'onay_bekliyor') {
+      toast.error('Sadece onay bekleyen hakedişler düzenlenebilir');
+      return;
+    }
+
+    const contract = workEntries.find(e => e.id === hakedis.contractId);
+    if (!contract) return;
+
+    setSelectedProjectId(hakedis.projectId);
+    setSelectedSubcontractor(hakedis.subcontractor);
+    setSelectedContractId(hakedis.contractId);
+    setHakedisDate(hakedis.date);
+    setVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '');
+    
+    if (contract.contractType === 'goturu_bedel') {
+      setPaymentAmount(String(hakedis.totalAmount));
+    } else if (hakedis.hakedisItems) {
+      // For birim fiyat, restore the items with their quantities
+      if (contract.workItemEntries) {
+        const items: HakedisItem[] = contract.workItemEntries.map(item => {
+          const existingItem = hakedis.hakedisItems?.find(hi => hi.workItemEntryId === item.id);
+          return {
+            id: existingItem?.id || crypto.randomUUID(),
+            workItemEntryId: item.id,
+            workCategory: item.workCategory,
+            description: item.description,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+            quantity: existingItem?.quantity || 0,
+            amount: existingItem?.amount || 0
+          };
+        });
+        setHakedisItems(items);
+      }
+    }
+
+    setIsEditMode(true);
+    setEditingHakedisId(hakedis.id);
+    setIsDetailDialogOpen(false);
+    setIsDialogOpen(true);
+  };
+
   const handleSubmit = () => {
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
       toast.error('Lütfen tüm alanları doldurun');
@@ -243,7 +293,12 @@ export default function SubcontractorHakedis() {
         toast.error('Lütfen geçerli bir ödeme tutarı girin');
         return;
       }
-      if (totalAmount > remainingAmount) {
+      // For edit mode, add current hakedis amount back to remaining
+      const currentHakedisAmount = isEditMode && editingHakedisId 
+        ? subcontractorHakedisler.find(h => h.id === editingHakedisId)?.totalAmount || 0 
+        : 0;
+      const adjustedRemaining = remainingAmount + currentHakedisAmount;
+      if (totalAmount > adjustedRemaining) {
         toast.error('Ödeme tutarı kalan tutardan fazla olamaz');
         return;
       }
@@ -255,40 +310,60 @@ export default function SubcontractorHakedis() {
       }
     }
 
-    // Generate hakediş number
-    const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
-    const hakedisNo = `${contract.contractNo}-H${(hakedisCount + 1).toString().padStart(2, '0')}`;
+    if (isEditMode && editingHakedisId) {
+      // Update existing hakedis
+      updateSubcontractorHakedis(editingHakedisId, {
+        vatRate: vatRate !== '' ? Number(vatRate) : undefined,
+        date: hakedisDate,
+        paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
+        hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+        totalAmount,
+      });
+      addActivityLog(
+        'hakedis_updated',
+        `Hakediş güncellendi`,
+        `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
+        editingHakedisId,
+        'hakedis'
+      );
+      toast.success('Hakediş güncellendi');
+    } else {
+      // Generate hakediş number
+      const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
+      const hakedisNo = `${contract.contractNo}-H${(hakedisCount + 1).toString().padStart(2, '0')}`;
 
-    const newHakedis: HakedisType = {
-      id: crypto.randomUUID(),
-      hakedisNo,
-      projectId: selectedProjectId,
-      subcontractor: selectedSubcontractor,
-      contractId: selectedContractId,
-      contractNo: contract.contractNo,
-      contractType: contract.contractType,
-      currency: contract.currency,
-      vatRate: vatRate !== '' ? Number(vatRate) : undefined,
-      date: hakedisDate,
-      paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
-      hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
-      totalAmount,
-      createdBy: currentUser.id,
-      approvalStatus: 'onay_bekliyor',
-      paymentStatus: 'odenmedi',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      const newHakedis: HakedisType = {
+        id: crypto.randomUUID(),
+        hakedisNo,
+        projectId: selectedProjectId,
+        subcontractor: selectedSubcontractor,
+        contractId: selectedContractId,
+        contractNo: contract.contractNo,
+        contractType: contract.contractType,
+        currency: contract.currency,
+        vatRate: vatRate !== '' ? Number(vatRate) : undefined,
+        date: hakedisDate,
+        paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
+        hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+        totalAmount,
+        createdBy: currentUser.id,
+        approvalStatus: 'onay_bekliyor',
+        paymentStatus: 'odenmedi',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-    addSubcontractorHakedis(newHakedis);
-    addActivityLog(
-      'hakedis_created',
-      `${newHakedis.hakedisNo} hakediş oluşturuldu`,
-      `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
-      newHakedis.id,
-      'hakedis'
-    );
-    toast.success('Hakediş kaydı oluşturuldu');
+      addSubcontractorHakedis(newHakedis);
+      addActivityLog(
+        'hakedis_created',
+        `${newHakedis.hakedisNo} hakediş oluşturuldu`,
+        `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
+        newHakedis.id,
+        'hakedis'
+      );
+      toast.success('Hakediş kaydı oluşturuldu');
+    }
+    
     setIsDialogOpen(false);
     resetForm();
   };
@@ -419,6 +494,16 @@ export default function SubcontractorHakedis() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {hakedis.approvalStatus === 'onay_bekliyor' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditHakedis(hakedis)}
+                                title="Düzenle"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -470,21 +555,28 @@ export default function SubcontractorHakedis() {
         </div>
 
         {/* New Hakedis Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          if (!open) resetForm();
+          setIsDialogOpen(open);
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Yeni Hakediş Kaydı</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Hakediş Düzenle' : 'Yeni Hakediş Kaydı'}</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6 py-4">
               {/* Project Selection */}
               <div className="space-y-2">
                 <Label>Proje</Label>
-                <Select value={selectedProjectId} onValueChange={(value) => {
-                  setSelectedProjectId(value);
-                  setSelectedSubcontractor('');
-                  setSelectedContractId('');
-                }}>
+                <Select 
+                  value={selectedProjectId} 
+                  onValueChange={(value) => {
+                    setSelectedProjectId(value);
+                    setSelectedSubcontractor('');
+                    setSelectedContractId('');
+                  }}
+                  disabled={isEditMode}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Proje seçin" />
                   </SelectTrigger>
@@ -502,10 +594,14 @@ export default function SubcontractorHakedis() {
               {selectedProjectId && (
                 <div className="space-y-2">
                   <Label>Altyüklenici</Label>
-                  <Select value={selectedSubcontractor} onValueChange={(value) => {
-                    setSelectedSubcontractor(value);
-                    setSelectedContractId('');
-                  }}>
+                  <Select 
+                    value={selectedSubcontractor} 
+                    onValueChange={(value) => {
+                      setSelectedSubcontractor(value);
+                      setSelectedContractId('');
+                    }}
+                    disabled={isEditMode}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Altyüklenici seçin" />
                     </SelectTrigger>
@@ -529,7 +625,7 @@ export default function SubcontractorHakedis() {
               {selectedSubcontractor && (
                 <div className="space-y-2">
                   <Label>Sözleşme No</Label>
-                  <Select value={selectedContractId} onValueChange={handleContractSelect}>
+                  <Select value={selectedContractId} onValueChange={handleContractSelect} disabled={isEditMode}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sözleşme seçin" />
                     </SelectTrigger>
@@ -712,7 +808,7 @@ export default function SubcontractorHakedis() {
                 </Button>
                 <Button onClick={handleSubmit} disabled={!selectedContractId}>
                   <Calculator className="h-4 w-4 mr-2" />
-                  Hakediş Oluştur
+                  {isEditMode ? 'Güncelle' : 'Hakediş Oluştur'}
                 </Button>
               </div>
             </div>
