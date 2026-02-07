@@ -151,9 +151,15 @@ export default function SubcontractorHakedis() {
         case 'project':
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
           break;
-        case 'contractNo':
-          comparison = a.contractNo.localeCompare(b.contractNo);
+        case 'subcontractor':
+          comparison = a.subcontractor.localeCompare(b.subcontractor, 'tr');
           break;
+        case 'workCategory': {
+          const contractA = workEntries.find(e => e.id === a.contractId);
+          const contractB = workEntries.find(e => e.id === b.contractId);
+          comparison = (contractA?.workCategory || '').localeCompare(contractB?.workCategory || '', 'tr');
+          break;
+        }
         case 'date':
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
@@ -333,8 +339,9 @@ export default function SubcontractorHakedis() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <SortableTableHeader label="Hakediş No" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Proje / Altyüklenici" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <SortableTableHeader label="Onay Durumu" sortKey="approvalStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
@@ -346,8 +353,10 @@ export default function SubcontractorHakedis() {
               </thead>
               <tbody className="divide-y">
                 <AnimatePresence>
-                  {sortedHakedisler.map((hakedis) => {
+                {sortedHakedisler.map((hakedis) => {
                     const project = projects.find(p => p.id === hakedis.projectId);
+                    const contract = workEntries.find(e => e.id === hakedis.contractId);
+                    const workCategory = contract?.workCategory || '-';
                     
                     return (
                       <motion.tr
@@ -370,11 +379,14 @@ export default function SubcontractorHakedis() {
                             {project?.projectCode}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {hakedis.subcontractor}
+                            {project?.projectName}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {hakedis.contractNo}
+                          {hakedis.subcontractor}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {workCategory}
                         </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
                           {formatDate(hakedis.date)}
@@ -390,19 +402,43 @@ export default function SubcontractorHakedis() {
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.paymentStatus} />
                         </td>
-                        <td className="px-4 py-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedHakedis(hakedis);
-                              setIsDetailDialogOpen(true);
-                            }}
-                            className="gap-1"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Detay
-                          </Button>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedHakedis(hakedis);
+                                setIsDetailDialogOpen(true);
+                              }}
+                              title="Detay"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // PDF generation will be implemented
+                                toast.info('PDF rapor oluşturuluyor...');
+                              }}
+                              title="PDF Rapor"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedHakedis(hakedis);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              title="Sil"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </motion.tr>
                     );
