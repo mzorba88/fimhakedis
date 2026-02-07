@@ -226,7 +226,17 @@ export default function Approvals() {
                             <FileText className="h-5 w-5 text-status-pending" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-muted-foreground">{hakedis.hakedisNo}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground">{hakedis.hakedisNo}</p>
+                              {hakedis.contractExceededNote && (
+                                <div className="group relative">
+                                  <AlertTriangle className="h-4 w-4 text-destructive animate-pulse" />
+                                  <div className="absolute left-0 top-full z-50 mt-1 hidden w-64 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
+                                    Sözleşme tutarı aşıldı
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                             <h3 className="font-medium text-foreground">
                               {hakedis.subcontractor}
                             </h3>
