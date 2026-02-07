@@ -14,7 +14,8 @@ import {
   mockProjects, 
   mockWorkEntries, 
   mockUsers,
-  defaultSubcontractors
+  defaultSubcontractors,
+  mockSubcontractorHakedisler
 } from '@/data/mockData';
 import { ActivityLog, ActivityType } from '@/types/activityLog';
 
@@ -68,8 +69,8 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   workEntries: mockWorkEntries,
   users: mockUsers,
   subcontractors: defaultSubcontractors,
-  contractCounter: 1000,
-  subcontractorHakedisler: [],
+  contractCounter: 1005,
+  subcontractorHakedisler: mockSubcontractorHakedisler,
   activityLogs: [],
 
   setCurrentUser: (user) => set({ currentUser: user }),
