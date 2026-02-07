@@ -422,19 +422,42 @@ export default function WorkEntries() {
                             {formatCurrencyWithType(entry.totalAmount, entry.currency)}
                           </p>
                         </td>
-                        <td className="px-4 py-4 text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedEntry(entry);
-                              setIsDetailDialogOpen(true);
-                            }}
-                            className="gap-1.5"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Detay
-                          </Button>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setIsDetailDialogOpen(true);
+                              }}
+                              title="Detay"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                toast.info('PDF rapor oluşturuluyor...');
+                              }}
+                              title="PDF Rapor"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              title="Sil"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </motion.tr>
                     );
