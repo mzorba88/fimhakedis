@@ -15,6 +15,7 @@ import {
   currencySymbols,
   contractTypeLabels
 } from '@/types/hakedis';
+import { generateContractPDF } from '@/utils/pdfGenerator';
 import { 
   Plus, 
   Search, 
@@ -445,7 +446,8 @@ export default function WorkEntries() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                toast.info('PDF rapor oluşturuluyor...');
+                                generateContractPDF(entry, project, subcontractorHakedisler);
+                                toast.success('PDF rapor indirildi');
                               }}
                               title="PDF Rapor"
                             >
