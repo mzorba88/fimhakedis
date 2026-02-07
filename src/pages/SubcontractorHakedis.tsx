@@ -82,7 +82,7 @@ export default function SubcontractorHakedis() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [hakedisItems, setHakedisItems] = useState<HakedisItem[]>([]);
   const [hakedisDate, setHakedisDate] = useState(new Date().toISOString().split('T')[0]);
-  const [vatRate, setVatRate] = useState<string>('');
+  const [vatRate, setVatRate] = useState<string>('10');
 
   // Get unique subcontractors from contracts
   const contractSubcontractors = useMemo(() => {
@@ -193,7 +193,7 @@ export default function SubcontractorHakedis() {
     setPaymentAmount('');
     setHakedisItems([]);
     setHakedisDate(new Date().toISOString().split('T')[0]);
-    setVatRate('');
+    setVatRate('10');
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
