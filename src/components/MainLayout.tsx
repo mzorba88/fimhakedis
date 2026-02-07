@@ -1,7 +1,8 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useHakedisStore } from '@/store/hakedisStore';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { roleLabels, UserRole } from '@/types/hakedis';
-import { Menu } from 'lucide-react';
+import { Menu, Loader2 } from 'lucide-react';
 import { AppSidebar } from '@/components/AppSidebar';
 import {
   SidebarProvider,
@@ -17,6 +18,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { currentUser, setCurrentUserByRole, users } = useHakedisStore();
+  const { isLoading, error } = useSupabaseData();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
@@ -29,11 +31,43 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, []);
 
-  const handleLogin = (role: UserRole) => {
-    setCurrentUserByRole(role);
-    setIsAuthenticated(true);
-    sessionStorage.setItem('isAuthenticated', 'true');
-  };
+  // Show login modal if not authenticated
+  if (!isAuthenticated) {
+    return <LoginModal isOpen={true} onLogin={(role) => {
+      setCurrentUserByRole(role);
+      setIsAuthenticated(true);
+      sessionStorage.setItem('isAuthenticated', 'true');
+    }} />;
+  }
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Veriler yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if data fetch failed
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <p className="text-destructive font-medium">Hata: {error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            Yeniden Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleRoleChange = (newRole: UserRole) => {
     if (newRole !== currentUser.role) {
@@ -54,11 +88,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     setPendingRole(null);
     setShowRoleDialog(false);
   };
-
-  // Show login modal if not authenticated
-  if (!isAuthenticated) {
-    return <LoginModal isOpen={true} onLogin={handleLogin} />;
-  }
 
   return (
     <SidebarProvider>

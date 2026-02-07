@@ -158,19 +158,24 @@ export default function Payments() {
     }, 0);
   }, [approvedHakedisler, exchangeRates]);
 
-  const handleMarkHakedisAsPaid = (hakedisId: string) => {
+  const handleMarkHakedisAsPaid = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
-    markHakedisAsPaid(hakedisId);
-    if (hakedis) {
-      addActivityLog(
-        'hakedis_paid',
-        `${hakedis.hakedisNo} hakediş ödendi olarak işaretlendi`,
-        `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
-        hakedisId,
-        'hakedis'
-      );
+    try {
+      await markHakedisAsPaid(hakedisId);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_paid',
+          `${hakedis.hakedisNo} hakediş ödendi olarak işaretlendi`,
+          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+          hakedisId,
+          'hakedis'
+        );
+      }
+      toast.success('Hakediş ödendi olarak işaretlendi');
+    } catch (error) {
+      console.error('Error marking hakedis as paid:', error);
+      toast.error('Ödeme işlemi başarısız');
     }
-    toast.success('Hakediş ödendi olarak işaretlendi');
   };
 
   const generatePaymentPdf = async (hakedis: typeof approvedHakedisler[0]) => {

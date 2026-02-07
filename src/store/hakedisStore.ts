@@ -11,13 +11,11 @@ import {
   roleLabels
 } from '@/types/hakedis';
 import { 
-  mockProjects, 
-  mockWorkEntries, 
   mockUsers,
   defaultSubcontractors,
-  mockSubcontractorHakedisler
 } from '@/data/mockData';
 import { ActivityLog, ActivityType } from '@/types/activityLog';
+import * as api from '@/services/supabaseService';
 
 interface HakedisState {
   // Current user
@@ -27,51 +25,54 @@ interface HakedisState {
 
   // Projects
   projects: Project[];
-  addProject: (project: Project) => void;
-  updateProject: (id: string, project: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
+  setProjects: (projects: Project[]) => void;
+  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Project>;
+  updateProject: (id: string, project: Partial<Project>) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
 
   // Work Entries (Contracts)
   workEntries: WorkEntry[];
-  contractCounter: number;
-  addWorkEntry: (entry: WorkEntry) => void;
-  updateWorkEntry: (id: string, entry: Partial<WorkEntry>) => void;
-  deleteWorkEntry: (id: string) => void;
-  approveEntry: (id: string, approvedBy: string) => void;
-  rejectEntry: (id: string, reason: string) => void;
-  markAsPaid: (id: string) => void;
-  getNextContractNo: () => string;
+  setWorkEntries: (entries: WorkEntry[]) => void;
+  addWorkEntry: (entry: Omit<WorkEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<WorkEntry>;
+  updateWorkEntry: (id: string, entry: Partial<WorkEntry>) => Promise<void>;
+  deleteWorkEntry: (id: string) => Promise<void>;
+  approveEntry: (id: string, approvedBy: string) => Promise<void>;
+  rejectEntry: (id: string, reason: string) => Promise<void>;
+  markAsPaid: (id: string) => Promise<void>;
+  getNextContractNo: () => Promise<string>;
 
   // Subcontractor Hakedisler
   subcontractorHakedisler: SubcontractorHakedis[];
-  addSubcontractorHakedis: (hakedis: SubcontractorHakedis) => void;
-  updateSubcontractorHakedis: (id: string, hakedis: Partial<SubcontractorHakedis>) => void;
-  deleteSubcontractorHakedis: (id: string) => void;
-  approveHakedis: (id: string, approvedBy: string) => void;
-  rejectHakedis: (id: string, reason: string) => void;
-  markHakedisAsPaid: (id: string) => void;
+  setSubcontractorHakedisler: (hakedisler: SubcontractorHakedis[]) => void;
+  addSubcontractorHakedis: (hakedis: Omit<SubcontractorHakedis, 'id' | 'createdAt' | 'updatedAt'>) => Promise<SubcontractorHakedis>;
+  updateSubcontractorHakedis: (id: string, hakedis: Partial<SubcontractorHakedis>) => Promise<void>;
+  deleteSubcontractorHakedis: (id: string) => Promise<void>;
+  approveHakedis: (id: string, approvedBy: string) => Promise<void>;
+  rejectHakedis: (id: string, reason: string) => Promise<void>;
+  markHakedisAsPaid: (id: string) => Promise<void>;
 
   // Subcontractors
   subcontractors: string[];
-  addSubcontractor: (name: string) => void;
+  setSubcontractors: (subcontractors: string[]) => void;
+  addSubcontractor: (name: string) => Promise<void>;
 
   // Users
   users: User[];
 
   // Activity Logs
   activityLogs: ActivityLog[];
-  addActivityLog: (type: ActivityType, description: string, details?: string, entityId?: string, entityType?: 'project' | 'contract' | 'hakedis') => void;
+  setActivityLogs: (logs: ActivityLog[]) => void;
+  addActivityLog: (type: ActivityType, description: string, details?: string, entityId?: string, entityType?: 'project' | 'contract' | 'hakedis') => Promise<void>;
 }
 
 export const useHakedisStore = create<HakedisState>((set, get) => ({
-  // Initialize with mock data
+  // Initialize with empty data (will be loaded from database)
   currentUser: mockUsers[0],
-  projects: mockProjects,
-  workEntries: mockWorkEntries,
+  projects: [],
+  workEntries: [],
   users: mockUsers,
-  subcontractors: defaultSubcontractors,
-  contractCounter: 1005,
-  subcontractorHakedisler: mockSubcontractorHakedisler,
+  subcontractors: [],
+  subcontractorHakedisler: [],
   activityLogs: [],
 
   setCurrentUser: (user) => set({ currentUser: user }),
@@ -82,157 +83,203 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   },
 
   // Projects
-  addProject: (project) => set((state) => ({ 
-    projects: [...state.projects, project] 
-  })),
+  setProjects: (projects) => set({ projects }),
   
-  updateProject: (id, projectUpdate) => set((state) => ({
-    projects: state.projects.map(p => 
-      p.id === id ? { ...p, ...projectUpdate, updatedAt: new Date().toISOString() } : p
-    )
-  })),
+  addProject: async (projectData) => {
+    const project = await api.createProject(projectData);
+    set((state) => ({ projects: [project, ...state.projects] }));
+    return project;
+  },
   
-  deleteProject: (id) => set((state) => ({
-    projects: state.projects.filter(p => p.id !== id)
-  })),
-
-  // Work Entries (Contracts)
-  getNextContractNo: () => {
-    const state = get();
-    const nextNo = state.contractCounter + 1;
-    set({ contractCounter: nextNo });
-    return `SZ-${nextNo}`;
+  updateProject: async (id, projectUpdate) => {
+    await api.updateProject(id, projectUpdate);
+    set((state) => ({
+      projects: state.projects.map(p => 
+        p.id === id ? { ...p, ...projectUpdate, updatedAt: new Date().toISOString() } : p
+      )
+    }));
+  },
+  
+  deleteProject: async (id) => {
+    await api.deleteProject(id);
+    set((state) => ({
+      projects: state.projects.filter(p => p.id !== id)
+    }));
   },
 
-  addWorkEntry: (entry) => set((state) => ({ 
-    workEntries: [...state.workEntries, entry] 
-  })),
+  // Work Entries (Contracts)
+  setWorkEntries: (entries) => set({ workEntries: entries }),
   
-  updateWorkEntry: (id, entryUpdate) => set((state) => ({
-    workEntries: state.workEntries.map(we => 
-      we.id === id ? { ...we, ...entryUpdate, updatedAt: new Date().toISOString() } : we
-    )
-  })),
+  getNextContractNo: async () => {
+    return await api.getNextContractNo();
+  },
 
-  deleteWorkEntry: (id) => set((state) => ({
-    workEntries: state.workEntries.filter(we => we.id !== id)
-  })),
+  addWorkEntry: async (entryData) => {
+    const entry = await api.createContract(entryData as any);
+    set((state) => ({ workEntries: [entry, ...state.workEntries] }));
+    return entry;
+  },
   
-  approveEntry: (id, approvedBy) => set((state) => ({
-    workEntries: state.workEntries.map(we => 
-      we.id === id 
-        ? { 
-            ...we, 
-            approvalStatus: 'onaylandi' as ApprovalStatus, 
-            approvedBy, 
-            approvalDate: new Date().toISOString(),
-            updatedAt: new Date().toISOString() 
-          } 
-        : we
-    )
-  })),
+  updateWorkEntry: async (id, entryUpdate) => {
+    await api.updateContract(id, entryUpdate);
+    set((state) => ({
+      workEntries: state.workEntries.map(we => 
+        we.id === id ? { ...we, ...entryUpdate, updatedAt: new Date().toISOString() } : we
+      )
+    }));
+  },
+
+  deleteWorkEntry: async (id) => {
+    await api.deleteContract(id);
+    set((state) => ({
+      workEntries: state.workEntries.filter(we => we.id !== id)
+    }));
+  },
   
-  rejectEntry: (id, reason) => set((state) => ({
-    workEntries: state.workEntries.map(we => 
-      we.id === id 
-        ? { 
-            ...we, 
-            approvalStatus: 'revize' as ApprovalStatus, 
-            rejectionReason: reason,
-            updatedAt: new Date().toISOString() 
-          } 
-        : we
-    )
-  })),
+  approveEntry: async (id, approvedBy) => {
+    const updates = { 
+      approvalStatus: 'onaylandi' as ApprovalStatus, 
+      approvedBy, 
+      approvalDate: new Date().toISOString(),
+    };
+    await api.updateContract(id, updates);
+    set((state) => ({
+      workEntries: state.workEntries.map(we => 
+        we.id === id 
+          ? { ...we, ...updates, updatedAt: new Date().toISOString() } 
+          : we
+      )
+    }));
+  },
   
-  markAsPaid: (id) => set((state) => ({
-    workEntries: state.workEntries.map(we => 
-      we.id === id 
-        ? { 
-            ...we, 
-            paymentStatus: 'odendi' as PaymentStatus, 
-            paidDate: new Date().toISOString(),
-            updatedAt: new Date().toISOString() 
-          } 
-        : we
-    )
-  })),
+  rejectEntry: async (id, reason) => {
+    const updates = { 
+      approvalStatus: 'revize' as ApprovalStatus, 
+      rejectionReason: reason,
+    };
+    await api.updateContract(id, updates);
+    set((state) => ({
+      workEntries: state.workEntries.map(we => 
+        we.id === id 
+          ? { ...we, ...updates, updatedAt: new Date().toISOString() } 
+          : we
+      )
+    }));
+  },
+  
+  markAsPaid: async (id) => {
+    const updates = { 
+      paymentStatus: 'odendi' as PaymentStatus, 
+      paidDate: new Date().toISOString(),
+    };
+    await api.updateContract(id, updates);
+    set((state) => ({
+      workEntries: state.workEntries.map(we => 
+        we.id === id 
+          ? { ...we, ...updates, updatedAt: new Date().toISOString() } 
+          : we
+      )
+    }));
+  },
 
   // Subcontractor Hakedisler
-  addSubcontractorHakedis: (hakedis) => set((state) => ({
-    subcontractorHakedisler: [...state.subcontractorHakedisler, hakedis]
-  })),
+  setSubcontractorHakedisler: (hakedisler) => set({ subcontractorHakedisler: hakedisler }),
+  
+  addSubcontractorHakedis: async (hakedisData) => {
+    const hakedis = await api.createHakedis(hakedisData as any);
+    set((state) => ({
+      subcontractorHakedisler: [hakedis, ...state.subcontractorHakedisler]
+    }));
+    return hakedis;
+  },
 
-  updateSubcontractorHakedis: (id, hakedisUpdate) => set((state) => ({
-    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
-      h.id === id ? { ...h, ...hakedisUpdate, updatedAt: new Date().toISOString() } : h
-    )
-  })),
+  updateSubcontractorHakedis: async (id, hakedisUpdate) => {
+    await api.updateHakedis(id, hakedisUpdate);
+    set((state) => ({
+      subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+        h.id === id ? { ...h, ...hakedisUpdate, updatedAt: new Date().toISOString() } : h
+      )
+    }));
+  },
 
-  deleteSubcontractorHakedis: (id) => set((state) => ({
-    subcontractorHakedisler: state.subcontractorHakedisler.filter(h => h.id !== id)
-  })),
+  deleteSubcontractorHakedis: async (id) => {
+    await api.deleteHakedis(id);
+    set((state) => ({
+      subcontractorHakedisler: state.subcontractorHakedisler.filter(h => h.id !== id)
+    }));
+  },
 
-  approveHakedis: (id, approvedBy) => set((state) => ({
-    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
-      h.id === id 
-        ? { 
-            ...h, 
-            approvalStatus: 'onaylandi' as ApprovalStatus, 
-            approvedBy, 
-            approvalDate: new Date().toISOString(),
-            updatedAt: new Date().toISOString() 
-          } 
-        : h
-    )
-  })),
+  approveHakedis: async (id, approvedBy) => {
+    const updates = { 
+      approvalStatus: 'onaylandi' as ApprovalStatus, 
+      approvedBy, 
+      approvalDate: new Date().toISOString(),
+    };
+    await api.updateHakedis(id, updates);
+    set((state) => ({
+      subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+        h.id === id 
+          ? { ...h, ...updates, updatedAt: new Date().toISOString() } 
+          : h
+      )
+    }));
+  },
 
-  rejectHakedis: (id, reason) => set((state) => ({
-    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
-      h.id === id 
-        ? { 
-            ...h, 
-            approvalStatus: 'revize' as ApprovalStatus, 
-            rejectionReason: reason,
-            updatedAt: new Date().toISOString() 
-          } 
-        : h
-    )
-  })),
+  rejectHakedis: async (id, reason) => {
+    const updates = { 
+      approvalStatus: 'revize' as ApprovalStatus, 
+      rejectionReason: reason,
+    };
+    await api.updateHakedis(id, updates);
+    set((state) => ({
+      subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+        h.id === id 
+          ? { ...h, ...updates, updatedAt: new Date().toISOString() } 
+          : h
+      )
+    }));
+  },
 
-  markHakedisAsPaid: (id) => set((state) => ({
-    subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
-      h.id === id 
-        ? { 
-            ...h, 
-            paymentStatus: 'odendi' as PaymentStatus, 
-            paidDate: new Date().toISOString(),
-            updatedAt: new Date().toISOString() 
-          } 
-        : h
-    )
-  })),
+  markHakedisAsPaid: async (id) => {
+    const updates = { 
+      paymentStatus: 'odendi' as PaymentStatus, 
+      paidDate: new Date().toISOString(),
+    };
+    await api.updateHakedis(id, updates);
+    set((state) => ({
+      subcontractorHakedisler: state.subcontractorHakedisler.map(h => 
+        h.id === id 
+          ? { ...h, ...updates, updatedAt: new Date().toISOString() } 
+          : h
+      )
+    }));
+  },
 
   // Subcontractors
-  addSubcontractor: (name) => set((state) => ({
-    subcontractors: [...state.subcontractors, name].sort()
-  })),
+  setSubcontractors: (subcontractors) => set({ subcontractors }),
+  
+  addSubcontractor: async (name) => {
+    await api.addSubcontractor(name);
+    set((state) => ({
+      subcontractors: [...state.subcontractors, name].sort()
+    }));
+  },
 
   // Activity Logs
-  addActivityLog: (type, description, details, entityId, entityType) => {
+  setActivityLogs: (logs) => set({ activityLogs: logs }),
+  
+  addActivityLog: async (type, description, details, entityId, entityType) => {
     const state = get();
-    const newLog: ActivityLog = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      userId: state.currentUser.id,
-      userName: state.currentUser.name,
-      userRole: roleLabels[state.currentUser.role],
-      description,
-      details,
-      entityId,
-      entityType,
-      timestamp: new Date().toISOString(),
-    };
-    set({ activityLogs: [...state.activityLogs, newLog] });
+    await api.createActivityLog(
+      type, 
+      roleLabels[state.currentUser.role], 
+      description, 
+      details, 
+      entityId, 
+      entityType
+    );
+    // Refresh logs from database
+    const logs = await api.fetchActivityLogs();
+    set({ activityLogs: logs });
   },
 }));

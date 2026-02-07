@@ -217,7 +217,7 @@ export default function WorkEntries() {
     ));
   };
 
-  const handleCreateEntry = () => {
+  const handleCreateEntry = async () => {
     if (!newEntry.projectId || !newEntry.workCategory) return;
 
     const selectedSubcontractor = newEntry.subcontractor === 'new' 
@@ -228,57 +228,57 @@ export default function WorkEntries() {
 
     // Add new subcontractor if needed
     if (newEntry.subcontractor === 'new' && newEntry.newSubcontractor) {
-      addSubcontractor(newEntry.newSubcontractor);
+      await addSubcontractor(newEntry.newSubcontractor);
     }
 
     const amounts = calculateTotals();
 
-    if (isEditMode && selectedEntry) {
-      // Update existing entry
-      updateWorkEntry(selectedEntry.id, {
-        projectId: newEntry.projectId,
-        workCategory: newEntry.workCategory,
-        subcontractor: selectedSubcontractor,
-        contractType: newEntry.contractType,
-        date: newEntry.date,
-        currency: newEntry.currency,
-        vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
-        description: newEntry.description || undefined,
-        paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
-        workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
-        totalAmount: amounts.totalAmount,
-      });
-      toast.success('Sözleşme güncellendi');
-    } else {
-      // Create new entry
-      const contractNo = getNextContractNo();
+    try {
+      if (isEditMode && selectedEntry) {
+        // Update existing entry
+        await updateWorkEntry(selectedEntry.id, {
+          projectId: newEntry.projectId,
+          workCategory: newEntry.workCategory,
+          subcontractor: selectedSubcontractor,
+          contractType: newEntry.contractType,
+          date: newEntry.date,
+          currency: newEntry.currency,
+          vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+          description: newEntry.description || undefined,
+          paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+          workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+          totalAmount: amounts.totalAmount,
+        });
+        toast.success('Sözleşme güncellendi');
+      } else {
+        // Create new entry
+        const contractNo = await getNextContractNo();
 
-      const entry: WorkEntry = {
-        id: `we${Date.now()}`,
-        contractNo,
-        projectId: newEntry.projectId,
-        workCategory: newEntry.workCategory,
-        subcontractor: selectedSubcontractor,
-        contractType: newEntry.contractType,
-        date: newEntry.date,
-        currency: newEntry.currency,
-        vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
-        description: newEntry.description || undefined,
-        paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
-        workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
-        createdBy: currentUser.id,
-        approvalStatus: 'onay_bekliyor',
-        totalAmount: amounts.totalAmount,
-        paymentStatus: 'odenmedi',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      addWorkEntry(entry);
-      toast.success('Sözleşme oluşturuldu');
+        await addWorkEntry({
+          contractNo,
+          projectId: newEntry.projectId,
+          workCategory: newEntry.workCategory,
+          subcontractor: selectedSubcontractor,
+          contractType: newEntry.contractType,
+          date: newEntry.date,
+          currency: newEntry.currency,
+          vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+          description: newEntry.description || undefined,
+          paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+          workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+          createdBy: currentUser.id,
+          approvalStatus: 'onay_bekliyor',
+          totalAmount: amounts.totalAmount,
+          paymentStatus: 'odenmedi',
+        });
+        toast.success('Sözleşme oluşturuldu');
+      }
+      
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error saving contract:', error);
+      toast.error('Sözleşme kaydedilemedi');
     }
-    
-    handleCloseDialog();
   };
 
   const handleEditEntry = (entry: WorkEntry) => {
@@ -1033,13 +1033,18 @@ export default function WorkEntries() {
           <AlertDialogFooter>
             <AlertDialogCancel>İptal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
                 if (selectedEntry) {
-                  deleteWorkEntry(selectedEntry.id);
-                  toast.success('Sözleşme silindi');
-                  setIsDeleteDialogOpen(false);
-                  setIsDetailDialogOpen(false);
-                  setSelectedEntry(null);
+                  try {
+                    await deleteWorkEntry(selectedEntry.id);
+                    toast.success('Sözleşme silindi');
+                    setIsDeleteDialogOpen(false);
+                    setIsDetailDialogOpen(false);
+                    setSelectedEntry(null);
+                  } catch (error) {
+                    console.error('Error deleting contract:', error);
+                    toast.error('Sözleşme silinemedi');
+                  }
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

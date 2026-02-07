@@ -65,52 +65,56 @@ export default function Projects() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     if (!newProject.projectName || !newProject.projectCode) {
       return;
     }
 
-    const project: Project = {
-      id: `p${Date.now()}`,
-      projectName: newProject.projectName,
-      projectCode: newProject.projectCode,
-      location: newProject.location,
-      startDate: newProject.startDate || new Date().toISOString().split('T')[0],
-      status: newProject.status,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      const project = await addProject({
+        projectName: newProject.projectName,
+        projectCode: newProject.projectCode,
+        location: newProject.location,
+        startDate: newProject.startDate || new Date().toISOString().split('T')[0],
+        status: newProject.status,
+      });
 
-    addProject(project);
-    addActivityLog(
-      'project_created',
-      `${project.projectCode} projesi oluşturuldu`,
-      `Proje: ${project.projectName} - Lokasyon: ${project.location || 'Belirtilmedi'}`,
-      project.id,
-      'project'
-    );
-    handleCloseDialog();
+      await addActivityLog(
+        'project_created',
+        `${project.projectCode} projesi oluşturuldu`,
+        `Proje: ${project.projectName} - Lokasyon: ${project.location || 'Belirtilmedi'}`,
+        project.id,
+        'project'
+      );
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error creating project:', error);
+    }
   };
 
-  const handleUpdateProject = () => {
+  const handleUpdateProject = async () => {
     if (!editingProject) return;
 
-    updateProject(editingProject.id, {
-      projectName: newProject.projectName,
-      projectCode: newProject.projectCode,
-      location: newProject.location,
-      startDate: newProject.startDate,
-      status: newProject.status,
-    });
-    addActivityLog(
-      'project_updated',
-      `${newProject.projectCode} projesi güncellendi`,
-      `Proje: ${newProject.projectName}`,
-      editingProject.id,
-      'project'
-    );
+    try {
+      await updateProject(editingProject.id, {
+        projectName: newProject.projectName,
+        projectCode: newProject.projectCode,
+        location: newProject.location,
+        startDate: newProject.startDate,
+        status: newProject.status,
+      });
+      await addActivityLog(
+        'project_updated',
+        `${newProject.projectCode} projesi güncellendi`,
+        `Proje: ${newProject.projectName}`,
+        editingProject.id,
+        'project'
+      );
 
-    handleCloseDialog();
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Error updating project:', error);
+    }
   };
 
   const handleEditClick = (project: Project) => {

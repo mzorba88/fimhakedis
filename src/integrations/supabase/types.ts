@@ -14,7 +14,290 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          description: string
+          details: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          timestamp: string
+          type: string
+          user_role: string
+        }
+        Insert: {
+          description: string
+          details?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          timestamp?: string
+          type: string
+          user_role: string
+        }
+        Update: {
+          description?: string
+          details?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          timestamp?: string
+          type?: string
+          user_role?: string
+        }
+        Relationships: []
+      }
+      contracts: {
+        Row: {
+          approval_date: string | null
+          approval_status: string
+          approved_by: string | null
+          contract_file: string | null
+          contract_no: string
+          contract_type: string
+          created_at: string
+          created_by: string
+          currency: string
+          date: string
+          description: string | null
+          id: string
+          paid_date: string | null
+          payment_plan: Json | null
+          payment_status: string
+          project_id: string
+          rejection_reason: string | null
+          subcontractor: string
+          total_amount: number
+          updated_at: string
+          vat_rate: number | null
+          work_category: string
+          work_item_entries: Json | null
+        }
+        Insert: {
+          approval_date?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          contract_file?: string | null
+          contract_no: string
+          contract_type: string
+          created_at?: string
+          created_by: string
+          currency?: string
+          date: string
+          description?: string | null
+          id?: string
+          paid_date?: string | null
+          payment_plan?: Json | null
+          payment_status?: string
+          project_id: string
+          rejection_reason?: string | null
+          subcontractor: string
+          total_amount?: number
+          updated_at?: string
+          vat_rate?: number | null
+          work_category: string
+          work_item_entries?: Json | null
+        }
+        Update: {
+          approval_date?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          contract_file?: string | null
+          contract_no?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          date?: string
+          description?: string | null
+          id?: string
+          paid_date?: string | null
+          payment_plan?: Json | null
+          payment_status?: string
+          project_id?: string
+          rejection_reason?: string | null
+          subcontractor?: string
+          total_amount?: number
+          updated_at?: string
+          vat_rate?: number | null
+          work_category?: string
+          work_item_entries?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counters: {
+        Row: {
+          id: string
+          value: number
+        }
+        Insert: {
+          id: string
+          value?: number
+        }
+        Update: {
+          id?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      hakedisler: {
+        Row: {
+          approval_date: string | null
+          approval_status: string
+          approved_by: string | null
+          contract_exceeded_note: string | null
+          contract_id: string
+          contract_no: string
+          contract_type: string
+          created_at: string
+          created_by: string
+          currency: string
+          date: string
+          description: string | null
+          extra_items: Json | null
+          hakedis_items: Json | null
+          hakedis_no: string
+          id: string
+          paid_date: string | null
+          payment_amount: number | null
+          payment_status: string
+          project_id: string
+          rejection_reason: string | null
+          subcontractor: string
+          total_amount: number
+          updated_at: string
+          vat_rate: number | null
+        }
+        Insert: {
+          approval_date?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          contract_exceeded_note?: string | null
+          contract_id: string
+          contract_no: string
+          contract_type: string
+          created_at?: string
+          created_by: string
+          currency?: string
+          date: string
+          description?: string | null
+          extra_items?: Json | null
+          hakedis_items?: Json | null
+          hakedis_no: string
+          id?: string
+          paid_date?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          project_id: string
+          rejection_reason?: string | null
+          subcontractor: string
+          total_amount?: number
+          updated_at?: string
+          vat_rate?: number | null
+        }
+        Update: {
+          approval_date?: string | null
+          approval_status?: string
+          approved_by?: string | null
+          contract_exceeded_note?: string | null
+          contract_id?: string
+          contract_no?: string
+          contract_type?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          date?: string
+          description?: string | null
+          extra_items?: Json | null
+          hakedis_items?: Json | null
+          hakedis_no?: string
+          id?: string
+          paid_date?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          project_id?: string
+          rejection_reason?: string | null
+          subcontractor?: string
+          total_amount?: number
+          updated_at?: string
+          vat_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hakedisler_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hakedisler_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          id: string
+          location: string
+          project_code: string
+          project_name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location: string
+          project_code: string
+          project_name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string
+          project_code?: string
+          project_name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subcontractors: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
