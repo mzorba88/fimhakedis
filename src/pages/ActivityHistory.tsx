@@ -198,13 +198,10 @@ export default function ActivityHistory() {
                               </p>
                             )}
                             
-                            <div className="mt-2 flex items-center gap-3">
+                            <div className="mt-2">
                               <Badge variant="outline" className="text-xs">
-                                {log.userName}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
                                 {log.userRole}
-                              </span>
+                              </Badge>
                             </div>
                           </div>
                         </div>
