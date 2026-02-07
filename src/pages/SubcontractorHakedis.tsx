@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -83,6 +84,7 @@ export default function SubcontractorHakedis() {
   const [hakedisItems, setHakedisItems] = useState<HakedisItem[]>([]);
   const [hakedisDate, setHakedisDate] = useState(new Date().toISOString().split('T')[0]);
   const [vatRate, setVatRate] = useState<string>('10');
+  const [description, setDescription] = useState<string>('');
 
   // Get unique subcontractors from contracts
   const contractSubcontractors = useMemo(() => {
@@ -194,6 +196,7 @@ export default function SubcontractorHakedis() {
     setHakedisItems([]);
     setHakedisDate(new Date().toISOString().split('T')[0]);
     setVatRate('10');
+    setDescription('');
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
@@ -247,7 +250,8 @@ export default function SubcontractorHakedis() {
     setSelectedSubcontractor(hakedis.subcontractor);
     setSelectedContractId(hakedis.contractId);
     setHakedisDate(hakedis.date);
-    setVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '');
+    setVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
+    setDescription(hakedis.description || '');
     
     if (contract.contractType === 'goturu_bedel') {
       setPaymentAmount(String(hakedis.totalAmount));
@@ -319,6 +323,7 @@ export default function SubcontractorHakedis() {
       updateSubcontractorHakedis(editingHakedisId, {
         vatRate: vatRate !== '' ? Number(vatRate) : undefined,
         date: hakedisDate,
+        description: description || undefined,
         paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
         totalAmount,
@@ -352,6 +357,7 @@ export default function SubcontractorHakedis() {
         currency: contract.currency,
         vatRate: vatRate !== '' ? Number(vatRate) : undefined,
         date: hakedisDate,
+        description: description || undefined,
         paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
         totalAmount,
@@ -651,27 +657,40 @@ export default function SubcontractorHakedis() {
 
               {/* Date and VAT Rate */}
               {selectedContractId && (
-                <div className="grid grid-cols-2 gap-4">
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Tarih</Label>
+                      <Input
+                        type="date"
+                        value={hakedisDate}
+                        onChange={(e) => setHakedisDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>KDV Oranı (%)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Örn: 20"
+                        min="0"
+                        max="100"
+                        value={vatRate}
+                        onChange={(e) => setVatRate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description/Notes */}
                   <div className="space-y-2">
-                    <Label>Tarih</Label>
-                    <Input
-                      type="date"
-                      value={hakedisDate}
-                      onChange={(e) => setHakedisDate(e.target.value)}
+                    <Label>Açıklama</Label>
+                    <Textarea
+                      placeholder="Hakediş ile ilgili notlarınızı buraya yazabilirsiniz..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>KDV Oranı (%)</Label>
-                    <Input
-                      type="number"
-                      placeholder="Örn: 20"
-                      min="0"
-                      max="100"
-                      value={vatRate}
-                      onChange={(e) => setVatRate(e.target.value)}
-                    />
-                  </div>
-                </div>
+                </>
               )}
 
               {/* Götürü Bedel Payment */}

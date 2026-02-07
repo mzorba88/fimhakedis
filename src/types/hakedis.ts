@@ -113,6 +113,7 @@ export interface SubcontractorHakedis {
   currency: Currency;
   vatRate?: number; // Custom VAT rate percentage (e.g., 20 for 20%)
   date: string;
+  description?: string; // Optional description/notes
   // For Götürü Bedel - payment amount
   paymentAmount?: number;
   // For Birim Fiyat - work items with quantities
