@@ -333,7 +333,7 @@ export default function Payments() {
     }
   };
 
-  const isAccountant = currentUser.role === 'muhasebe';
+  const canManagePayments = currentUser.role === 'muhasebe' || currentUser.role === 'direktor';
 
   return (
     <MainLayout>
@@ -388,12 +388,12 @@ export default function Payments() {
           </motion.div>
         </div>
 
-        {/* Info Banner for non-accountants */}
-        {!isAccountant && (
+        {/* Info Banner for users without payment permission */}
+        {!canManagePayments && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-accent p-4">
             <AlertTriangle className="h-5 w-5 text-primary" />
             <p className="text-sm text-foreground">
-              Ödeme işlemleri sadece <strong>Muhasebe</strong> rolündeki kullanıcılar tarafından yapılabilir.
+              Ödeme işlemleri sadece <strong>Direktör</strong> ve <strong>Muhasebe</strong> rolündeki kullanıcılar tarafından yapılabilir.
               Rol değiştirmek için sağ üstteki menüyü kullanabilirsiniz.
             </p>
           </div>
@@ -448,7 +448,7 @@ export default function Payments() {
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
-                  {isAccountant && (
+                  {canManagePayments && (
                     <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       İşlem
                     </th>
@@ -507,7 +507,7 @@ export default function Payments() {
                             </p>
                           )}
                         </td>
-                        {isAccountant && (
+                        {canManagePayments && (
                           <td className="px-4 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               {!isPaid && (
