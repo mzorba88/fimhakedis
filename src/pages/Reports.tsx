@@ -29,8 +29,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import formanLogo from '@/assets/forman-logo.png';
 
 export default function Reports() {
   const { projects, workEntries } = useHakedisStore();
@@ -81,83 +82,169 @@ export default function Reports() {
     };
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const data = generateReportData();
     if (!data) {
       toast.error('Lütfen bir proje seçin');
       return;
     }
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    // Header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ALTYUKLENICI HAKEDISI', pageWidth / 2, 25, { align: 'center' });
-
-    // Project Info
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
+    // Create a temporary container for the PDF content
+    const container = document.createElement('div');
+    container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 40px; background: white; font-family: Arial, sans-serif;';
     
-    const infoY = 40;
-    doc.text(`Proje Adi: ${data.project.projectName}`, 20, infoY);
-    doc.text(`Proje Kodu: ${data.project.projectCode}`, 20, infoY + 6);
-    doc.text(`Lokasyon: ${data.project.location}`, 20, infoY + 12);
+    // Generate table rows
+    const tableRows = data.entries.map((entry, idx) => `
+      <tr style="background: ${idx % 2 === 0 ? '#f9fafb' : 'white'};">
+        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
+        <td style="padding: 10px; border: 1px solid #ddd;">${entry.workCategory}</td>
+        <td style="padding: 10px; border: 1px solid #ddd;">${entry.subcontractor}</td>
+        <td style="padding: 10px; border: 1px solid #ddd;">${contractTypeLabels[entry.contractType]}</td>
+        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(entry.totalAmount, entry.currency)}</td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div style="margin-bottom: 20px;">
+        <img src="${formanLogo}" style="height: 50px; margin-bottom: 10px;" />
+        <h1 style="text-align: center; font-size: 24px; margin: 10px 0; color: #1a1a1a;">HAKEDİŞ RAPORU</h1>
+        <p style="text-align: center; font-size: 12px; color: #666;">Rapor Tarihi: ${formatDate(new Date().toISOString())}</p>
+      </div>
+      
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px;">Proje Bilgileri</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: #3b82f6; color: white;">
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Değer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 10px; border: 1px solid #ddd;">Proje Adı</td>
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">${data.project.projectName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">Proje Kodu</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${data.project.projectCode}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 10px; border: 1px solid #ddd;">Lokasyon</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${data.project.location}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">Dönem</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      ${data.entries.length > 0 ? `
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">Hakediş Kalemleri</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: #6366f1; color: white;">
+              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 40px;">#</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">İş Kalemi</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Altyüklenici</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Sözleşme Tipi</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Tutar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+      
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 5px;">Özet Bilgiler</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="background: #22c55e; color: white;">
+              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Tutar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 10px; border: 1px solid #ddd;">Önceki Toplam</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.previousTotal)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">Bu Dönem</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.currentPeriodTotal)}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 10px; border: 1px solid #ddd;">Kümülatif Toplam</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.cumulativeTotal)}</td>
+            </tr>
+            <tr style="background: #3b82f6; color: white;">
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">GENEL TOPLAM</td>
+              <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${formatCurrency(data.grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+        <div style="text-align: center; width: 45%;">
+          <p style="font-size: 12px; margin-bottom: 40px;">Direktör Onayı:</p>
+          <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
+          <p style="font-size: 10px; color: #666;">İmza / Tarih</p>
+        </div>
+        <div style="text-align: center; width: 45%;">
+          <p style="font-size: 12px; margin-bottom: 40px;">Muhasebe Onayı:</p>
+          <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
+          <p style="font-size: 10px; color: #666;">İmza / Tarih</p>
+        </div>
+      </div>
+    `;
     
-    const dateStr = new Date().toLocaleDateString('tr-TR');
-    doc.text(`Tarih: ${dateStr}`, pageWidth - 60, infoY);
-    doc.text(`Donem: ${data.periodStart || 'Baslangic'} - ${data.periodEnd || 'Bugun'}`, pageWidth - 60, infoY + 6);
-
-    // Table
-    const tableData = data.entries.map(entry => [
-      entry.workCategory,
-      entry.subcontractor,
-      contractTypeLabels[entry.contractType],
-      formatCurrencyWithType(entry.totalAmount, entry.currency),
-    ]);
-
-    autoTable(doc, {
-      startY: 65,
-      head: [['Is Kalemi', 'Altyuklenici', 'Sozlesme Tipi', 'Tutar']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [79, 70, 229] },
-      styles: { fontSize: 8 },
-    });
-
-    // Summary
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    document.body.appendChild(container);
     
-    autoTable(doc, {
-      startY: finalY,
-      body: [
-        ['Onceki Toplam', formatCurrency(data.previousTotal)],
-        ['Bu Donem', formatCurrency(data.currentPeriodTotal)],
-        ['Kumulatif Toplam', formatCurrency(data.cumulativeTotal)],
-        ['GENEL TOPLAM', formatCurrency(data.grandTotal)],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 10 },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 80 },
-        1: { halign: 'right', cellWidth: 60 },
-      },
-      margin: { left: pageWidth - 160 },
-    });
-
-    // Signature Area
-    const signatureY = (doc as any).lastAutoTable.finalY + 30;
-    doc.setFontSize(10);
-    doc.text('Direktor Onayi:', 20, signatureY);
-    doc.line(20, signatureY + 20, 80, signatureY + 20);
-    doc.text('Imza', 45, signatureY + 25);
-    doc.text('Tarih: _______________', 20, signatureY + 35);
-
-    // Save
-    doc.save(`hakedis_${data.project.projectCode}_${dateStr.replace(/\./g, '-')}.pdf`);
-    toast.success('PDF raporu indirildi');
-    setIsDialogOpen(false);
+    try {
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      const imgWidth = 190;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 10;
+      
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+      pdf.save(`hakedis-raporu-${data.project.projectCode}-${dateStr}.pdf`);
+      toast.success('PDF raporu indirildi');
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('PDF oluşturma hatası:', error);
+      toast.error('PDF oluşturulamadı');
+    } finally {
+      document.body.removeChild(container);
+    }
   };
 
   const handleExportExcel = () => {
@@ -169,33 +256,43 @@ export default function Reports() {
 
     const wb = XLSX.utils.book_new();
     
-    // Header info
+    // Header info with branding
     const headerData = [
-      ['ALTYUKLENICI HAKEDISI'],
+      ['HAKEDİŞ RAPORU'],
       [],
-      ['Proje Adi', data.project.projectName],
+      ['Proje Adı', data.project.projectName],
       ['Proje Kodu', data.project.projectCode],
       ['Lokasyon', data.project.location],
-      ['Donem', `${data.periodStart || 'Baslangic'} - ${data.periodEnd || 'Bugun'}`],
+      ['Dönem', `${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}`],
+      ['Rapor Tarihi', formatDate(new Date().toISOString())],
       [],
     ];
 
     // Table data
-    const tableHeader = ['Is Kalemi', 'Altyuklenici', 'Sozlesme Tipi', 'Tutar'];
-    const tableData = data.entries.map(entry => [
+    const tableHeader = ['#', 'İş Kalemi', 'Altyüklenici', 'Sözleşme Tipi', 'Tutar'];
+    const tableData = data.entries.map((entry, idx) => [
+      idx + 1,
       entry.workCategory,
       entry.subcontractor,
       contractTypeLabels[entry.contractType],
       entry.totalAmount,
     ]);
 
-    // Summary
+    // Summary with proper Turkish labels
     const summaryData = [
       [],
-      ['Onceki Toplam', data.previousTotal],
-      ['Bu Donem', data.currentPeriodTotal],
-      ['Kumulatif Toplam', data.cumulativeTotal],
+      ['ÖZET BİLGİLER'],
+      ['Önceki Toplam', data.previousTotal],
+      ['Bu Dönem', data.currentPeriodTotal],
+      ['Kümülatif Toplam', data.cumulativeTotal],
       ['GENEL TOPLAM', data.grandTotal],
+      [],
+      [],
+      ['Direktör Onayı:', ''],
+      ['İmza / Tarih:', '____________________'],
+      [],
+      ['Muhasebe Onayı:', ''],
+      ['İmza / Tarih:', '____________________'],
     ];
 
     const allData = [
@@ -206,10 +303,20 @@ export default function Reports() {
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(allData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Hakedis');
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 5 },   // #
+      { wch: 25 },  // İş Kalemi
+      { wch: 25 },  // Altyüklenici
+      { wch: 20 },  // Sözleşme Tipi
+      { wch: 20 },  // Tutar
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Hakediş Raporu');
     
     const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
-    XLSX.writeFile(wb, `hakedis_${data.project.projectCode}_${dateStr}.xlsx`);
+    XLSX.writeFile(wb, `hakedis-raporu-${data.project.projectCode}-${dateStr}.xlsx`);
     toast.success('Excel raporu indirildi');
     setIsDialogOpen(false);
   };
