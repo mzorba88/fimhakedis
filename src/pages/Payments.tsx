@@ -401,9 +401,10 @@ export default function Payments() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-muted/50">
-                  <SortableTableHeader label="Hakediş No / Altyüklenici" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
+              <tr className="border-b bg-muted/50">
+                  <SortableTableHeader label="Hakediş No" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
@@ -430,17 +431,12 @@ export default function Payments() {
                         className="group hover:bg-muted/30"
                       >
                         <td className="px-4 py-4">
-                          <div className="max-w-xs">
-                            <p className="font-medium text-foreground">
-                              {hakedis.hakedisNo}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {hakedis.subcontractor}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {contractTypeLabels[hakedis.contractType]}
-                            </p>
-                          </div>
+                          <p className="font-medium text-foreground">
+                            {hakedis.hakedisNo}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {contractTypeLabels[hakedis.contractType]}
+                          </p>
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-sm font-medium text-foreground">
@@ -449,6 +445,9 @@ export default function Payments() {
                           <p className="text-xs text-muted-foreground truncate max-w-[150px]">
                             {project?.projectName}
                           </p>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {hakedis.subcontractor}
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {hakedis.contractNo}
