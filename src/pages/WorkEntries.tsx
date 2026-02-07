@@ -445,9 +445,13 @@ export default function WorkEntries() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                generateContractPDF(entry, project, subcontractorHakedisler);
-                                toast.success('PDF rapor indirildi');
+                              onClick={async () => {
+                                try {
+                                  await generateContractPDF(entry, project, subcontractorHakedisler);
+                                  toast.success('PDF rapor indirildi');
+                                } catch (error) {
+                                  toast.error('PDF oluşturulamadı');
+                                }
                               }}
                               title="PDF Rapor"
                             >
