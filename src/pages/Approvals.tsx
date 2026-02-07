@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
 import { 
@@ -46,6 +47,7 @@ export default function Approvals() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'asc' });
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedHakedisId, setSelectedHakedisId] = useState<string | null>(null);
@@ -66,9 +68,40 @@ export default function Approvals() {
     return matchesSearch && matchesProject;
   });
 
-  const sortedHakedisler = [...filteredHakedisler].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
+  const sortedHakedisler = useMemo(() => {
+    const sorted = [...filteredHakedisler];
+    if (!sortConfig.key || !sortConfig.direction) {
+      return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+    
+    return sorted.sort((a, b) => {
+      const projectA = projects.find(p => p.id === a.projectId);
+      const projectB = projects.find(p => p.id === b.projectId);
+      
+      let comparison = 0;
+      switch (sortConfig.key) {
+        case 'hakedisNo':
+          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          break;
+        case 'subcontractor':
+          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          break;
+        case 'project':
+          comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
+          break;
+        case 'createdAt':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'totalAmount':
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredHakedisler, sortConfig, projects]);
 
   const handleApproveHakedis = (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);

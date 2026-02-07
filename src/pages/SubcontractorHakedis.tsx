@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 
   formatCurrencyWithType, 
@@ -63,6 +64,7 @@ export default function SubcontractorHakedis() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'desc' });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -131,9 +133,46 @@ export default function SubcontractorHakedis() {
     return matchesSearch && matchesProject;
   });
 
-  const sortedHakedisler = [...filteredHakedisler].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const sortedHakedisler = useMemo(() => {
+    const sorted = [...filteredHakedisler];
+    if (!sortConfig.key || !sortConfig.direction) {
+      return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    
+    return sorted.sort((a, b) => {
+      const projectA = projects.find(p => p.id === a.projectId);
+      const projectB = projects.find(p => p.id === b.projectId);
+      
+      let comparison = 0;
+      switch (sortConfig.key) {
+        case 'hakedisNo':
+          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          break;
+        case 'project':
+          comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
+          break;
+        case 'contractNo':
+          comparison = a.contractNo.localeCompare(b.contractNo);
+          break;
+        case 'date':
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'totalAmount':
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        case 'approvalStatus':
+          comparison = a.approvalStatus.localeCompare(b.approvalStatus);
+          break;
+        case 'paymentStatus':
+          comparison = a.paymentStatus.localeCompare(b.paymentStatus);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredHakedisler, sortConfig, projects]);
 
   const resetForm = () => {
     setSelectedProjectId('');
@@ -293,27 +332,13 @@ export default function SubcontractorHakedis() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Hakediş No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Proje / Altyüklenici
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Sözleşme No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Tarih
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Tutar
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Onay Durumu
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Ödeme Durumu
-                  </th>
+                  <SortableTableHeader label="Hakediş No" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Proje / Altyüklenici" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Onay Durumu" sortKey="approvalStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
+                  <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     İşlemler
                   </th>

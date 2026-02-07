@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency } from '@/types/hakedis';
 import { 
@@ -41,6 +42,7 @@ export default function Payments() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPayment, setFilterPayment] = useState<string>('all');
+  const { sortConfig, handleSort } = useSorting({ key: 'approvalDate', direction: 'desc' });
   const [activeTab, setActiveTab] = useState('hakedisler');
 
   // Only show approved hakedisler
@@ -59,9 +61,43 @@ export default function Payments() {
     return matchesSearch && matchesProject && matchesPayment;
   });
 
-  const sortedHakedisler = [...filteredHakedisler].sort(
-    (a, b) => new Date(b.approvalDate || b.createdAt).getTime() - new Date(a.approvalDate || a.createdAt).getTime()
-  );
+  const sortedHakedisler = useMemo(() => {
+    const sorted = [...filteredHakedisler];
+    if (!sortConfig.key || !sortConfig.direction) {
+      return sorted.sort((a, b) => new Date(b.approvalDate || b.createdAt).getTime() - new Date(a.approvalDate || a.createdAt).getTime());
+    }
+    
+    return sorted.sort((a, b) => {
+      const projectA = projects.find(p => p.id === a.projectId);
+      const projectB = projects.find(p => p.id === b.projectId);
+      
+      let comparison = 0;
+      switch (sortConfig.key) {
+        case 'hakedisNo':
+          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          break;
+        case 'project':
+          comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
+          break;
+        case 'contractNo':
+          comparison = a.contractNo.localeCompare(b.contractNo);
+          break;
+        case 'approvalDate':
+          comparison = new Date(a.approvalDate || a.createdAt).getTime() - new Date(b.approvalDate || b.createdAt).getTime();
+          break;
+        case 'totalAmount':
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        case 'paymentStatus':
+          comparison = a.paymentStatus.localeCompare(b.paymentStatus);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredHakedisler, sortConfig, projects]);
 
   // Summary Stats for hakedisler
   const totalApprovedHakedis = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
@@ -366,24 +402,12 @@ export default function Payments() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Hakediş No / Altyüklenici
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Proje
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Sözleşme No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Onay Tarihi
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Tutar
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Ödeme Durumu
-                  </th>
+                  <SortableTableHeader label="Hakediş No / Altyüklenici" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   {isAccountant && (
                     <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       İşlem
