@@ -422,11 +422,15 @@ export default function SubcontractorHakedis() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                const project = projects.find(p => p.id === hakedis.projectId);
-                                const contract = workEntries.find(e => e.id === hakedis.contractId);
-                                generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
-                                toast.success('PDF rapor indirildi');
+                              onClick={async () => {
+                                try {
+                                  const project = projects.find(p => p.id === hakedis.projectId);
+                                  const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                  await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                                  toast.success('PDF rapor indirildi');
+                                } catch (error) {
+                                  toast.error('PDF oluşturulamadı');
+                                }
                               }}
                               title="PDF Rapor"
                             >
