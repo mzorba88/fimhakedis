@@ -72,7 +72,7 @@ export default function WorkEntries() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -106,8 +106,7 @@ export default function WorkEntries() {
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
-    const matchesStatus = filterStatus === 'all' || entry.approvalStatus === filterStatus;
-    return matchesSearch && matchesProject && matchesStatus;
+    return matchesSearch && matchesProject;
   });
 
   const sortedEntries = [...filteredEntries].sort(
@@ -310,17 +309,6 @@ export default function WorkEntries() {
                   {project.projectCode}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Durum" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Durumlar</SelectItem>
-              <SelectItem value="onay_bekliyor">Onay Bekliyor</SelectItem>
-              <SelectItem value="onaylandi">Onaylandı</SelectItem>
-              <SelectItem value="revize">Revize Gerekli</SelectItem>
             </SelectContent>
           </Select>
         </div>
