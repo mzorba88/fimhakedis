@@ -45,15 +45,15 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center gap-2">
           <img 
             src={formanLogo} 
             alt="Forman International" 
-            className={collapsed ? "h-8 w-auto" : "h-10 w-auto"}
+            className={collapsed ? "h-8 w-auto" : "h-12 w-auto"}
           />
           {!collapsed && (
-            <span className="text-lg font-semibold text-foreground whitespace-nowrap">
-              FIM-Hakedişler
+            <span className="text-sm font-semibold text-foreground text-center leading-tight">
+              FIM - HAKEDİŞ YÖNETİM SİSTEMİ
             </span>
           )}
         </div>
