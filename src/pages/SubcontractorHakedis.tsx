@@ -12,6 +12,7 @@ import {
   HakedisItem,
   Currency
 } from '@/types/hakedis';
+import { generateHakedisPDF } from '@/utils/pdfGenerator';
 import { 
   Plus, 
   Search, 
@@ -422,8 +423,10 @@ export default function SubcontractorHakedis() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                // PDF generation will be implemented
-                                toast.info('PDF rapor oluşturuluyor...');
+                                const project = projects.find(p => p.id === hakedis.projectId);
+                                const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                                toast.success('PDF rapor indirildi');
                               }}
                               title="PDF Rapor"
                             >
