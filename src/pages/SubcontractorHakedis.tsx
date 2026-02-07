@@ -234,9 +234,9 @@ export default function SubcontractorHakedis() {
   };
 
   const handleEditHakedis = (hakedis: HakedisType) => {
-    // Only allow editing for pending approval hakedis
-    if (hakedis.approvalStatus !== 'onay_bekliyor') {
-      toast.error('Sadece onay bekleyen hakedişler düzenlenebilir');
+    // Only allow editing for pending approval or revision required hakedis
+    if (hakedis.approvalStatus !== 'onay_bekliyor' && hakedis.approvalStatus !== 'revize') {
+      toast.error('Sadece onay bekleyen veya revize gerekli hakedişler düzenlenebilir');
       return;
     }
 
@@ -311,6 +311,10 @@ export default function SubcontractorHakedis() {
     }
 
     if (isEditMode && editingHakedisId) {
+      // Check if editing a "revize" status hakedis - set it back to pending
+      const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
+      const shouldResetToOnayBekliyor = existingHakedis?.approvalStatus === 'revize';
+      
       // Update existing hakedis
       updateSubcontractorHakedis(editingHakedisId, {
         vatRate: vatRate !== '' ? Number(vatRate) : undefined,
@@ -318,15 +322,20 @@ export default function SubcontractorHakedis() {
         paymentAmount: contract.contractType === 'goturu_bedel' ? totalAmount : undefined,
         hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
         totalAmount,
+        // Reset approval status to pending if it was in revision
+        ...(shouldResetToOnayBekliyor && {
+          approvalStatus: 'onay_bekliyor' as const,
+          rejectionReason: undefined,
+        }),
       });
       addActivityLog(
         'hakedis_updated',
-        `Hakediş güncellendi`,
+        `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}`,
         `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
         editingHakedisId,
         'hakedis'
       );
-      toast.success('Hakediş güncellendi');
+      toast.success(shouldResetToOnayBekliyor ? 'Hakediş güncellendi ve onaya sunuldu' : 'Hakediş güncellendi');
     } else {
       // Generate hakediş number
       const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
@@ -494,7 +503,7 @@ export default function SubcontractorHakedis() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {hakedis.approvalStatus === 'onay_bekliyor' && (
+                            {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize') && (
                               <Button
                                 variant="ghost"
                                 size="sm"
