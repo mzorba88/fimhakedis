@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { roleLabels, UserRole } from '@/types/hakedis';
 import { Menu } from 'lucide-react';
@@ -8,6 +8,8 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
+import { LoginModal } from '@/components/LoginModal';
+import { RolePasswordDialog } from '@/components/RolePasswordDialog';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -15,6 +17,48 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { currentUser, setCurrentUserByRole, users } = useHakedisStore();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
+
+  // Check session storage for authentication on mount
+  useEffect(() => {
+    const authenticated = sessionStorage.getItem('isAuthenticated');
+    if (authenticated === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = (role: UserRole) => {
+    setCurrentUserByRole(role);
+    setIsAuthenticated(true);
+    sessionStorage.setItem('isAuthenticated', 'true');
+  };
+
+  const handleRoleChange = (newRole: UserRole) => {
+    if (newRole !== currentUser.role) {
+      setPendingRole(newRole);
+      setShowRoleDialog(true);
+    }
+  };
+
+  const handleRoleConfirm = () => {
+    if (pendingRole) {
+      setCurrentUserByRole(pendingRole);
+      setPendingRole(null);
+      setShowRoleDialog(false);
+    }
+  };
+
+  const handleRoleCancel = () => {
+    setPendingRole(null);
+    setShowRoleDialog(false);
+  };
+
+  // Show login modal if not authenticated
+  if (!isAuthenticated) {
+    return <LoginModal isOpen={true} onLogin={handleLogin} />;
+  }
 
   return (
     <SidebarProvider>
@@ -34,7 +78,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <div className="flex items-center gap-3">
                 <select
                   value={currentUser.role}
-                  onChange={(e) => setCurrentUserByRole(e.target.value as UserRole)}
+                  onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                   className="rounded-lg border bg-background px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   {users.map((user) => (
@@ -56,6 +100,14 @@ export function MainLayout({ children }: MainLayoutProps) {
           </main>
         </SidebarInset>
       </div>
+
+      {/* Role Change Password Dialog */}
+      <RolePasswordDialog
+        isOpen={showRoleDialog}
+        targetRole={pendingRole}
+        onConfirm={handleRoleConfirm}
+        onCancel={handleRoleCancel}
+      />
     </SidebarProvider>
   );
 }
