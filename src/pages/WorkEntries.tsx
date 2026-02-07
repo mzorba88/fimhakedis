@@ -448,14 +448,16 @@ export default function WorkEntries() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditEntry(entry)}
-                              title="Düzenle"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {currentUser.role === 'direktor' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditEntry(entry)}
+                                title="Düzenle"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
