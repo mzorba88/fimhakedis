@@ -26,6 +26,7 @@ import {
   PlusCircle,
   AlertTriangle
 } from 'lucide-react';
+import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -468,14 +469,14 @@ export default function SubcontractorHakedis() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Altyüklenici Hakedişleri</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Altyüklenici Hakedişleri</h1>
+            <p className="page-subtitle">
               Altyüklenici sözleşmelerine ait hakediş kayıtları
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
             <Plus className="h-4 w-4" />
             Yeni Hakediş
           </Button>
@@ -507,8 +508,121 @@ export default function SubcontractorHakedis() {
           </Select>
         </div>
 
-        {/* Hakedisler Table */}
-        <div className="card-elevated overflow-hidden">
+        {/* Mobile Cards View */}
+        <div className="mobile-cards">
+          {sortedHakedisler.map((hakedis) => {
+            const project = projects.find(p => p.id === hakedis.projectId);
+            const contract = workEntries.find(e => e.id === hakedis.contractId);
+            const workCategory = contract?.workCategory || '-';
+            
+            return (
+              <MobileCard 
+                key={hakedis.id}
+                onClick={() => {
+                  setSelectedHakedis(hakedis);
+                  setIsDetailDialogOpen(true);
+                }}
+              >
+                <MobileCardHeader
+                  title={hakedis.hakedisNo}
+                  subtitle={`${project?.projectCode} - ${hakedis.subcontractor}`}
+                  badge={
+                    <div className="flex flex-col items-end gap-1">
+                      <StatusBadge status={hakedis.approvalStatus} size="sm" />
+                      <StatusBadge status={hakedis.paymentStatus} size="sm" />
+                    </div>
+                  }
+                  icon={hakedis.contractExceededNote ? <AlertTriangle className="h-4 w-4 text-destructive" /> : undefined}
+                />
+                <div className="space-y-0.5">
+                  <MobileCardRow label="İş Kalemi" value={workCategory} />
+                  <MobileCardRow label="Açıklama" value={
+                    <span className="truncate max-w-[150px] block text-right">{hakedis.description || '-'}</span>
+                  } />
+                  <MobileCardRow label="Tarih" value={formatDate(hakedis.date)} />
+                  <MobileCardRow 
+                    label="Tutar" 
+                    value={
+                      <span className="font-semibold text-primary">
+                        {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
+                      </span>
+                    } 
+                  />
+                </div>
+                <MobileCardActions>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedHakedis(hakedis);
+                      setIsDetailDialogOpen(true);
+                    }}
+                    className="touch-target"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditHakedis(hakedis);
+                      }}
+                      className="touch-target"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        const project = projects.find(p => p.id === hakedis.projectId);
+                        const contract = workEntries.find(e => e.id === hakedis.contractId);
+                        await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                        toast.success('PDF rapor indirildi');
+                      } catch (error) {
+                        toast.error('PDF oluşturulamadı');
+                      }
+                    }}
+                    className="touch-target"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedHakedis(hakedis);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    className="text-destructive hover:text-destructive touch-target"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </MobileCardActions>
+              </MobileCard>
+            );
+          })}
+          
+          {sortedHakedisler.length === 0 && (
+            <div className="p-8 text-center">
+              <Receipt className="mx-auto h-10 w-10 text-muted-foreground/50" />
+              <h3 className="mt-3 text-base font-medium text-foreground">Hakediş kaydı bulunamadı</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Yeni hakediş kaydı eklemek için yukarıdaki butonu kullanın.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="desktop-table card-elevated overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

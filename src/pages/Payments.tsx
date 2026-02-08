@@ -342,12 +342,12 @@ export default function Payments() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Ödemeler</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Ödemeler</h1>
+            <p className="page-subtitle">
               Onaylanmış hakedişlerin ödeme takibi
             </p>
           </div>
@@ -360,21 +360,21 @@ export default function Payments() {
             animate={{ opacity: 1, y: 0 }}
             className="stat-card"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-status-pending-bg p-2.5">
-                  <Clock className="h-5 w-5 text-status-pending" />
+                <div className="rounded-lg bg-[hsl(var(--status-pending-bg))] p-2 sm:p-2.5">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--status-pending))]" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Bekleyen Ödeme (GBP)</p>
-                  <p className="text-xl font-semibold text-status-pending">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Bekleyen Ödeme (GBP)</p>
+                  <p className="text-lg sm:text-xl font-semibold text-[hsl(var(--status-pending))]">
                     {isLoadingRates ? (
                       <span className="text-muted-foreground">Yükleniyor...</span>
                     ) : (
                       `£${totalUnpaidGBP.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                     {approvedHakedisler.filter(h => h.paymentStatus === 'odenmedi').length} adet bekleyen hakediş
                   </p>
                 </div>
@@ -384,10 +384,11 @@ export default function Payments() {
                 size="sm"
                 onClick={refreshRates}
                 disabled={isLoadingRates}
-                className="gap-1.5"
+                className="gap-1.5 touch-target self-end sm:self-auto"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoadingRates ? 'animate-spin' : ''}`} />
-                Kurları Güncelle
+                <span className="hidden sm:inline">Kurları Güncelle</span>
+                <span className="sm:hidden">Güncelle</span>
               </Button>
             </div>
           </motion.div>
@@ -395,11 +396,10 @@ export default function Payments() {
 
         {/* Info Banner for users without payment permission */}
         {!canManagePayments && (
-          <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-accent p-4">
-            <AlertTriangle className="h-5 w-5 text-primary" />
-            <p className="text-sm text-foreground">
+          <div className="flex items-start sm:items-center gap-3 rounded-lg border border-primary/30 bg-accent p-3 sm:p-4">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-xs sm:text-sm text-foreground">
               Ödeme işlemleri sadece <strong>Direktör</strong> ve <strong>Muhasebe</strong> rolündeki kullanıcılar tarafından yapılabilir.
-              Rol değiştirmek için sağ üstteki menüyü kullanabilirsiniz.
             </p>
           </div>
         )}
