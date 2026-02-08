@@ -303,6 +303,7 @@ export default function Approvals() {
                           className="overflow-hidden"
                         >
                           <div className="mt-4 pt-4 border-t space-y-4">
+                            {/* Basic Info Grid */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                               <div>
                                 <p className="text-xs text-muted-foreground">Hakediş Tarihi</p>
@@ -312,7 +313,25 @@ export default function Approvals() {
                                 <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
                                 <p className="text-sm font-medium">{contractTypeLabels[hakedis.contractType]}</p>
                               </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Para Birimi</p>
+                                <p className="text-sm font-medium">{hakedis.currency}</p>
+                              </div>
+                              {hakedis.vatRate !== undefined && hakedis.vatRate !== null && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">KDV Oranı</p>
+                                  <p className="text-sm font-medium">%{hakedis.vatRate}</p>
+                                </div>
+                              )}
                             </div>
+
+                            {/* Hakediş Açıklaması */}
+                            {hakedis.description && (
+                              <div className="rounded-lg bg-muted/30 p-3">
+                                <p className="text-xs text-muted-foreground mb-1">Hakediş Açıklaması</p>
+                                <p className="text-sm text-foreground whitespace-pre-wrap">{hakedis.description}</p>
+                              </div>
+                            )}
 
                             {/* Show payment amount for götürü bedel */}
                             {hakedis.contractType === 'goturu_bedel' && hakedis.paymentAmount && (
@@ -328,21 +347,100 @@ export default function Approvals() {
                             {hakedis.hakedisItems && hakedis.hakedisItems.length > 0 && (
                               <div>
                                 <p className="text-xs text-muted-foreground mb-2">Hakediş Kalemleri</p>
-                                <div className="space-y-1">
-                                  {hakedis.hakedisItems.map((item, i) => (
-                                    <div key={i} className="flex justify-between text-sm">
-                                      <span>{item.description} ({item.quantity} {item.unit})</span>
-                                      <span className="font-medium">{formatCurrencyWithType(item.amount, hakedis.currency)}</span>
-                                    </div>
-                                  ))}
+                                <div className="rounded-lg border overflow-hidden">
+                                  <table className="w-full text-sm">
+                                    <thead className="bg-muted/50">
+                                      <tr>
+                                        <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Açıklama</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Miktar</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Birim Fiyat</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Tutar</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                      {hakedis.hakedisItems.map((item, i) => (
+                                        <tr key={i}>
+                                          <td className="px-3 py-2">{item.description}</td>
+                                          <td className="px-3 py-2 text-right">{item.quantity} {item.unit}</td>
+                                          <td className="px-3 py-2 text-right">{formatCurrencyWithType(item.unitPrice, hakedis.currency)}</td>
+                                          <td className="px-3 py-2 text-right font-medium">{formatCurrencyWithType(item.amount, hakedis.currency)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
                             )}
 
+                            {/* Extra items outside contract */}
+                            {hakedis.extraItems && hakedis.extraItems.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-2">Sözleşme Harici Ek İşler</p>
+                                <div className="rounded-lg border border-status-pending overflow-hidden">
+                                  <table className="w-full text-sm">
+                                    <thead className="bg-status-pending-bg">
+                                      <tr>
+                                        <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Açıklama</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Miktar</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Birim Fiyat</th>
+                                        <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Tutar</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                      {hakedis.extraItems.map((item, i) => (
+                                        <tr key={i}>
+                                          <td className="px-3 py-2">{item.description}</td>
+                                          <td className="px-3 py-2 text-right">{item.quantity} {item.unit}</td>
+                                          <td className="px-3 py-2 text-right">{formatCurrencyWithType(item.unitPrice, hakedis.currency)}</td>
+                                          <td className="px-3 py-2 text-right font-medium">{formatCurrencyWithType(item.amount, hakedis.currency)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Contract exceeded warning */}
+                            {hakedis.contractExceededNote && (
+                              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
+                                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-medium text-destructive">Sözleşme Tutarı Aşıldı</p>
+                                  <p className="text-xs text-destructive/80 mt-0.5">{hakedis.contractExceededNote}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Total Summary */}
                             <div className="rounded-lg bg-muted/50 p-4">
                               <div className="flex justify-between text-sm font-semibold">
-                                <span>Toplam</span>
+                                <span>Toplam Tutar</span>
                                 <span className="text-primary">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
+                              </div>
+                              {hakedis.vatRate !== undefined && hakedis.vatRate !== null && hakedis.vatRate > 0 && (
+                                <>
+                                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                    <span>KDV (%{hakedis.vatRate})</span>
+                                    <span>{formatCurrencyWithType(hakedis.totalAmount * (hakedis.vatRate / 100), hakedis.currency)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t">
+                                    <span>Genel Toplam (KDV Dahil)</span>
+                                    <span className="text-primary">{formatCurrencyWithType(hakedis.totalAmount * (1 + hakedis.vatRate / 100), hakedis.currency)}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Meta info */}
+                            <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground pt-2 border-t">
+                              <div>
+                                <span>Oluşturan: </span>
+                                <span className="font-medium">{hakedis.createdBy}</span>
+                              </div>
+                              <div>
+                                <span>Oluşturulma: </span>
+                                <span className="font-medium">{formatDate(hakedis.createdAt)}</span>
                               </div>
                             </div>
                           </div>
