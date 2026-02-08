@@ -89,69 +89,61 @@ export default function Reports() {
       return;
     }
 
-    // Create a temporary container for the PDF content
+    // Create a temporary container for the PDF content - optimized for single page
     const container = document.createElement('div');
-    container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 40px; background: white; font-family: Arial, sans-serif;';
+    container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 20px; background: white; font-family: Arial, sans-serif;';
     
-    // Generate table rows
+    // Generate table rows - compact format
     const tableRows = data.entries.map((entry, idx) => `
       <tr style="background: ${idx % 2 === 0 ? '#f9fafb' : 'white'};">
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${entry.workCategory}</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${entry.subcontractor}</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${contractTypeLabels[entry.contractType]}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(entry.totalAmount, entry.currency)}</td>
+        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
+        <td style="padding: 4px 6px; border: 1px solid #ddd;">${entry.workCategory}</td>
+        <td style="padding: 4px 6px; border: 1px solid #ddd;">${entry.subcontractor}</td>
+        <td style="padding: 4px 6px; border: 1px solid #ddd;">${contractTypeLabels[entry.contractType]}</td>
+        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(entry.totalAmount, entry.currency)}</td>
       </tr>
     `).join('');
 
     container.innerHTML = `
-      <div style="margin-bottom: 20px;">
-        <img src="${formanLogo}" style="height: 50px; margin-bottom: 10px;" />
-        <h1 style="text-align: center; font-size: 24px; margin: 10px 0; color: #1a1a1a;">HAKEDİŞ RAPORU</h1>
-        <p style="text-align: center; font-size: 12px; color: #666;">Rapor Tarihi: ${formatDate(new Date().toISOString())}</p>
+      <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+        <img src="${formanLogo}" style="height: 35px;" />
+        <div style="text-align: right;">
+          <h1 style="font-size: 18px; margin: 0; color: #1a1a1a;">HAKEDİŞ RAPORU</h1>
+          <p style="font-size: 10px; color: #666; margin: 2px 0 0 0;">Rapor Tarihi: ${formatDate(new Date().toISOString())}</p>
+        </div>
       </div>
       
-      <div style="margin-bottom: 25px;">
-        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px;">Proje Bilgileri</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #3b82f6; color: white;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Değer</th>
-            </tr>
-          </thead>
+      <div style="margin-bottom: 12px;">
+        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 3px;">Proje Bilgileri</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <tbody>
             <tr style="background: #f9fafb;">
-              <td style="padding: 10px; border: 1px solid #ddd;">Proje Adı</td>
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">${data.project.projectName}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 20%;">Proje Adı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; width: 30%;">${data.project.projectName}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 20%;">Proje Kodu</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 30%;">${data.project.projectCode}</td>
             </tr>
             <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;">Proje Kodu</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${data.project.projectCode}</td>
-            </tr>
-            <tr style="background: #f9fafb;">
-              <td style="padding: 10px; border: 1px solid #ddd;">Lokasyon</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${data.project.location}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;">Dönem</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Lokasyon</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">${data.project.location}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Dönem</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}</td>
             </tr>
           </tbody>
         </table>
       </div>
       
       ${data.entries.length > 0 ? `
-      <div style="margin-bottom: 25px;">
-        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">Hakediş Kalemleri</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <div style="margin-bottom: 12px;">
+        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 3px;">Hakediş Kalemleri</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
           <thead>
             <tr style="background: #6366f1; color: white;">
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 40px;">#</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">İş Kalemi</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Altyüklenici</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Sözleşme Tipi</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Tutar</th>
+              <th style="padding: 4px 6px; text-align: center; border: 1px solid #ddd; width: 30px;">#</th>
+              <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd;">İş Kalemi</th>
+              <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd;">Altyüklenici</th>
+              <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd;">Söz. Tipi</th>
+              <th style="padding: 4px 6px; text-align: right; border: 1px solid #ddd;">Tutar</th>
             </tr>
           </thead>
           <tbody>
@@ -161,53 +153,47 @@ export default function Reports() {
       </div>
       ` : ''}
       
-      <div style="margin-bottom: 25px;">
-        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 5px;">Özet Bilgiler</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #22c55e; color: white;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Tutar</th>
-            </tr>
-          </thead>
+      <div style="margin-bottom: 12px;">
+        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 3px;">Özet Bilgiler</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <tbody>
             <tr style="background: #f9fafb;">
-              <td style="padding: 10px; border: 1px solid #ddd;">Önceki Toplam</td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.previousTotal)}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Önceki Toplam</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.previousTotal)}</td>
             </tr>
             <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;">Bu Dönem</td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.currentPeriodTotal)}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Bu Dönem</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.currentPeriodTotal)}</td>
             </tr>
             <tr style="background: #f9fafb;">
-              <td style="padding: 10px; border: 1px solid #ddd;">Kümülatif Toplam</td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.cumulativeTotal)}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Kümülatif Toplam</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.cumulativeTotal)}</td>
             </tr>
             <tr style="background: #3b82f6; color: white;">
-              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">GENEL TOPLAM</td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${formatCurrency(data.grandTotal)}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">GENEL TOPLAM</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${formatCurrency(data.grandTotal)}</td>
             </tr>
           </tbody>
         </table>
       </div>
       
-      <div style="display: flex; justify-content: space-between; margin-top: 60px;">
+      <div style="display: flex; justify-content: space-between; margin-top: 20px;">
         <div style="text-align: center; width: 45%;">
-          <p style="font-size: 12px; margin-bottom: 40px;">Direktör Onayı:</p>
-          <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
-          <p style="font-size: 10px; color: #666;">İmza / Tarih</p>
+          <p style="font-size: 10px; margin-bottom: 20px;">Direktör Onayı:</p>
+          <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
+          <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
         </div>
         <div style="text-align: center; width: 45%;">
-          <p style="font-size: 12px; margin-bottom: 40px;">Muhasebe Onayı:</p>
-          <div style="border-bottom: 1px solid #333; margin-bottom: 5px;"></div>
-          <p style="font-size: 10px; color: #666;">İmza / Tarih</p>
+          <p style="font-size: 10px; margin-bottom: 20px;">Muhasebe Onayı:</p>
+          <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
+          <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
         </div>
       </div>
     `;
     
     document.body.appendChild(container);
     
-    try {
+  try {
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -218,24 +204,27 @@ export default function Reports() {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/png');
       
-      const imgWidth = 190;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // Calculate dimensions to fit on single page
+      const pageWidth = 190;
+      const pageHeight = 277; // Leave margin
+      const imgRatio = canvas.width / canvas.height;
+      const pageRatio = pageWidth / pageHeight;
       
-      let heightLeft = imgHeight;
-      let position = 10;
-      
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      let imgWidth, imgHeight;
+      if (imgRatio > pageRatio) {
+        imgWidth = pageWidth;
+        imgHeight = pageWidth / imgRatio;
+      } else {
+        imgHeight = pageHeight;
+        imgWidth = pageHeight * imgRatio;
       }
       
-      const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+      const xOffset = (210 - imgWidth) / 2;
+      const yOffset = 10;
+      
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+      
+      const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\\./g, '-');
       pdf.save(`hakedis-raporu-${data.project.projectCode}-${dateStr}.pdf`);
       toast.success('PDF raporu indirildi');
       setIsDialogOpen(false);
