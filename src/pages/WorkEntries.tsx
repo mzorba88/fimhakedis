@@ -29,6 +29,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -326,14 +327,14 @@ export default function WorkEntries() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Altyüklenici Sözleşmeleri</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Altyüklenici Sözleşmeleri</h1>
+            <p className="page-subtitle">
               Tüm altyüklenici sözleşmelerini görüntüleyin ve yönetin
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
             <Plus className="h-4 w-4" />
             Yeni Kayıt
           </Button>
@@ -365,8 +366,110 @@ export default function WorkEntries() {
           </Select>
         </div>
 
-        {/* Entries Table */}
-        <div className="card-elevated overflow-hidden">
+        {/* Mobile Cards View */}
+        <div className="mobile-cards">
+          {sortedEntries.map((entry) => {
+            const project = projects.find(p => p.id === entry.projectId);
+            
+            return (
+              <MobileCard 
+                key={entry.id}
+                onClick={() => {
+                  setSelectedEntry(entry);
+                  setIsDetailDialogOpen(true);
+                }}
+              >
+                <MobileCardHeader
+                  title={entry.contractNo}
+                  subtitle={`${project?.projectCode} - ${entry.subcontractor}`}
+                />
+                <div className="space-y-0.5">
+                  <MobileCardRow label="İş Kalemi" value={
+                    <span className="truncate max-w-[150px] block text-right">{entry.workCategory}</span>
+                  } />
+                  <MobileCardRow label="Sözleşme Tipi" value={contractTypeLabels[entry.contractType]} />
+                  <MobileCardRow label="Tarih" value={formatDate(entry.date)} />
+                  <MobileCardRow 
+                    label="Tutar" 
+                    value={
+                      <span className="font-semibold text-primary">
+                        {formatCurrencyWithType(entry.totalAmount, entry.currency)}
+                      </span>
+                    } 
+                  />
+                </div>
+                <MobileCardActions>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEntry(entry);
+                      setIsDetailDialogOpen(true);
+                    }}
+                    className="touch-target"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {currentUser.role === 'direktor' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditEntry(entry);
+                      }}
+                      className="touch-target"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await generateContractPDF(entry, project, subcontractorHakedisler);
+                        toast.success('PDF rapor indirildi');
+                      } catch (error) {
+                        toast.error('PDF oluşturulamadı');
+                      }
+                    }}
+                    className="touch-target"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEntry(entry);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    className="text-destructive hover:text-destructive touch-target"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </MobileCardActions>
+              </MobileCard>
+            );
+          })}
+          
+          {sortedEntries.length === 0 && (
+            <div className="p-8 text-center">
+              <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground/50" />
+              <h3 className="mt-3 text-base font-medium text-foreground">Kayıt bulunamadı</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Arama kriterlerinize uygun sözleşme kaydı bulunmuyor.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="desktop-table card-elevated overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

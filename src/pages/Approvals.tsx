@@ -15,6 +15,7 @@ import {
   FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -158,18 +159,18 @@ export default function Approvals() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Onay Bekleyenler</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Onay Bekleyenler</h1>
+            <p className="page-subtitle">
               Direktör onayı bekleyen altyüklenici hakediş kayıtları
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-status-pending-bg px-4 py-2">
-            <Clock className="h-5 w-5 text-status-pending" />
-            <span className="text-sm font-medium text-status-pending">
+          <div className="flex items-center gap-2 rounded-lg bg-[hsl(var(--status-pending-bg))] px-3 py-1.5 sm:px-4 sm:py-2">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--status-pending))]" />
+            <span className="text-xs sm:text-sm font-medium text-[hsl(var(--status-pending))]">
               {pendingHakedisler.length} hakediş bekliyor
             </span>
           </div>
@@ -177,11 +178,10 @@ export default function Approvals() {
 
         {/* Info Banner for non-directors */}
         {!isDirector && (
-          <div className="flex items-center gap-3 rounded-lg border border-status-pending/30 bg-status-pending-bg p-4">
-            <AlertTriangle className="h-5 w-5 text-status-pending" />
-            <p className="text-sm text-foreground">
+          <div className="flex items-start sm:items-center gap-3 rounded-lg border border-[hsl(var(--status-pending))]/30 bg-[hsl(var(--status-pending-bg))] p-3 sm:p-4">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--status-pending))] shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-xs sm:text-sm text-foreground">
               Onay işlemleri sadece <strong>Direktör</strong> rolündeki kullanıcılar tarafından yapılabilir.
-              Rol değiştirmek için sağ üstteki menüyü kullanabilirsiniz.
             </p>
           </div>
         )}
@@ -232,8 +232,8 @@ export default function Approvals() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-3">
-                          <div className="rounded-lg bg-status-pending-bg p-2.5">
-                            <FileText className="h-5 w-5 text-status-pending" />
+                          <div className="rounded-lg bg-[hsl(var(--status-pending-bg))] p-2 sm:p-2.5">
+                            <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--status-pending))]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">

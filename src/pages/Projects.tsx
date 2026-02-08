@@ -146,16 +146,16 @@ export default function Projects() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Projeler</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="page-title">Projeler</h1>
+            <p className="page-subtitle">
               Tüm projelerinizi yönetin
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
             <Plus className="h-4 w-4" />
             Yeni Proje
           </Button>
