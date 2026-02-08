@@ -341,6 +341,11 @@ export default function SubcontractorHakedis() {
       return;
     }
 
+    if (!description.trim()) {
+      toast.error('Lütfen hakediş açıklaması girin');
+      return;
+    }
+
     const contract = workEntries.find(e => e.id === selectedContractId);
     if (!contract) return;
 
@@ -512,6 +517,7 @@ export default function SubcontractorHakedis() {
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
+                  <SortableTableHeader label="Açıklama" sortKey="description" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <SortableTableHeader label="Onay Durumu" sortKey="approvalStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
@@ -569,6 +575,11 @@ export default function SubcontractorHakedis() {
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {workCategory}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-muted-foreground max-w-xs">
+                          <p className="truncate" title={hakedis.description || '-'}>
+                            {hakedis.description || '-'}
+                          </p>
                         </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
                           {formatDate(hakedis.date)}
@@ -770,13 +781,19 @@ export default function SubcontractorHakedis() {
 
                   {/* Description/Notes */}
                   <div className="space-y-2">
-                    <Label>Açıklama</Label>
+                    <Label>
+                      Açıklama <span className="text-destructive">*</span>
+                    </Label>
                     <Textarea
-                      placeholder="Hakediş ile ilgili notlarınızı buraya yazabilirsiniz..."
+                      placeholder="Hakediş ile ilgili notlarınızı buraya yazabilirsiniz... (Zorunlu)"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
+                      required
                     />
+                    {!description.trim() && (
+                      <p className="text-xs text-destructive">Açıklama alanı zorunludur</p>
+                    )}
                   </div>
                 </>
               )}
@@ -1288,6 +1305,13 @@ export default function SubcontractorHakedis() {
                   </div>
                 </div>
 
+                {/* Hakediş Description */}
+                {selectedHakedis.description && (
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Hakediş Açıklaması</p>
+                    <p className="text-sm text-foreground">{selectedHakedis.description}</p>
+                  </div>
+                )}
                 {/* Status */}
                 <div className="flex gap-4">
                   <div>
