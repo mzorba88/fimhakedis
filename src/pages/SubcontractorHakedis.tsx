@@ -1158,6 +1158,30 @@ export default function SubcontractorHakedis() {
               {/* Birim Fiyat Items */}
               {selectedContract?.contractType === 'birim_fiyat' && hakedisItems.length > 0 && (
                 <div className="space-y-4">
+                  {/* Contract Balance Info for Birim Fiyat */}
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Sözleşme Tutarı</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Toplam Hakediş</p>
+                        <p className="font-semibold text-green-600">
+                          {formatCurrencyWithType(paidAmountForContract, selectedContract.currency)}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Kalan Bakiye</p>
+                        <p className={`text-lg font-bold ${remainingAmount > 0 ? 'text-amber-600' : remainingAmount < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                          {formatCurrencyWithType(remainingAmount, selectedContract.currency)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Label>İş Kalemleri ve Miktarlar</Label>
                   <div className="space-y-3">
                     {hakedisItems.map((item) => (
@@ -1537,17 +1561,15 @@ export default function SubcontractorHakedis() {
                             <span className="font-medium">{formatCurrencyWithType(contract.totalAmount, contract.currency)}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Toplam Ödenen</span>
+                            <span className="text-muted-foreground">Toplam Hakediş</span>
                             <span className="text-green-600 font-medium">{formatCurrencyWithType(totalPaid, contract.currency)}</span>
                           </div>
-                          {selectedHakedis.contractType === 'goturu_bedel' && (
-                            <div className="flex justify-between text-sm border-t pt-2 mt-1">
-                              <span className="font-semibold">Kalan Bakiye</span>
-                              <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                                {formatCurrencyWithType(remainingBalance, contract.currency)}
-                              </span>
-                            </div>
-                          )}
+                          <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                            <span className="font-semibold">Kalan Bakiye</span>
+                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                              {formatCurrencyWithType(remainingBalance, contract.currency)}
+                            </span>
+                          </div>
                         </div>
                       </>
                     );

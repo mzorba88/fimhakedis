@@ -1065,25 +1065,20 @@ export default function WorkEntries() {
                     .reduce((sum, h) => sum + h.totalAmount, 0);
                   const remainingBalance = selectedEntry.totalAmount - paidAmount;
                   
-                  if (paidAmount > 0 || selectedEntry.contractType === 'goturu_bedel') {
-                    return (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Ödenen Miktar</span>
-                          <span className="text-green-600 font-medium">{formatCurrencyWithType(paidAmount, selectedEntry.currency)}</span>
-                        </div>
-                        {selectedEntry.contractType === 'goturu_bedel' && (
-                          <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                            <span className="font-semibold">Kalan Bakiye</span>
-                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                              {formatCurrencyWithType(remainingBalance, selectedEntry.currency)}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  }
-                  return null;
+                  return (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Toplam Hakediş</span>
+                        <span className="text-green-600 font-medium">{formatCurrencyWithType(paidAmount, selectedEntry.currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border-t pt-2 mt-2">
+                        <span className="font-semibold">Kalan Bakiye</span>
+                        <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                          {formatCurrencyWithType(remainingBalance, selectedEntry.currency)}
+                        </span>
+                      </div>
+                    </>
+                  );
                 })()}
               </div>
             </div>
