@@ -172,6 +172,7 @@ export const mockSubcontractorHakedisler: SubcontractorHakedis[] = [
   {
     id: 'sh1',
     hakedisNo: 'HKD-001',
+    hakedisType: 'ara_hakedis',
     projectId: 'p1',
     subcontractor: 'BARA ELEKTRİK',
     contractId: 'we1',
@@ -194,6 +195,7 @@ export const mockSubcontractorHakedisler: SubcontractorHakedis[] = [
   {
     id: 'sh2',
     hakedisNo: 'HKD-002',
+    hakedisType: 'ara_hakedis',
     projectId: 'p2',
     subcontractor: 'MECHSYS',
     contractId: 'we2',
@@ -218,6 +220,7 @@ export const mockSubcontractorHakedisler: SubcontractorHakedis[] = [
   {
     id: 'sh3',
     hakedisNo: 'HKD-003',
+    hakedisType: 'ara_hakedis',
     projectId: 'p3',
     subcontractor: 'EMSU BOYA',
     contractId: 'we3',
@@ -240,6 +243,7 @@ export const mockSubcontractorHakedisler: SubcontractorHakedis[] = [
   {
     id: 'sh4',
     hakedisNo: 'HKD-004',
+    hakedisType: 'ara_hakedis',
     projectId: 'p4',
     subcontractor: 'KARATAÇLAR',
     contractId: 'we4',
@@ -261,6 +265,7 @@ export const mockSubcontractorHakedisler: SubcontractorHakedis[] = [
   {
     id: 'sh5',
     hakedisNo: 'HKD-005',
+    hakedisType: 'ara_hakedis',
     projectId: 'p5',
     subcontractor: 'ÖNDER ALÇI DEKORASYON',
     contractId: 'we5',

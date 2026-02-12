@@ -7,11 +7,13 @@ import {
   formatCurrencyWithType, 
   formatDate, 
   contractTypeLabels,
+  hakedisTypeLabels,
   currencySymbols,
   SubcontractorHakedis as HakedisType,
   HakedisItem,
   ExtraWorkItem,
-  Currency
+  Currency,
+  HakedisRecordType
 } from '@/types/hakedis';
 import { generateHakedisPDF } from '@/utils/pdfGenerator';
 import { 
@@ -97,7 +99,7 @@ export default function SubcontractorHakedis() {
   const [hakedisDate, setHakedisDate] = useState(new Date().toISOString().split('T')[0]);
   const [vatRate, setVatRate] = useState<string>('10');
   const [description, setDescription] = useState<string>('');
-
+  const [hakedisType, setHakedisType] = useState<HakedisRecordType>('ara_hakedis');
   // Get unique subcontractors from contracts
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
@@ -142,6 +144,14 @@ export default function SubcontractorHakedis() {
     const extraItemsTotal = extraItems.reduce((sum, item) => sum + item.amount, 0);
     return contractItemsTotal + extraItemsTotal;
   }, [hakedisItems, extraItems]);
+
+  // Calculate previous payments for kesin hesap (all alelhesap + ara_hakedis for the contract)
+  const previousPaymentsTotal = useMemo(() => {
+    if (!selectedContractId) return 0;
+    return subcontractorHakedisler
+      .filter(h => h.contractId === selectedContractId && h.id !== editingHakedisId)
+      .reduce((sum, h) => sum + h.totalAmount, 0);
+  }, [subcontractorHakedisler, selectedContractId, editingHakedisId]);
 
   // Filtered hakedisler
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
@@ -214,6 +224,7 @@ export default function SubcontractorHakedis() {
     setHakedisDate(new Date().toISOString().split('T')[0]);
     setVatRate('10');
     setDescription('');
+    setHakedisType('ara_hakedis');
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
@@ -271,6 +282,7 @@ export default function SubcontractorHakedis() {
     setHakedisDate(hakedis.date);
     setVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
     setDescription(hakedis.description || '');
+    setHakedisType(hakedis.hakedisType || 'ara_hakedis');
     
     if (contract.contractType === 'goturu_bedel') {
       // For götürü bedel, set payment amount (subtract extra items if any)
@@ -353,7 +365,23 @@ export default function SubcontractorHakedis() {
     let totalAmount = 0;
     const extraItemsTotal = extraItems.reduce((sum, i) => sum + i.amount, 0);
     
-    if (contract.contractType === 'goturu_bedel') {
+    if (hakedisType === 'alelhesap') {
+      // Alelhesap: just a lump sum payment amount
+      const paymentBase = parseFloat(paymentAmount) || 0;
+      if (paymentBase <= 0) {
+        toast.error('Lütfen geçerli bir ödeme tutarı girin');
+        return;
+      }
+      totalAmount = paymentBase;
+    } else if (hakedisType === 'kesin_hesap') {
+      // Kesin hesap: only for birim fiyat - enter final quantities
+      totalAmount = birimFiyatTotal;
+      if (totalAmount <= 0) {
+        toast.error('Lütfen en az bir kalem için miktar girin');
+        return;
+      }
+      // Net amount after deducting previous payments will be shown but totalAmount stays as the full kesin hesap amount
+    } else if (contract.contractType === 'goturu_bedel') {
       const paymentBase = parseFloat(paymentAmount) || 0;
       if (paymentBase <= 0 && extraItemsTotal <= 0) {
         toast.error('Lütfen geçerli bir ödeme tutarı girin veya ek iş ekleyin');
@@ -370,6 +398,7 @@ export default function SubcontractorHakedis() {
       }
       totalAmount = paymentBase + extraItemsTotal;
     } else {
+      // ara_hakedis birim fiyat
       totalAmount = birimFiyatTotal;
       if (totalAmount <= 0) {
         toast.error('Lütfen en az bir kalem için miktar girin');
@@ -393,21 +422,19 @@ export default function SubcontractorHakedis() {
 
     try {
       if (isEditMode && editingHakedisId) {
-        // Check if editing a "revize" status hakedis - set it back to pending
         const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
         const shouldResetToOnayBekliyor = existingHakedis?.approvalStatus === 'revize';
         
-        // Update existing hakedis
         await updateSubcontractorHakedis(editingHakedisId, {
+          hakedisType,
           vatRate: vatRate !== '' ? Number(vatRate) : undefined,
           date: hakedisDate,
           description: description || undefined,
-          paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
-          hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+          paymentAmount: (hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') ? (parseFloat(paymentAmount) || 0) : undefined,
+          hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
           contractExceededNote: exceeded ? contractExceededNote : undefined,
-          // Reset approval status to pending if it was in revision
           ...(shouldResetToOnayBekliyor && {
             approvalStatus: 'onay_bekliyor' as const,
             rejectionReason: undefined,
@@ -424,10 +451,12 @@ export default function SubcontractorHakedis() {
       } else {
         // Generate hakediş number
         const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
-        const hakedisNo = `${contract.contractNo}-H${(hakedisCount + 1).toString().padStart(2, '0')}`;
+        const prefix = hakedisType === 'alelhesap' ? 'AH' : hakedisType === 'kesin_hesap' ? 'KH' : 'H';
+        const hakedisNo = `${contract.contractNo}-${prefix}${(hakedisCount + 1).toString().padStart(2, '0')}`;
 
         const newHakedis = await addSubcontractorHakedis({
           hakedisNo,
+          hakedisType,
           projectId: selectedProjectId,
           subcontractor: selectedSubcontractor,
           contractId: selectedContractId,
@@ -437,8 +466,8 @@ export default function SubcontractorHakedis() {
           vatRate: vatRate !== '' ? Number(vatRate) : undefined,
           date: hakedisDate,
           description: description || undefined,
-          paymentAmount: contract.contractType === 'goturu_bedel' ? (parseFloat(paymentAmount) || 0) : undefined,
-          hakedisItems: contract.contractType === 'birim_fiyat' ? hakedisItems.filter(i => i.quantity > 0) : undefined,
+          paymentAmount: (hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') ? (parseFloat(paymentAmount) || 0) : undefined,
+          hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
           contractExceededNote: exceeded ? contractExceededNote : undefined,
@@ -450,12 +479,12 @@ export default function SubcontractorHakedis() {
 
         await addActivityLog(
           'hakedis_created',
-          `${newHakedis.hakedisNo} hakediş oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
+          `${newHakedis.hakedisNo} ${hakedisTypeLabels[hakedisType]} oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
           `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
           newHakedis.id,
           'hakedis'
         );
-        toast.success('Hakediş kaydı oluşturuldu');
+        toast.success(`${hakedisTypeLabels[hakedisType]} kaydı oluşturuldu`);
       }
       
       setIsDialogOpen(false);
@@ -526,7 +555,7 @@ export default function SubcontractorHakedis() {
               >
                 <MobileCardHeader
                   title={hakedis.hakedisNo}
-                  subtitle={`${project?.projectCode} - ${hakedis.subcontractor}`}
+                  subtitle={`${project?.projectCode} - ${hakedis.subcontractor} • ${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']}`}
                   badge={
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={hakedis.approvalStatus} size="sm" />
@@ -664,7 +693,7 @@ export default function SubcontractorHakedis() {
                                 {hakedis.hakedisNo}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {contractTypeLabels[hakedis.contractType]}
+                                {hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • {contractTypeLabels[hakedis.contractType]}
                               </p>
                             </div>
                             {hakedis.contractExceededNote && (
@@ -869,6 +898,39 @@ export default function SubcontractorHakedis() {
                 </div>
               )}
 
+              {/* Hakediş Type Selection */}
+              {selectedContractId && (
+                <div className="space-y-2">
+                  <Label>Hakediş Tipi</Label>
+                  <Select 
+                    value={hakedisType} 
+                    onValueChange={(value: HakedisRecordType) => setHakedisType(value)}
+                    disabled={isEditMode}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ara_hakedis">Ara Hakediş</SelectItem>
+                      <SelectItem value="alelhesap">Alelhesap (Avans Ödeme)</SelectItem>
+                      {selectedContract?.contractType === 'birim_fiyat' && (
+                        <SelectItem value="kesin_hesap">Kesin Hesap</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {hakedisType === 'alelhesap' && (
+                    <p className="text-xs text-muted-foreground">
+                      Sözleşme taksitlerine veya iş kalemlerine bağlı olmadan yapılan avans ödeme.
+                    </p>
+                  )}
+                  {hakedisType === 'kesin_hesap' && (
+                    <p className="text-xs text-muted-foreground">
+                      İş tamamlandığında kesin miktarlar girilir, önceki ödemeler otomatik düşülür.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Date and VAT Rate */}
               {selectedContractId && (
                 <>
@@ -881,17 +943,19 @@ export default function SubcontractorHakedis() {
                         onChange={(e) => setHakedisDate(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>KDV Oranı (%)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Örn: 20"
-                        min="0"
-                        max="100"
-                        value={vatRate}
-                        onChange={(e) => setVatRate(e.target.value)}
-                      />
-                    </div>
+                    {hakedisType !== 'alelhesap' && (
+                      <div className="space-y-2">
+                        <Label>KDV Oranı (%)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Örn: 20"
+                          min="0"
+                          max="100"
+                          value={vatRate}
+                          onChange={(e) => setVatRate(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Description/Notes */}
@@ -913,8 +977,208 @@ export default function SubcontractorHakedis() {
                 </>
               )}
 
-              {/* Götürü Bedel Payment */}
-              {selectedContract?.contractType === 'goturu_bedel' && (
+              {/* Alelhesap - Simple Payment Amount */}
+              {hakedisType === 'alelhesap' && selectedContractId && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Sözleşme Tutarı</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(selectedContract?.totalAmount || 0, selectedContract?.currency || 'TRY')}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Önceki Ödemeler</p>
+                        <p className="font-semibold text-primary">
+                          {formatCurrencyWithType(previousPaymentsTotal, selectedContract?.currency || 'TRY')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Alelhesap Tutarı ({currencySymbols[selectedContract?.currency || 'TRY']})</Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Kesin Hesap - Birim Fiyat items with final quantities + previous payment deduction */}
+              {hakedisType === 'kesin_hesap' && selectedContract?.contractType === 'birim_fiyat' && hakedisItems.length > 0 && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Sözleşme Tutarı</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Önceki Ödemeler Toplamı</p>
+                        <p className="font-semibold text-primary">
+                          {formatCurrencyWithType(previousPaymentsTotal, selectedContract.currency)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Label>Kesin İş Miktarları</Label>
+                  <div className="space-y-3">
+                    {hakedisItems.map((item) => (
+                      <div key={item.id} className="rounded-lg border p-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.workCategory}</p>
+                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, selectedContract.currency)} / {item.unit}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Kesin Miktar"
+                              className="w-28"
+                              value={item.quantity || ''}
+                              onChange={(e) => updateHakedisItemQuantity(item.id, parseFloat(e.target.value) || 0)}
+                            />
+                            <span className="text-sm text-muted-foreground w-12">{item.unit}</span>
+                          </div>
+                        </div>
+                        {item.quantity > 0 && (
+                          <div className="mt-2 text-right text-sm font-medium">
+                            Tutar: {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Extra Work Items for Kesin Hesap */}
+                  {extraItems.length > 0 && (
+                    <div className="space-y-3 mt-4">
+                      <Label className="text-amber-600">Sözleşme Harici Ek İşler</Label>
+                      {extraItems.map((item) => (
+                        <div key={item.id} className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{item.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setExtraItems(items => items.filter(i => i.id !== item.id))}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!showAddExtraItem && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-dashed border-amber-400 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                      onClick={() => setShowAddExtraItem(true)}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Sözleşme Harici Ek İş Ekle
+                    </Button>
+                  )}
+
+                  {showAddExtraItem && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-amber-700 font-semibold">Yeni Ek İş Kalemi</Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setShowAddExtraItem(false); setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 }); }}>İptal</Button>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm">İş Açıklaması</Label>
+                          <Input placeholder="Örn: Ek işler" value={newExtraItem.description || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, description: e.target.value }))} />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Miktar</Label>
+                            <Input type="number" placeholder="0" value={newExtraItem.quantity || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim</Label>
+                            <Input placeholder="m², adet, kg..." value={newExtraItem.unit || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unit: e.target.value }))} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Input type="number" placeholder="0.00" value={newExtraItem.unitPrice || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))} />
+                          </div>
+                        </div>
+                        {(newExtraItem.quantity || 0) > 0 && (newExtraItem.unitPrice || 0) > 0 && (
+                          <div className="rounded-lg bg-amber-100 p-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-amber-700">Toplam Tutar:</span>
+                              <span className="font-bold text-amber-900">{formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}</span>
+                            </div>
+                          </div>
+                        )}
+                        <Button type="button" className="w-full" disabled={!newExtraItem.description || !newExtraItem.unit || !newExtraItem.quantity || !newExtraItem.unitPrice} onClick={() => {
+                          const amount = (newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0);
+                          setExtraItems(items => [...items, { id: crypto.randomUUID(), description: newExtraItem.description || '', unit: newExtraItem.unit || '', unitPrice: newExtraItem.unitPrice || 0, quantity: newExtraItem.quantity || 0, amount }]);
+                          setNewExtraItem({ description: '', unit: '', unitPrice: 0, quantity: 0 }); setShowAddExtraItem(false); toast.success('Ek iş kalemi eklendi');
+                        }}>
+                          <Plus className="h-4 w-4 mr-2" /> Ek İş Kalemini Ekle
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kesin Hesap Summary */}
+                  {birimFiyatTotal > 0 && (
+                    <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span>Kesin Hesap Tutarı</span>
+                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
+                      </div>
+                      {vatRate !== '' && Number(vatRate) > 0 && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>KDV (%{vatRate})</span>
+                          <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, selectedContract.currency)}</span>
+                        </div>
+                      )}
+                      <div className="border-t pt-2 flex justify-between">
+                        <span className="font-medium">Önceki Ödemeler</span>
+                        <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaymentsTotal, selectedContract.currency)}</span>
+                      </div>
+                      <div className="border-t pt-2 flex justify-between text-lg">
+                        <span className="font-bold">Net Ödenecek Tutar</span>
+                        <span className={`font-bold ${(birimFiyatTotal - previousPaymentsTotal) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                          {formatCurrencyWithType(birimFiyatTotal - previousPaymentsTotal, selectedContract.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Götürü Bedel Payment (only for ara_hakedis) */}
+              {hakedisType === 'ara_hakedis' && selectedContract?.contractType === 'goturu_bedel' && (
                 <div className="space-y-4">
                   <div className="rounded-lg border bg-muted/30 p-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1157,7 +1421,7 @@ export default function SubcontractorHakedis() {
               )}
 
               {/* Birim Fiyat Items */}
-              {selectedContract?.contractType === 'birim_fiyat' && hakedisItems.length > 0 && (
+              {hakedisType === 'ara_hakedis' && selectedContract?.contractType === 'birim_fiyat' && hakedisItems.length > 0 && (
                 <div className="space-y-4">
                   {/* Contract Balance Info for Birim Fiyat */}
                   <div className="rounded-lg border bg-muted/30 p-4">
@@ -1435,6 +1699,10 @@ export default function SubcontractorHakedis() {
                     <p className="font-medium">{selectedHakedis.subcontractor}</p>
                   </div>
                   <div>
+                    <p className="text-xs text-muted-foreground">Hakediş Tipi</p>
+                    <p className="font-medium">{hakedisTypeLabels[selectedHakedis.hakedisType || 'ara_hakedis']}</p>
+                  </div>
+                  <div>
                     <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
                     <p className="font-medium">{contractTypeLabels[selectedHakedis.contractType]}</p>
                   </div>
@@ -1552,10 +1820,27 @@ export default function SubcontractorHakedis() {
                     const totalPaid = subcontractorHakedisler
                       .filter(h => h.contractId === selectedHakedis.contractId)
                       .reduce((sum, h) => sum + h.totalAmount, 0);
+                    const previousPaid = subcontractorHakedisler
+                      .filter(h => h.contractId === selectedHakedis.contractId && h.id !== selectedHakedis.id)
+                      .reduce((sum, h) => sum + h.totalAmount, 0);
                     const remainingBalance = contract.totalAmount - totalPaid;
                     
                     return (
                       <>
+                        {selectedHakedis.hakedisType === 'kesin_hesap' && (
+                          <div className="border-t pt-2 mt-2 space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium">Önceki Ödemeler</span>
+                              <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaid, contract.currency)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                              <span className="font-bold">Net Ödenecek Tutar</span>
+                              <span className={`font-bold text-lg ${(selectedHakedis.totalAmount - previousPaid) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                                {formatCurrencyWithType(selectedHakedis.totalAmount - previousPaid, contract.currency)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         <div className="border-t pt-2 mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Sözleşme Tutarı</span>
@@ -1563,11 +1848,11 @@ export default function SubcontractorHakedis() {
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Toplam Hakediş</span>
-                            <span className="text-green-600 font-medium">{formatCurrencyWithType(totalPaid, contract.currency)}</span>
+                            <span className="text-primary font-medium">{formatCurrencyWithType(totalPaid, contract.currency)}</span>
                           </div>
                           <div className="flex justify-between text-sm border-t pt-2 mt-1">
                             <span className="font-semibold">Kalan Bakiye</span>
-                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-primary'}`}>
                               {formatCurrencyWithType(remainingBalance, contract.currency)}
                             </span>
                           </div>
