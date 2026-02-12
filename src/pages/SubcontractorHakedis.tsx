@@ -444,6 +444,7 @@ export default function SubcontractorHakedis() {
           contractExceededNote: exceeded ? contractExceededNote : undefined,
           createdBy: currentUser.id,
           approvalStatus: 'onay_bekliyor',
+          paidAmount: 0,
           paymentStatus: 'odenmedi',
         });
 

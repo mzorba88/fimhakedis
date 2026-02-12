@@ -166,6 +166,7 @@ export type Database = {
           hakedis_items: Json | null
           hakedis_no: string
           id: string
+          paid_amount: number | null
           paid_date: string | null
           payment_amount: number | null
           payment_status: string
@@ -193,6 +194,7 @@ export type Database = {
           hakedis_items?: Json | null
           hakedis_no: string
           id?: string
+          paid_amount?: number | null
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
@@ -220,6 +222,7 @@ export type Database = {
           hakedis_items?: Json | null
           hakedis_no?: string
           id?: string
+          paid_amount?: number | null
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
