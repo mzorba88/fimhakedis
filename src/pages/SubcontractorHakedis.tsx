@@ -33,7 +33,7 @@ import {
   AlertTriangle,
   FileSpreadsheet
 } from 'lucide-react';
-import { exportHakedislerToExcel } from '@/utils/excelExport';
+import { exportSingleHakedisToExcel } from '@/utils/excelExport';
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -516,20 +516,10 @@ export default function SubcontractorHakedis() {
               Altyüklenici sözleşmelerine ait hakediş kayıtları
             </p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline" 
-              onClick={() => exportHakedislerToExcel(sortedHakedisler, projects, workEntries)} 
-              className="gap-2 touch-target"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2 flex-1 sm:flex-none touch-target">
-              <Plus className="h-4 w-4" />
-              Yeni Hakediş
-            </Button>
-          </div>
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
+            <Plus className="h-4 w-4" />
+            Yeni Hakediş
+          </Button>
         </div>
 
         {/* Filters */}
@@ -664,6 +654,19 @@ export default function SubcontractorHakedis() {
                     className="touch-target"
                   >
                     <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const project = projects.find(p => p.id === hakedis.projectId);
+                      const contract = workEntries.find(c => c.id === hakedis.contractId);
+                      exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
+                    }}
+                    className="touch-target"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -820,6 +823,18 @@ export default function SubcontractorHakedis() {
                               title="PDF Rapor"
                             >
                               <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const project = projects.find(p => p.id === hakedis.projectId);
+                                const contract = workEntries.find(c => c.id === hakedis.contractId);
+                                exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
+                              }}
+                              title="Excel Rapor"
+                            >
+                              <FileSpreadsheet className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"

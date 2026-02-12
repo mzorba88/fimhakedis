@@ -16,7 +16,7 @@ import {
   CreditCard,
   FileSpreadsheet
 } from 'lucide-react';
-import { exportPaymentsToExcel } from '@/utils/excelExport';
+import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -450,15 +450,6 @@ export default function Payments() {
               Onaylanmış hakedişlerin ödeme takibi
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => exportPaymentsToExcel(sortedHakedisler, projects, workEntries)} 
-            className="gap-2 w-full sm:w-auto touch-target"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span className="hidden sm:inline">Excel İndir</span>
-            <span className="sm:hidden">Excel</span>
-          </Button>
         </div>
 
         {/* Summary Card - Only Pending Payments */}
@@ -682,6 +673,19 @@ export default function Payments() {
                               >
                                 <FileDown className="h-4 w-4" />
                                 PDF
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const project = projects.find(p => p.id === hakedis.projectId);
+                                  const contract = workEntries.find(c => c.id === hakedis.contractId);
+                                  exportSinglePaymentToExcel(hakedis, project, contract);
+                                }}
+                                className="gap-1.5"
+                              >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Excel
                               </Button>
                             </div>
                           </td>
