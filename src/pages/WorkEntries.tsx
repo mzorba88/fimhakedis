@@ -229,7 +229,7 @@ export default function WorkEntries() {
 
     // Add new subcontractor if needed
     if (newEntry.subcontractor === 'new' && newEntry.newSubcontractor) {
-      await addSubcontractor(newEntry.newSubcontractor);
+      await addSubcontractor(newEntry.newSubcontractor, newEntry.workCategory);
     }
 
     const amounts = calculateTotals();
@@ -642,7 +642,7 @@ export default function WorkEntries() {
               <Label>İş Kalemi *</Label>
               <Select
                 value={newEntry.workCategory}
-                onValueChange={(value) => setNewEntry({ ...newEntry, workCategory: value })}
+                onValueChange={(value) => setNewEntry({ ...newEntry, workCategory: value, subcontractor: '', newSubcontractor: '' })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="İş kalemi seçin" />
@@ -660,53 +660,62 @@ export default function WorkEntries() {
             {/* Subcontractor */}
             <div className="space-y-2">
               <Label>Altyüklenici *</Label>
-              <Select
-                value={newEntry.subcontractor}
-                onValueChange={(value) => {
-                  setNewEntry({ ...newEntry, subcontractor: value });
-                  // Auto-fill work items from the subcontractor's most recent contract
-                  if (value !== 'new' && !isEditMode) {
-                    const subContracts = workEntries
-                      .filter(e => e.subcontractor === value && e.contractType === 'birim_fiyat' && e.workItemEntries && e.workItemEntries.length > 0)
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                    
-                    if (subContracts.length > 0) {
-                      const lastContract = subContracts[0];
-                      const copiedItems: WorkItemEntry[] = (lastContract.workItemEntries || []).map((item, idx) => ({
-                        ...item,
-                        id: `wie_copy_${Date.now()}_${idx}`,
-                        quantity: 0, // Reset quantity for new contract
-                        currency: newEntry.currency,
-                      }));
-                      setWorkItemEntries(copiedItems);
-                      if (newEntry.contractType !== 'birim_fiyat') {
-                        setNewEntry(prev => ({ ...prev, subcontractor: value, contractType: 'birim_fiyat' }));
-                      }
-                      toast.info(`${value} altyüklenicisinin önceki sözleşmesindeki iş kalemleri yüklendi. Düzenleyebilirsiniz.`);
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Altyüklenici seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subcontractors.map((sub) => (
-                    <SelectItem key={sub} value={sub}>
-                      {sub}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="new">+ Yeni Altyüklenici Ekle</SelectItem>
-                </SelectContent>
-              </Select>
-              {newEntry.subcontractor === 'new' && (
-                <Input
-                  placeholder="Yeni altyüklenici adı"
-                  value={newEntry.newSubcontractor}
-                  onChange={(e) => setNewEntry({ ...newEntry, newSubcontractor: e.target.value })}
-                  className="mt-2"
-                />
-              )}
+              {(() => {
+                const filteredSubs = newEntry.workCategory
+                  ? subcontractors.filter(sub => sub.workCategory === newEntry.workCategory)
+                  : subcontractors;
+                return (
+                  <>
+                    <Select
+                      value={newEntry.subcontractor}
+                      onValueChange={(value) => {
+                        setNewEntry({ ...newEntry, subcontractor: value });
+                        // Auto-fill work items from the subcontractor's most recent contract
+                        if (value !== 'new' && !isEditMode) {
+                          const subContracts = workEntries
+                            .filter(e => e.subcontractor === value && e.contractType === 'birim_fiyat' && e.workItemEntries && e.workItemEntries.length > 0)
+                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                          
+                          if (subContracts.length > 0) {
+                            const lastContract = subContracts[0];
+                            const copiedItems: WorkItemEntry[] = (lastContract.workItemEntries || []).map((item, idx) => ({
+                              ...item,
+                              id: `wie_copy_${Date.now()}_${idx}`,
+                              quantity: 0,
+                              currency: newEntry.currency,
+                            }));
+                            setWorkItemEntries(copiedItems);
+                            if (newEntry.contractType !== 'birim_fiyat') {
+                              setNewEntry(prev => ({ ...prev, subcontractor: value, contractType: 'birim_fiyat' }));
+                            }
+                            toast.info(`${value} altyüklenicisinin önceki sözleşmesindeki iş kalemleri yüklendi. Düzenleyebilirsiniz.`);
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Altyüklenici seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredSubs.map((sub) => (
+                          <SelectItem key={sub.name} value={sub.name}>
+                            {sub.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new">+ Yeni Altyüklenici Ekle</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {newEntry.subcontractor === 'new' && (
+                      <Input
+                        placeholder="Yeni altyüklenici adı"
+                        value={newEntry.newSubcontractor}
+                        onChange={(e) => setNewEntry({ ...newEntry, newSubcontractor: e.target.value })}
+                        className="mt-2"
+                      />
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             {/* Contract Description */}

@@ -52,9 +52,9 @@ interface HakedisState {
   markHakedisAsPaid: (id: string) => Promise<void>;
 
   // Subcontractors
-  subcontractors: string[];
-  setSubcontractors: (subcontractors: string[]) => void;
-  addSubcontractor: (name: string) => Promise<void>;
+  subcontractors: { name: string; workCategory: string }[];
+  setSubcontractors: (subcontractors: { name: string; workCategory: string }[]) => void;
+  addSubcontractor: (name: string, workCategory?: string) => Promise<void>;
 
   // Users
   users: User[];
@@ -258,10 +258,10 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
   // Subcontractors
   setSubcontractors: (subcontractors) => set({ subcontractors }),
   
-  addSubcontractor: async (name) => {
-    await api.addSubcontractor(name);
+  addSubcontractor: async (name, workCategory) => {
+    await api.addSubcontractor(name, workCategory);
     set((state) => ({
-      subcontractors: [...state.subcontractors, name].sort()
+      subcontractors: [...state.subcontractors, { name, workCategory: workCategory || '' }].sort((a, b) => a.name.localeCompare(b.name))
     }));
   },
 
