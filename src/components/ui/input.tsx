@@ -12,6 +12,18 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onKeyDown={(e) => {
+          if (type === "number" && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+            e.preventDefault();
+          }
+          props.onKeyDown?.(e);
+        }}
+        onWheel={(e) => {
+          if (type === "number") {
+            (e.target as HTMLInputElement).blur();
+          }
+          props.onWheel?.(e);
+        }}
         {...props}
       />
     );
