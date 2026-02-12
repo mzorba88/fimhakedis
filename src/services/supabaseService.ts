@@ -58,6 +58,7 @@ const toWorkEntry = (row: any): WorkEntry => ({
 const toHakedis = (row: any): SubcontractorHakedis => ({
   id: row.id,
   hakedisNo: row.hakedis_no,
+  hakedisType: row.hakedis_type || 'ara_hakedis',
   projectId: row.project_id,
   subcontractor: row.subcontractor,
   contractId: row.contract_id,
@@ -244,6 +245,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
     .from('hakedisler')
     .insert({
       hakedis_no: hakedis.hakedisNo,
+      hakedis_type: hakedis.hakedisType,
       project_id: hakedis.projectId,
       subcontractor: hakedis.subcontractor,
       contract_id: hakedis.contractId,
@@ -272,6 +274,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
 
 export const updateHakedis = async (id: string, updates: Partial<SubcontractorHakedis>): Promise<void> => {
   const dbUpdates: any = {};
+  if (updates.hakedisType !== undefined) dbUpdates.hakedis_type = updates.hakedisType;
   if (updates.projectId !== undefined) dbUpdates.project_id = updates.projectId;
   if (updates.subcontractor !== undefined) dbUpdates.subcontractor = updates.subcontractor;
   if (updates.contractId !== undefined) dbUpdates.contract_id = updates.contractId;

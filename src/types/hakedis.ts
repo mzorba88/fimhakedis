@@ -6,6 +6,8 @@ export type ContractType = 'goturu_bedel' | 'birim_fiyat';
 
 export type ApprovalStatus = 'onay_bekliyor' | 'onaylandi' | 'revize';
 
+export type HakedisRecordType = 'ara_hakedis' | 'alelhesap' | 'kesin_hesap';
+
 export type PaymentStatus = 'odendi' | 'odenmedi' | 'kismen_odendi';
 
 export type ProjectStatus = 'aktif' | 'tamamlandi';
@@ -106,6 +108,7 @@ export interface WorkEntry {
 export interface SubcontractorHakedis {
   id: string;
   hakedisNo: string; // Auto-generated hakediş number
+  hakedisType: HakedisRecordType; // ara_hakedis, alelhesap, kesin_hesap
   projectId: string;
   subcontractor: string;
   contractId: string; // Reference to WorkEntry (contract)
@@ -228,6 +231,12 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
 export const contractTypeLabels: Record<ContractType, string> = {
   goturu_bedel: 'Götürü Bedel',
   birim_fiyat: 'Birim Fiyat',
+};
+
+export const hakedisTypeLabels: Record<HakedisRecordType, string> = {
+  ara_hakedis: 'Ara Hakediş',
+  alelhesap: 'Alelhesap',
+  kesin_hesap: 'Kesin Hesap',
 };
 
 export const projectStatusLabels: Record<ProjectStatus, string> = {
