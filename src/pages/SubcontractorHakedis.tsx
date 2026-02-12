@@ -8,12 +8,16 @@ import {
   formatDate, 
   contractTypeLabels,
   hakedisTypeLabels,
+  approvalStatusLabels,
+  paymentStatusLabels,
   currencySymbols,
   SubcontractorHakedis as HakedisType,
   HakedisItem,
   ExtraWorkItem,
   Currency,
-  HakedisRecordType
+  HakedisRecordType,
+  ApprovalStatus,
+  PaymentStatus
 } from '@/types/hakedis';
 import { generateHakedisPDF } from '@/utils/pdfGenerator';
 import { 
@@ -74,6 +78,8 @@ export default function SubcontractorHakedis() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
+  const [filterApproval, setFilterApproval] = useState<string>('all');
+  const [filterPayment, setFilterPayment] = useState<string>('all');
   const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'desc' });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -162,7 +168,9 @@ export default function SubcontractorHakedis() {
       hakedis.hakedisNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project?.projectName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
-    return matchesSearch && matchesProject;
+    const matchesApproval = filterApproval === 'all' || hakedis.approvalStatus === filterApproval;
+    const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
+    return matchesSearch && matchesProject && matchesApproval && matchesPayment;
   });
 
   const sortedHakedisler = useMemo(() => {
@@ -524,7 +532,7 @@ export default function SubcontractorHakedis() {
             />
           </div>
           <Select value={filterProject} onValueChange={setFilterProject}>
-            <SelectTrigger className="w-full sm:w-56">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Proje Seç" />
             </SelectTrigger>
             <SelectContent>
@@ -533,6 +541,28 @@ export default function SubcontractorHakedis() {
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectCode} - {project.projectName}
                 </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterApproval} onValueChange={setFilterApproval}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="Onay Durumu" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Onay Durumları</SelectItem>
+              {Object.entries(approvalStatusLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterPayment} onValueChange={setFilterPayment}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue placeholder="Ödeme Durumu" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Ödeme Durumları</SelectItem>
+              {Object.entries(paymentStatusLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
