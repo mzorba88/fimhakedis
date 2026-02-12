@@ -26,8 +26,10 @@ import {
   Eye,
   Pencil,
   FileText,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet
 } from 'lucide-react';
+import { exportContractsToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { Button } from '@/components/ui/button';
@@ -334,10 +336,20 @@ export default function WorkEntries() {
               Tüm altyüklenici sözleşmelerini görüntüleyin ve yönetin
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
-            <Plus className="h-4 w-4" />
-            Yeni Kayıt
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => exportContractsToExcel(sortedEntries, projects, subcontractorHakedisler)} 
+              className="gap-2 touch-target"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span className="hidden sm:inline">Excel</span>
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="gap-2 flex-1 sm:flex-none touch-target">
+              <Plus className="h-4 w-4" />
+              Yeni Kayıt
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

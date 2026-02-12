@@ -34,7 +34,7 @@ import * as XLSX from 'xlsx';
 import formanLogo from '@/assets/forman-logo.png';
 
 export default function Reports() {
-  const { projects, workEntries } = useHakedisStore();
+  const { projects, workEntries, subcontractorHakedisler } = useHakedisStore();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -46,6 +46,12 @@ export default function Reports() {
   const getProjectEntries = (projectId: string) => {
     return workEntries.filter(
       e => e.projectId === projectId && e.approvalStatus === 'onaylandi'
+    );
+  };
+
+  const getProjectHakedisler = (projectId: string) => {
+    return subcontractorHakedisler.filter(
+      h => h.projectId === projectId && h.approvalStatus === 'onaylandi'
     );
   };
 
@@ -70,6 +76,14 @@ export default function Reports() {
     const currentPeriodTotal = entries.reduce((sum, e) => sum + e.totalAmount, 0);
     const cumulativeTotal = previousTotal + currentPeriodTotal;
 
+    // Financial summary
+    const allContracts = workEntries.filter(e => e.projectId === selectedProjectId);
+    const contractTotal = allContracts.reduce((sum, e) => sum + e.totalAmount, 0);
+    const allHakedisler = getProjectHakedisler(selectedProjectId);
+    const hakedisTotal = allHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+    const paidTotal = allHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+    const remainingBalance = hakedisTotal - paidTotal;
+
     return {
       project: selectedProject,
       entries,
@@ -77,6 +91,10 @@ export default function Reports() {
       currentPeriodTotal,
       cumulativeTotal,
       grandTotal: cumulativeTotal,
+      contractTotal,
+      hakedisTotal,
+      paidTotal,
+      remainingBalance,
       periodStart,
       periodEnd,
     };
@@ -154,7 +172,31 @@ export default function Reports() {
       ` : ''}
       
       <div style="margin-bottom: 12px;">
-        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 3px;">Özet Bilgiler</h2>
+        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 3px;">Finansal Özet</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+          <tbody>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Toplam Sözleşme Tutarı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.contractTotal)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş Tutarı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.hakedisTotal)}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; color: #16a34a;">${formatCurrency(data.paidTotal)}</td>
+            </tr>
+            <tr style="background: #3b82f6; color: white;">
+              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">KALAN BAKİYE</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${formatCurrency(data.remainingBalance)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 3px;">Dönem Özeti</h2>
         <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <tbody>
             <tr style="background: #f9fafb;">
@@ -169,9 +211,9 @@ export default function Reports() {
               <td style="padding: 5px 8px; border: 1px solid #ddd;">Kümülatif Toplam</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatCurrency(data.cumulativeTotal)}</td>
             </tr>
-            <tr style="background: #3b82f6; color: white;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">GENEL TOPLAM</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">${formatCurrency(data.grandTotal)}</td>
+          </tbody>
+        </table>
+      </div>
             </tr>
           </tbody>
         </table>
@@ -267,14 +309,23 @@ export default function Reports() {
       entry.totalAmount,
     ]);
 
-    // Summary with proper Turkish labels
+    // Financial summary
+    const financialData = [
+      [],
+      ['FİNANSAL ÖZET'],
+      ['Toplam Sözleşme Tutarı', data.contractTotal],
+      ['Toplam Hakediş Tutarı', data.hakedisTotal],
+      ['Ödenen Tutar', data.paidTotal],
+      ['Kalan Bakiye', data.remainingBalance],
+    ];
+
+    // Period summary
     const summaryData = [
       [],
-      ['ÖZET BİLGİLER'],
+      ['DÖNEM ÖZETİ'],
       ['Önceki Toplam', data.previousTotal],
       ['Bu Dönem', data.currentPeriodTotal],
       ['Kümülatif Toplam', data.cumulativeTotal],
-      ['GENEL TOPLAM', data.grandTotal],
       [],
       [],
       ['Direktör Onayı:', ''],
@@ -288,6 +339,7 @@ export default function Reports() {
       ...headerData,
       tableHeader,
       ...tableData,
+      ...financialData,
       ...summaryData,
     ];
 
@@ -312,18 +364,20 @@ export default function Reports() {
 
   // Calculate summary for each project
   const projectSummaries = projects.map(project => {
-    const entries = getProjectEntries(project.id);
-    const approvedTotal = entries.reduce((sum, e) => sum + e.totalAmount, 0);
-    const paidTotal = entries
-      .filter(e => e.paymentStatus === 'odendi')
-      .reduce((sum, e) => sum + e.totalAmount, 0);
+    const contracts = workEntries.filter(e => e.projectId === project.id);
+    const contractTotal = contracts.reduce((sum, e) => sum + e.totalAmount, 0);
+    const hakedisler = getProjectHakedisler(project.id);
+    const hakedisTotal = hakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+    const paidTotal = hakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+    const remainingBalance = hakedisTotal - paidTotal;
     
     return {
       project,
-      approvedTotal,
+      contractTotal,
+      hakedisTotal,
       paidTotal,
-      unpaidTotal: approvedTotal - paidTotal,
-      entriesCount: entries.length,
+      remainingBalance,
+      entriesCount: contracts.length,
     };
   });
 
@@ -370,16 +424,20 @@ export default function Reports() {
 
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Onaylanan Toplam</span>
-                  <span className="font-medium">{formatCurrency(summary.approvedTotal)}</span>
+                  <span className="text-muted-foreground">Sözleşme Tutarı</span>
+                  <span className="font-medium">{formatCurrency(summary.contractTotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Hakediş Tutarı</span>
+                  <span className="font-medium">{formatCurrency(summary.hakedisTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Ödenen</span>
                   <span className="font-medium text-status-paid">{formatCurrency(summary.paidTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Bekleyen</span>
-                  <span className="font-medium text-status-pending">{formatCurrency(summary.unpaidTotal)}</span>
+                  <span className="text-muted-foreground">Kalan Bakiye</span>
+                  <span className="font-medium text-status-pending">{formatCurrency(summary.remainingBalance)}</span>
                 </div>
               </div>
 
