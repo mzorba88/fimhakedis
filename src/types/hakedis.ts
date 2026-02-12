@@ -6,7 +6,7 @@ export type ContractType = 'goturu_bedel' | 'birim_fiyat';
 
 export type ApprovalStatus = 'onay_bekliyor' | 'onaylandi' | 'revize';
 
-export type PaymentStatus = 'odendi' | 'odenmedi';
+export type PaymentStatus = 'odendi' | 'odenmedi' | 'kismen_odendi';
 
 export type ProjectStatus = 'aktif' | 'tamamlandi';
 
@@ -122,6 +122,7 @@ export interface SubcontractorHakedis {
   // Extra work items outside contract
   extraItems?: ExtraWorkItem[];
   totalAmount: number;
+  paidAmount: number; // Amount paid so far (for partial payments)
   createdBy: string;
   approvalStatus: ApprovalStatus;
   approvedBy?: string;
@@ -221,6 +222,7 @@ export const approvalStatusLabels: Record<ApprovalStatus, string> = {
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   odendi: 'Ödendi',
   odenmedi: 'Ödenmedi',
+  kismen_odendi: 'Kısmen Ödendi',
 };
 
 export const contractTypeLabels: Record<ContractType, string> = {

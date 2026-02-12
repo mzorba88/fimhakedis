@@ -27,6 +27,10 @@ const statusConfig: Record<ApprovalStatus | PaymentStatus, { label: string; clas
     label: 'Ödenmedi', 
     className: 'status-unpaid' 
   },
+  kismen_odendi: { 
+    label: 'Kısmen Ödendi', 
+    className: 'status-pending' 
+  },
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {

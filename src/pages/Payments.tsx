@@ -12,7 +12,8 @@ import {
   Banknote,
   FileDown,
   RefreshCw,
-  XCircle
+  XCircle,
+  CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,14 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import formanLogo from '@/assets/forman-logo.png';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 // Exchange rate types
 type ExchangeRates = {
@@ -63,6 +72,9 @@ export default function Payments() {
   const [filterPayment, setFilterPayment] = useState<string>('all');
   const { sortConfig, handleSort } = useSorting({ key: 'approvalDate', direction: 'desc' });
   const [activeTab, setActiveTab] = useState('hakedisler');
+  const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState('');
+  const [selectedHakedisForPartial, setSelectedHakedisForPartial] = useState<string | null>(null);
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
@@ -143,17 +155,17 @@ export default function Payments() {
 
   // Calculate total unpaid in GBP
   const totalUnpaidGBP = useMemo(() => {
-    const unpaidHakedisler = approvedHakedisler.filter(h => h.paymentStatus === 'odenmedi');
+    const unpaidHakedisler = approvedHakedisler.filter(h => h.paymentStatus !== 'odendi');
     
     return unpaidHakedisler.reduce((sum, h) => {
       const currency = h.currency as Currency;
-      let amountInGBP = h.totalAmount;
+      const remainingAmount = h.totalAmount - (h.paidAmount || 0);
+      let amountInGBP = remainingAmount;
       
       if (currency === 'GBP') {
-        amountInGBP = h.totalAmount;
+        amountInGBP = remainingAmount;
       } else if (exchangeRates[currency]) {
-        // Convert from currency to GBP: amount / rate
-        amountInGBP = h.totalAmount / exchangeRates[currency];
+        amountInGBP = remainingAmount / exchangeRates[currency];
       }
       
       return sum + amountInGBP;
@@ -163,20 +175,69 @@ export default function Payments() {
   const handleMarkHakedisAsPaid = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
     try {
-      await markHakedisAsPaid(hakedisId);
+      await updateSubcontractorHakedis(hakedisId, {
+        paymentStatus: 'odendi',
+        paidAmount: hakedis?.totalAmount || 0,
+        paidDate: new Date().toISOString(),
+      });
       if (hakedis) {
         await addActivityLog(
           'hakedis_paid',
-          `${hakedis.hakedisNo} hakediş ödendi olarak işaretlendi`,
+          `${hakedis.hakedisNo} hakediş tam ödendi olarak işaretlendi`,
           `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
           hakedisId,
           'hakedis'
         );
       }
-      toast.success('Hakediş ödendi olarak işaretlendi');
+      toast.success('Hakediş tam ödendi olarak işaretlendi');
     } catch (error) {
       console.error('Error marking hakedis as paid:', error);
       toast.error('Ödeme işlemi başarısız');
+    }
+  };
+
+  const handlePartialPayment = async () => {
+    if (!selectedHakedisForPartial) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisForPartial);
+    if (!hakedis) return;
+
+    const amount = parseFloat(partialPaymentAmount);
+    const remaining = hakedis.totalAmount - (hakedis.paidAmount || 0);
+    
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Geçerli bir tutar giriniz');
+      return;
+    }
+    if (amount > remaining) {
+      toast.error(`Tutar kalan bakiyeden (${formatCurrencyWithType(remaining, hakedis.currency)}) fazla olamaz`);
+      return;
+    }
+
+    try {
+      const newPaidAmount = (hakedis.paidAmount || 0) + amount;
+      const isFullyPaid = newPaidAmount >= hakedis.totalAmount;
+      
+      await updateSubcontractorHakedis(selectedHakedisForPartial, {
+        paidAmount: newPaidAmount,
+        paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
+        paidDate: isFullyPaid ? new Date().toISOString() : hakedis.paidDate,
+      });
+
+      await addActivityLog(
+        'hakedis_paid',
+        `${hakedis.hakedisNo} hakediş kısmi ödeme yapıldı`,
+        `Altyüklenici: ${hakedis.subcontractor} - Ödenen: ${formatCurrencyWithType(amount, hakedis.currency)} - Kalan: ${formatCurrencyWithType(hakedis.totalAmount - newPaidAmount, hakedis.currency)}`,
+        selectedHakedisForPartial,
+        'hakedis'
+      );
+
+      toast.success(`Kısmi ödeme kaydedildi: ${formatCurrencyWithType(amount, hakedis.currency)}`);
+      setPartialPaymentDialogOpen(false);
+      setPartialPaymentAmount('');
+      setSelectedHakedisForPartial(null);
+    } catch (error) {
+      console.error('Error making partial payment:', error);
+      toast.error('Kısmi ödeme işlemi başarısız');
     }
   };
 
@@ -247,8 +308,16 @@ export default function Payments() {
               <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</td>
             </tr>
             <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">Ödenen Tutar</td>
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(hakedis.paidAmount || 0, hakedis.currency)}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 10px; border: 1px solid #ddd;">Kalan Bakiye</td>
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: ${(hakedis.totalAmount - (hakedis.paidAmount || 0)) > 0 ? '#d97706' : '#16a34a'};">${formatCurrencyWithType(hakedis.totalAmount - (hakedis.paidAmount || 0), hakedis.currency)}</td>
+            </tr>
+            <tr>
               <td style="padding: 10px; border: 1px solid #ddd;">Ödeme Durumu</td>
-              <td style="padding: 10px; border: 1px solid #ddd;">${hakedis.paymentStatus === 'odendi' ? 'Ödendi' : 'Ödenmedi'}</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">${hakedis.paymentStatus === 'odendi' ? 'Ödendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kısmen Ödendi' : 'Ödenmedi'}</td>
             </tr>
             ${hakedis.paidDate ? `
             <tr style="background: #f9fafb;">
@@ -403,7 +472,7 @@ export default function Payments() {
                     )}
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                    {approvedHakedisler.filter(h => h.paymentStatus === 'odenmedi').length} adet bekleyen hakediş
+                    {approvedHakedisler.filter(h => h.paymentStatus !== 'odendi').length} adet bekleyen hakediş
                   </p>
                 </div>
               </div>
@@ -464,6 +533,7 @@ export default function Payments() {
               <SelectItem value="all">Tüm Durumlar</SelectItem>
               <SelectItem value="odendi">Ödendi</SelectItem>
               <SelectItem value="odenmedi">Ödenmedi</SelectItem>
+              <SelectItem value="kismen_odendi">Kısmen Ödendi</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -479,7 +549,9 @@ export default function Payments() {
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Toplam Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Ödenen</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Kalan</th>
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   {canManagePayments && (
                     <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -493,6 +565,8 @@ export default function Payments() {
                   {sortedHakedisler.map((hakedis) => {
                     const project = projects.find(p => p.id === hakedis.projectId);
                     const isPaid = hakedis.paymentStatus === 'odendi';
+                    const paidAmount = hakedis.paidAmount || 0;
+                    const remainingAmount = hakedis.totalAmount - paidAmount;
                     
                     return (
                       <motion.tr
@@ -532,6 +606,16 @@ export default function Payments() {
                             {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
                           </p>
                         </td>
+                        <td className="px-4 py-4 text-right">
+                          <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                            {formatCurrencyWithType(paidAmount, hakedis.currency)}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <p className={`text-sm font-semibold ${remainingAmount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                            {formatCurrencyWithType(remainingAmount, hakedis.currency)}
+                          </p>
+                        </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.paymentStatus} />
                           {isPaid && hakedis.paidDate && (
@@ -542,16 +626,31 @@ export default function Payments() {
                         </td>
                         {canManagePayments && (
                           <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-2 flex-wrap">
                               {!isPaid && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
-                                  className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
-                                >
-                                  <Banknote className="h-4 w-4" />
-                                  Ödendi
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
+                                    className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
+                                  >
+                                    <Banknote className="h-4 w-4" />
+                                    Tam Ödeme
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => {
+                                      setSelectedHakedisForPartial(hakedis.id);
+                                      setPartialPaymentAmount('');
+                                      setPartialPaymentDialogOpen(true);
+                                    }}
+                                    className="gap-1.5"
+                                  >
+                                    <CreditCard className="h-4 w-4" />
+                                    Kısmi Ödeme
+                                  </Button>
+                                </>
                               )}
                               {canCancelApproval && !isPaid && (
                                 <Button
@@ -594,6 +693,64 @@ export default function Payments() {
             </div>
           )}
         </div>
+
+        {/* Partial Payment Dialog */}
+        <Dialog open={partialPaymentDialogOpen} onOpenChange={setPartialPaymentDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Kısmi Ödeme</DialogTitle>
+            </DialogHeader>
+            {selectedHakedisForPartial && (() => {
+              const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisForPartial);
+              if (!hakedis) return null;
+              const paidSoFar = hakedis.paidAmount || 0;
+              const remaining = hakedis.totalAmount - paidSoFar;
+              return (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Hakediş No:</span>
+                      <span className="font-medium">{hakedis.hakedisNo}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Toplam Tutar:</span>
+                      <span className="font-medium">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Ödenen:</span>
+                      <span className="font-medium text-green-600">{formatCurrencyWithType(paidSoFar, hakedis.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t pt-2">
+                      <span className="text-muted-foreground font-medium">Kalan Bakiye:</span>
+                      <span className="font-semibold text-amber-600">{formatCurrencyWithType(remaining, hakedis.currency)}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ödenecek Tutar</Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={partialPaymentAmount}
+                      onChange={(e) => setPartialPaymentAmount(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maksimum: {formatCurrencyWithType(remaining, hakedis.currency)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPartialPaymentDialogOpen(false)}>
+                İptal
+              </Button>
+              <Button onClick={handlePartialPayment} className="gap-1.5">
+                <CreditCard className="h-4 w-4" />
+                Ödemeyi Kaydet
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

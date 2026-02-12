@@ -71,6 +71,7 @@ const toHakedis = (row: any): SubcontractorHakedis => ({
   hakedisItems: row.hakedis_items as HakedisItem[] | undefined,
   extraItems: row.extra_items as ExtraWorkItem[] | undefined,
   totalAmount: Number(row.total_amount),
+  paidAmount: Number(row.paid_amount || 0),
   createdBy: row.created_by,
   approvalStatus: row.approval_status as ApprovalStatus,
   approvedBy: row.approved_by,
@@ -259,6 +260,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
       created_by: hakedis.createdBy,
       approval_status: hakedis.approvalStatus,
       payment_status: hakedis.paymentStatus,
+      paid_amount: hakedis.paidAmount || 0,
       contract_exceeded_note: hakedis.contractExceededNote,
     })
     .select()
@@ -288,6 +290,7 @@ export const updateHakedis = async (id: string, updates: Partial<SubcontractorHa
   if (updates.approvalDate !== undefined) dbUpdates.approval_date = updates.approvalDate;
   if (updates.rejectionReason !== undefined) dbUpdates.rejection_reason = updates.rejectionReason;
   if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
+  if (updates.paidAmount !== undefined) dbUpdates.paid_amount = updates.paidAmount;
   if (updates.paidDate !== undefined) dbUpdates.paid_date = updates.paidDate;
   if (updates.contractExceededNote !== undefined) dbUpdates.contract_exceeded_note = updates.contractExceededNote;
 
