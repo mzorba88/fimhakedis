@@ -312,20 +312,27 @@ export const deleteHakedis = async (id: string): Promise<void> => {
 };
 
 // Subcontractors
-export const fetchSubcontractors = async (): Promise<string[]> => {
+export interface SubcontractorRecord {
+  name: string;
+  workCategory: string;
+}
+
+export const fetchSubcontractors = async (): Promise<SubcontractorRecord[]> => {
   const { data, error } = await supabase
     .from('subcontractors')
-    .select('name')
+    .select('name, work_category')
     .order('name');
   
   if (error) throw error;
-  return (data || []).map(row => row.name);
+  return (data || []).map(row => ({ name: row.name, workCategory: row.work_category || '' }));
 };
 
-export const addSubcontractor = async (name: string): Promise<void> => {
+export const addSubcontractor = async (name: string, workCategory?: string): Promise<void> => {
+  const insertData: any = { name };
+  if (workCategory) insertData.work_category = workCategory;
   const { error } = await supabase
     .from('subcontractors')
-    .insert({ name });
+    .insert(insertData);
   
   if (error && !error.message.includes('duplicate')) throw error;
 };
@@ -404,7 +411,5 @@ export const getNextHakedisNo = async (): Promise<string> => {
 
 // Initialize default subcontractors
 export const initializeSubcontractors = async (defaultList: string[]): Promise<void> => {
-  for (const name of defaultList) {
-    await addSubcontractor(name);
-  }
+  // No longer needed - subcontractors are managed in the database with work categories
 };
