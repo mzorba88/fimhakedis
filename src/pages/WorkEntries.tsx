@@ -662,7 +662,30 @@ export default function WorkEntries() {
               <Label>Altyüklenici *</Label>
               <Select
                 value={newEntry.subcontractor}
-                onValueChange={(value) => setNewEntry({ ...newEntry, subcontractor: value })}
+                onValueChange={(value) => {
+                  setNewEntry({ ...newEntry, subcontractor: value });
+                  // Auto-fill work items from the subcontractor's most recent contract
+                  if (value !== 'new' && !isEditMode) {
+                    const subContracts = workEntries
+                      .filter(e => e.subcontractor === value && e.contractType === 'birim_fiyat' && e.workItemEntries && e.workItemEntries.length > 0)
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    
+                    if (subContracts.length > 0) {
+                      const lastContract = subContracts[0];
+                      const copiedItems: WorkItemEntry[] = (lastContract.workItemEntries || []).map((item, idx) => ({
+                        ...item,
+                        id: `wie_copy_${Date.now()}_${idx}`,
+                        quantity: 0, // Reset quantity for new contract
+                        currency: newEntry.currency,
+                      }));
+                      setWorkItemEntries(copiedItems);
+                      if (newEntry.contractType !== 'birim_fiyat') {
+                        setNewEntry(prev => ({ ...prev, subcontractor: value, contractType: 'birim_fiyat' }));
+                      }
+                      toast.info(`${value} altyüklenicisinin önceki sözleşmesindeki iş kalemleri yüklendi. Düzenleyebilirsiniz.`);
+                    }
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Altyüklenici seçin" />
