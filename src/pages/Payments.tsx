@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Banknote,
   FileDown,
-  RefreshCw
+  RefreshCw,
+  XCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ export default function Payments() {
     subcontractorHakedisler,
     markAsPaid,
     markHakedisAsPaid,
+    updateSubcontractorHakedis,
     currentUser,
     addActivityLog
   } = useHakedisStore();
@@ -339,6 +341,32 @@ export default function Payments() {
   };
 
   const canManagePayments = currentUser.role === 'muhasebe' || currentUser.role === 'direktor';
+  const canCancelApproval = currentUser.role === 'direktor';
+
+  const handleCancelApproval = async (hakedisId: string) => {
+    const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
+    try {
+      await updateSubcontractorHakedis(hakedisId, {
+        approvalStatus: 'revize',
+        approvedBy: undefined,
+        approvalDate: undefined,
+        rejectionReason: 'Direktör tarafından onay iptal edildi',
+      });
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_rejected',
+          `${hakedis.hakedisNo} hakediş onayı iptal edildi`,
+          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+          hakedisId,
+          'hakedis'
+        );
+      }
+      toast.success('Hakediş onayı iptal edildi, durum "Revize Gerekli" olarak güncellendi');
+    } catch (error) {
+      console.error('Error cancelling approval:', error);
+      toast.error('Onay iptali başarısız');
+    }
+  };
 
   return (
     <MainLayout>
@@ -523,6 +551,17 @@ export default function Payments() {
                                 >
                                   <Banknote className="h-4 w-4" />
                                   Ödendi
+                                </Button>
+                              )}
+                              {canCancelApproval && !isPaid && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleCancelApproval(hakedis.id)}
+                                  className="gap-1.5"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Onay İptali
                                 </Button>
                               )}
                               <Button
