@@ -6,7 +6,8 @@ import {
   CheckCircle2, 
   Wallet,
   FileText,
-  History
+  History,
+  List
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import formanLogo from '@/assets/forman-logo.png';
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2 },
   { name: 'Ödemeler', href: '/odemeler', icon: Wallet },
   { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
+  { name: 'İş Kalemleri', href: '/is-kalemleri', icon: List },
 ];
 
 const bottomNavigation = [

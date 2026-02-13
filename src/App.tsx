@@ -11,6 +11,7 @@ import Approvals from "./pages/Approvals";
 import Payments from "./pages/Payments";
 import Reports from "./pages/Reports";
 import ActivityHistory from "./pages/ActivityHistory";
+import WorkItems from "./pages/WorkItems";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/onaylar" element={<Approvals />} />
           <Route path="/odemeler" element={<Payments />} />
           <Route path="/raporlar" element={<Reports />} />
+          <Route path="/is-kalemleri" element={<WorkItems />} />
           <Route path="/islem-gecmisi" element={<ActivityHistory />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
