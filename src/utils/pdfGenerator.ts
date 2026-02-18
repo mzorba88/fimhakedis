@@ -20,10 +20,10 @@ export const generateContractPDF = async (
   const vatAmount = entry.vatRate ? subtotal * (entry.vatRate / 100) : 0;
   const totalWithVat = subtotal + vatAmount;
   
-  // For götürü bedel - payment tracking
-  const paidAmount = subcontractorHakedisler
-    .filter(h => h.contractId === entry.id)
-    .reduce((sum, h) => sum + h.totalAmount, 0);
+  // Payment tracking - tüm onaylı hakedişlerdeki ödenen tutarların toplamı
+  const approvedHakedisler = subcontractorHakedisler.filter(h => h.contractId === entry.id && h.approvalStatus === 'onaylandi');
+  const totalHakedisAmount = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+  const paidAmount = approvedHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
   const remainingBalance = entry.totalAmount - paidAmount;
 
   // Create a temporary container for the PDF content - optimized for single page
@@ -98,20 +98,21 @@ export const generateContractPDF = async (
     `;
   }
 
-  // Balance section for götürü bedel
-  let balanceHtml = '';
-  if (entry.contractType === 'goturu_bedel') {
-    balanceHtml = `
-      <tr style="background: #f9fafb;">
-        <td style="padding: 10px; border: 1px solid #ddd;">Ödenen Miktar</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${formatCurrencyWithType(paidAmount, entry.currency)}</td>
-      </tr>
-      <tr>
-        <td style="padding: 10px; border: 1px solid #ddd;">Kalan Bakiye</td>
-        <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, entry.currency)}</td>
-      </tr>
-    `;
-  }
+  // Balance section - tüm sözleşme tipleri için göster
+  const balanceHtml = `
+    <tr>
+      <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Toplam Hakediş Tutarı</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, entry.currency)}</td>
+    </tr>
+    <tr style="background: #f9fafb;">
+      <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(paidAmount, entry.currency)}</td>
+    </tr>
+    <tr>
+      <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, entry.currency)}</td>
+    </tr>
+  `;
   
   container.innerHTML = `
     <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
@@ -240,12 +241,15 @@ export const generateHakedisPDF = async (
   const subtotal = hakedis.totalAmount;
   const vatAmount = hakedis.vatRate ? subtotal * (hakedis.vatRate / 100) : 0;
   const totalWithVat = subtotal + vatAmount;
+  const hakedisPaidAmount = hakedis.paidAmount || 0;
+  const hakedisRemainingBalance = subtotal - hakedisPaidAmount;
   
-  // Contract summary
+  // Contract summary - onaylı hakediş toplamları
   const contractTotal = contract?.totalAmount || 0;
-  const allHakedisler = subcontractorHakedisler.filter(h => h.contractId === hakedis.contractId);
-  const totalPaidAmount = allHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
-  const remainingBalance = contractTotal - totalPaidAmount;
+  const approvedContractHakedisler = subcontractorHakedisler.filter(h => h.contractId === hakedis.contractId && h.approvalStatus === 'onaylandi');
+  const totalHakedisAmount = approvedContractHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+  const totalPaidOnContract = approvedContractHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+  const remainingBalance = contractTotal - totalPaidOnContract;
 
   // Create a temporary container for the PDF content - optimized for single page
   const container = document.createElement('div');
@@ -296,19 +300,21 @@ export const generateHakedisPDF = async (
         <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <tbody>
             <tr style="background: #f9fafb;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Toplam</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(contractTotal, contract.currency)}</td>
             </tr>
             <tr>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalPaidAmount, contract.currency)}</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş Tutarı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, contract.currency)}</td>
             </tr>
-            ${contract.contractType === 'goturu_bedel' ? `
             <tr style="background: #f9fafb;">
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(totalPaidOnContract, contract.currency)}</td>
+            </tr>
+            <tr>
               <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, contract.currency)}</td>
             </tr>
-            ` : ''}
           </tbody>
         </table>
       </div>
@@ -380,8 +386,16 @@ export const generateHakedisPDF = async (
           </tr>
           ` : ''}
           <tr>
+            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(hakedisPaidAmount, hakedis.currency)}</td>
+          </tr>
+          <tr style="background: #f9fafb;">
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Kalan Bakiye</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${hakedisRemainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)}</td>
+          </tr>
+          <tr>
             <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödeme Durumu</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${hakedis.paymentStatus === 'odendi' ? '✓ Ödendi' : '○ Ödenmedi'}</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd;">${hakedis.paymentStatus === 'odendi' ? '✓ Ödendi' : hakedis.paymentStatus === 'kismen_odendi' ? '◑ Kısmen Ödendi' : '○ Ödenmedi'}</td>
           </tr>
           ${hakedis.paidDate ? `
           <tr style="background: #f9fafb;">

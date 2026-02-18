@@ -25,7 +25,7 @@ export function exportSingleContractToExcel(
   const relatedHakedisler = hakedisler.filter(h => h.contractId === entry.id && h.approvalStatus === 'onaylandi');
   const hakedisTotal = relatedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
   const paidTotal = relatedHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-  const remaining = hakedisTotal - paidTotal;
+  const remaining = entry.totalAmount - paidTotal;
 
   const data = [
     ['SÖZLEŞME DETAY RAPORU'],
@@ -48,7 +48,7 @@ export function exportSingleContractToExcel(
     ['Sözleşme Tutarı', entry.totalAmount],
     ['Toplam Hakediş Tutarı', hakedisTotal],
     ['Ödenen Tutar', paidTotal],
-    ['Kalan Bakiye', remaining],
+    ['Kalan Bakiye (Sözleşme - Ödenen)', remaining],
   ].filter(r => r.length > 0);
 
   // Add hakedis detail if exists
@@ -122,7 +122,7 @@ export function exportSingleHakedisToExcel(
     ['Sözleşme Tutarı', contract?.totalAmount || 0],
     ['Toplam Hakediş Tutarı', totalHakedisOnContract],
     ['Toplam Ödenen', totalPaidOnContract],
-    ['Sözleşme Kalan Bakiye', totalHakedisOnContract - totalPaidOnContract],
+    ['Kalan Bakiye (Sözleşme - Ödenen)', (contract?.totalAmount || 0) - totalPaidOnContract],
   );
 
   if (hakedis.contractExceededNote) {
