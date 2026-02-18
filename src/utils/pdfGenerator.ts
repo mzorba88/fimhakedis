@@ -19,12 +19,17 @@ export const generateContractPDF = async (
   const subtotal = entry.totalAmount;
   const vatAmount = entry.vatRate ? subtotal * (entry.vatRate / 100) : 0;
   const totalWithVat = subtotal + vatAmount;
+  const contractAmountWithVat = totalWithVat; // KDV dahil sözleşme tutarı
   
   // Payment tracking - tüm onaylı hakedişlerdeki ödenen tutarların toplamı
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.contractId === entry.id && h.approvalStatus === 'onaylandi');
-  const totalHakedisAmount = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+  // KDV dahil hakediş toplamları
+  const totalHakedisAmount = approvedHakedisler.reduce((sum, h) => {
+    const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+    return sum + h.totalAmount + hVat;
+  }, 0);
   const paidAmount = approvedHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-  const remainingBalance = entry.totalAmount - paidAmount;
+  const remainingBalance = contractAmountWithVat - paidAmount;
 
   // Create a temporary container for the PDF content - optimized for single page
   const container = document.createElement('div');
@@ -101,15 +106,15 @@ export const generateContractPDF = async (
   // Balance section - tüm sözleşme tipleri için göster
   const balanceHtml = `
     <tr>
-      <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Toplam Hakediş Tutarı</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Toplam Hakediş Tutarı (KDV Dahil)</td>
       <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, entry.currency)}</td>
     </tr>
     <tr style="background: #f9fafb;">
-      <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
       <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(paidAmount, entry.currency)}</td>
     </tr>
     <tr>
-      <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye</td>
+      <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye (KDV Dahil)</td>
       <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, entry.currency)}</td>
     </tr>
   `;
@@ -157,7 +162,7 @@ export const generateContractPDF = async (
       <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
         <tbody>
           <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Ara Toplam</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı (KDV Hariç)</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">${formatCurrencyWithType(subtotal, entry.currency)}</td>
           </tr>
           ${entry.vatRate ? `
@@ -165,11 +170,11 @@ export const generateContractPDF = async (
             <td style="padding: 5px 8px; border: 1px solid #ddd;">KDV (%${entry.vatRate})</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(vatAmount, entry.currency)}</td>
           </tr>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">KDV Dahil Toplam</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(totalWithVat, entry.currency)}</td>
-          </tr>
           ` : ''}
+          <tr style="background: #f9fafb;">
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Sözleşme Tutarı (KDV Dahil)</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(contractAmountWithVat, entry.currency)}</td>
+          </tr>
           ${balanceHtml}
         </tbody>
       </table>
@@ -237,17 +242,22 @@ export const generateHakedisPDF = async (
   contract: WorkEntry | undefined,
   subcontractorHakedisler: SubcontractorHakedis[]
 ) => {
-  // Calculate financial data
+  // Calculate financial data (KDV dahil)
   const subtotal = hakedis.totalAmount;
   const vatAmount = hakedis.vatRate ? subtotal * (hakedis.vatRate / 100) : 0;
-  const totalWithVat = subtotal + vatAmount;
+  const totalWithVat = subtotal + vatAmount; // KDV dahil hakediş tutarı
   const hakedisPaidAmount = hakedis.paidAmount || 0;
-  const hakedisRemainingBalance = subtotal - hakedisPaidAmount;
+  const hakedisRemainingBalance = totalWithVat - hakedisPaidAmount;
   
-  // Contract summary - onaylı hakediş toplamları
-  const contractTotal = contract?.totalAmount || 0;
+  // Contract summary - KDV dahil onaylı hakediş toplamları
+  const contractSubtotal = contract?.totalAmount || 0;
+  const contractVat = contract?.vatRate ? contractSubtotal * (contract.vatRate / 100) : 0;
+  const contractTotal = contractSubtotal + contractVat; // KDV dahil sözleşme tutarı
   const approvedContractHakedisler = subcontractorHakedisler.filter(h => h.contractId === hakedis.contractId && h.approvalStatus === 'onaylandi');
-  const totalHakedisAmount = approvedContractHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+  const totalHakedisAmount = approvedContractHakedisler.reduce((sum, h) => {
+    const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+    return sum + h.totalAmount + hVat;
+  }, 0);
   const totalPaidOnContract = approvedContractHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
   const remainingBalance = contractTotal - totalPaidOnContract;
 
@@ -300,19 +310,19 @@ export const generateHakedisPDF = async (
         <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
           <tbody>
             <tr style="background: #f9fafb;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı (KDV Dahil)</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(contractTotal, contract.currency)}</td>
             </tr>
             <tr>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş Tutarı</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş Tutarı (KDV Dahil)</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, contract.currency)}</td>
             </tr>
             <tr style="background: #f9fafb;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(totalPaidOnContract, contract.currency)}</td>
             </tr>
             <tr>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye (KDV Dahil)</td>
               <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, contract.currency)}</td>
             </tr>
           </tbody>
@@ -372,7 +382,7 @@ export const generateHakedisPDF = async (
       <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
         <tbody>
           <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Hakediş Tutarı</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Hakediş Tutarı (KDV Hariç)</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(subtotal, hakedis.currency)}</td>
           </tr>
           ${hakedis.vatRate ? `
@@ -380,17 +390,17 @@ export const generateHakedisPDF = async (
             <td style="padding: 5px 8px; border: 1px solid #ddd;">KDV (%${hakedis.vatRate})</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(vatAmount, hakedis.currency)}</td>
           </tr>
+          ` : ''}
           <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">KDV Dahil Toplam</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Hakediş Tutarı (KDV Dahil)</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(totalWithVat, hakedis.currency)}</td>
           </tr>
-          ` : ''}
           <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(hakedisPaidAmount, hakedis.currency)}</td>
           </tr>
           <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Kalan Bakiye</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Kalan Bakiye (KDV Dahil)</td>
             <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${hakedisRemainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)}</td>
           </tr>
           <tr>
