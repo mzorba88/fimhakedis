@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import formanLogo from '@/assets/forman-logo.png';
+import { useHakedisStore } from '@/store/hakedisStore';
 import {
   Sidebar,
   SidebarContent,
@@ -23,24 +24,34 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Projeler', href: '/projeler', icon: FolderKanban },
-  { name: 'Altyüklenici Sözleşmeleri', href: '/yapilanisler', icon: ClipboardList },
-  { name: 'Altyüklenici Hakedişleri', href: '/hakedisler', icon: FileText },
-  { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2 },
-  { name: 'Ödemeler', href: '/odemeler', icon: Wallet },
-  { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
-];
-
-const bottomNavigation = [
-  { name: 'İşlem Geçmişi', href: '/islem-gecmisi', icon: History },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const { workEntries, subcontractorHakedisler } = useHakedisStore();
+
+  const pendingApprovalsCount = 
+    workEntries.filter(e => e.approvalStatus === 'onay_bekliyor').length +
+    subcontractorHakedisler.filter(h => h.approvalStatus === 'onay_bekliyor').length;
+
+  const unpaidPaymentsCount = 
+    subcontractorHakedisler.filter(h => 
+      h.approvalStatus === 'onaylandi' && h.paymentStatus !== 'odendi'
+    ).length;
+
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Projeler', href: '/projeler', icon: FolderKanban },
+    { name: 'Altyüklenici Sözleşmeleri', href: '/yapilanisler', icon: ClipboardList },
+    { name: 'Altyüklenici Hakedişleri', href: '/hakedisler', icon: FileText },
+    { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2, badge: pendingApprovalsCount },
+    { name: 'Ödemeler', href: '/odemeler', icon: Wallet, badge: unpaidPaymentsCount },
+    { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
+  ];
+
+  const bottomNavigation = [
+    { name: 'İşlem Geçmişi', href: '/islem-gecmisi', icon: History },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -79,7 +90,14 @@ export function AppSidebar() {
                         activeClassName="bg-primary/10 text-primary font-medium"
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
-                        {!collapsed && <span>{item.name}</span>}
+                        {!collapsed && (
+                          <span className="flex-1">{item.name}</span>
+                        )}
+                        {!collapsed && item.badge != null && item.badge > 0 && (
+                          <span className="ml-auto text-xs font-semibold bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center leading-none">
+                            {item.badge}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
