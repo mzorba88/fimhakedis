@@ -31,7 +31,6 @@ export function AppSidebar() {
   const { workEntries, subcontractorHakedisler } = useHakedisStore();
 
   const pendingApprovalsCount = 
-    workEntries.filter(e => e.approvalStatus === 'onay_bekliyor').length +
     subcontractorHakedisler.filter(h => h.approvalStatus === 'onay_bekliyor').length;
 
   const unpaidPaymentsCount = 
