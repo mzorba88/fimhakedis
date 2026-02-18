@@ -14,7 +14,8 @@ import {
   RefreshCw,
   XCircle,
   CreditCard,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from 'lucide-react';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -77,6 +78,8 @@ export default function Payments() {
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
   const [partialPaymentAmount, setPartialPaymentAmount] = useState('');
   const [selectedHakedisForPartial, setSelectedHakedisForPartial] = useState<string | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedHakedisForDetail, setSelectedHakedisForDetail] = useState<string | null>(null);
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
@@ -560,6 +563,7 @@ export default function Payments() {
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Ödenen</th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Kalan</th>
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Detay</th>
                   {canManagePayments && (
                     <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       İşlem
@@ -567,6 +571,7 @@ export default function Payments() {
                   )}
                 </tr>
               </thead>
+
               <tbody className="divide-y">
                 <AnimatePresence>
                   {sortedHakedisler.map((hakedis) => {
@@ -630,6 +635,20 @@ export default function Payments() {
                               {formatDate(hakedis.paidDate)}
                             </p>
                           )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedHakedisForDetail(hakedis.id);
+                              setDetailDialogOpen(true);
+                            }}
+                            className="gap-1.5"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Detay
+                          </Button>
                         </td>
                         {canManagePayments && (
                           <td className="px-4 py-4 text-center">
@@ -714,6 +733,108 @@ export default function Payments() {
           )}
         </div>
 
+        {/* Detail Dialog */}
+        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Hakediş Detayı</DialogTitle>
+            </DialogHeader>
+            {selectedHakedisForDetail && (() => {
+              const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisForDetail);
+              if (!hakedis) return null;
+              const project = projects.find(p => p.id === hakedis.projectId);
+              const contract = workEntries.find(c => c.id === hakedis.contractId);
+              const contractAmount = contract?.totalAmount || 0;
+              const paidSoFar = hakedis.paidAmount || 0;
+              const remaining = hakedis.totalAmount - paidSoFar;
+              return (
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Genel Bilgiler</h3>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Hakediş No</span>
+                        <span className="text-sm font-medium">{hakedis.hakedisNo}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Sözleşme No</span>
+                        <span className="text-sm font-medium">{hakedis.contractNo}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Altyüklenici</span>
+                        <span className="text-sm font-medium">{hakedis.subcontractor}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Proje</span>
+                        <span className="text-sm font-medium">{project?.projectCode} - {project?.projectName}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Sözleşme Tipi</span>
+                        <span className="text-sm font-medium">{contractTypeLabels[hakedis.contractType]}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Tarih</span>
+                        <span className="text-sm font-medium">{formatDate(hakedis.date)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Onaylayan</span>
+                        <span className="text-sm font-medium">{hakedis.approvedBy || '-'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Onay Tarihi</span>
+                        <span className="text-sm font-medium">{hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}</span>
+                      </div>
+                    </div>
+                    {hakedis.description && (
+                      <div className="mt-2 pt-2 border-t">
+                        <span className="text-xs text-muted-foreground">Açıklama</span>
+                        <p className="text-sm mt-0.5">{hakedis.description}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Finansal Özet</h3>
+                    <div className="flex justify-between text-sm border-b pb-2">
+                      <span className="text-muted-foreground">Sözleşme Tutarı</span>
+                      <span className="font-semibold">{formatCurrencyWithType(contractAmount, hakedis.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Hakediş Tutarı</span>
+                      <span className="font-semibold">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Ödenen Tutar</span>
+                      <span className="font-semibold text-[hsl(var(--status-paid))]">{formatCurrencyWithType(paidSoFar, hakedis.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm border-t pt-2">
+                      <span className="text-muted-foreground font-medium">Kalan Bakiye</span>
+                      <span className={`font-bold ${remaining > 0 ? 'text-[hsl(var(--status-pending))]' : 'text-[hsl(var(--status-paid))]'}`}>
+                        {formatCurrencyWithType(remaining, hakedis.currency)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-1">
+                      <span className="text-muted-foreground">Ödeme Durumu</span>
+                      <StatusBadge status={hakedis.paymentStatus} />
+                    </div>
+                    {hakedis.paidDate && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Ödeme Tarihi</span>
+                        <span className="font-medium">{formatDate(hakedis.paidDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+                Kapat
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Partial Payment Dialog */}
         <Dialog open={partialPaymentDialogOpen} onOpenChange={setPartialPaymentDialogOpen}>
           <DialogContent className="sm:max-w-md">
@@ -738,11 +859,11 @@ export default function Payments() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Ödenen:</span>
-                      <span className="font-medium text-green-600">{formatCurrencyWithType(paidSoFar, hakedis.currency)}</span>
+                      <span className="font-medium text-[hsl(var(--status-paid))]">{formatCurrencyWithType(paidSoFar, hakedis.currency)}</span>
                     </div>
                     <div className="flex justify-between text-sm border-t pt-2">
                       <span className="text-muted-foreground font-medium">Kalan Bakiye:</span>
-                      <span className="font-semibold text-amber-600">{formatCurrencyWithType(remaining, hakedis.currency)}</span>
+                      <span className="font-semibold text-[hsl(var(--status-pending))]">{formatCurrencyWithType(remaining, hakedis.currency)}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -775,3 +896,4 @@ export default function Payments() {
     </MainLayout>
   );
 }
+
