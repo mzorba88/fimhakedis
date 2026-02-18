@@ -245,7 +245,8 @@ export default function Payments() {
 
   const generatePaymentPdf = async (hakedis: typeof approvedHakedisler[0]) => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    
+    const contract = workEntries.find(e => e.id === hakedis.contractId);
+    const contractAmount = contract?.totalAmount || 0;
     // Create a temporary container for the PDF content
     const container = document.createElement('div');
     container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 40px; background: white; font-family: Arial, sans-serif;';
@@ -306,7 +307,11 @@ export default function Payments() {
           </thead>
           <tbody>
             <tr style="background: #f9fafb;">
-              <td style="padding: 10px; border: 1px solid #ddd;">Toplam Tutar</td>
+              <td style="padding: 10px; border: 1px solid #ddd;">Sözleşme Tutarı</td>
+              <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(contractAmount, hakedis.currency)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">Hakediş Tutarı</td>
               <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</td>
             </tr>
             <tr>
