@@ -37,6 +37,7 @@ import { exportSingleHakedisToExcel } from '@/utils/excelExport';
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -108,7 +109,7 @@ export default function SubcontractorHakedis() {
   const [vatRate, setVatRate] = useState<string>('10');
   const [description, setDescription] = useState<string>('');
   const [hakedisType, setHakedisType] = useState<HakedisRecordType>('ara_hakedis');
-  // Get unique subcontractors from contracts
+  const [vatInclusive, setVatInclusive] = useState(false);
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
     workEntries.forEach(entry => {
@@ -235,6 +236,7 @@ export default function SubcontractorHakedis() {
     setVatRate('10');
     setDescription('');
     setHakedisType('ara_hakedis');
+    setVatInclusive(false);
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
@@ -414,6 +416,11 @@ export default function SubcontractorHakedis() {
         toast.error('Lütfen en az bir kalem için miktar girin');
         return;
       }
+    }
+
+    // If vatInclusive is checked, back-calculate the base amount (KDV hariç)
+    if (vatInclusive && vatRate !== '' && Number(vatRate) > 0) {
+      totalAmount = totalAmount / (1 + Number(vatRate) / 100);
     }
 
     // Check if contract amount is exceeded
@@ -1002,14 +1009,27 @@ export default function SubcontractorHakedis() {
                     </div>
                     <div className="space-y-2">
                       <Label>KDV Oranı (%)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Örn: 20"
-                        min="0"
-                        max="100"
-                        value={vatRate}
-                        onChange={(e) => setVatRate(e.target.value)}
-                      />
+                      <div className="flex items-center gap-3">
+                        <Input
+                          type="number"
+                          placeholder="Örn: 20"
+                          min="0"
+                          max="100"
+                          value={vatRate}
+                          onChange={(e) => setVatRate(e.target.value)}
+                          className="flex-1"
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <Checkbox
+                            id="vatInclusiveHakedis"
+                            checked={vatInclusive}
+                            onCheckedChange={(checked) => setVatInclusive(checked === true)}
+                          />
+                          <Label htmlFor="vatInclusiveHakedis" className="text-xs font-normal cursor-pointer whitespace-nowrap">
+                            Dahil
+                          </Label>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1061,30 +1081,29 @@ export default function SubcontractorHakedis() {
                     />
                     {paymentAmount && (
                       <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
-                        <div className="flex justify-between">
-                          <span>Ara Toplam</span>
-                          <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract?.currency || 'TRY')}</span>
-                        </div>
-                        {vatRate !== '' && Number(vatRate) > 0 && (
-                          <>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>KDV (%{vatRate})</span>
-                              <span>{formatCurrencyWithType((parseFloat(paymentAmount) || 0) * Number(vatRate) / 100, selectedContract?.currency || 'TRY')}</span>
-                            </div>
-                            <div className="border-t pt-2 flex justify-between">
-                              <span className="font-medium">KDV Dahil Toplam</span>
-                              <span className="font-semibold text-primary">
-                                {formatCurrencyWithType((parseFloat(paymentAmount) || 0) * (1 + Number(vatRate) / 100), selectedContract?.currency || 'TRY')}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {(vatRate === '' || Number(vatRate) === 0) && (
-                          <div className="flex justify-between font-semibold">
-                            <span>Toplam</span>
-                            <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract?.currency || 'TRY')}</span>
-                          </div>
-                        )}
+                        {(() => {
+                          const entered = parseFloat(paymentAmount) || 0;
+                          const vr = vatRate !== '' ? Number(vatRate) : 0;
+                          const cur = selectedContract?.currency || 'TRY';
+                          if (vatInclusive && vr > 0) {
+                            const base = entered / (1 + vr / 100);
+                            const vatAmt = entered - base;
+                            return (<>
+                              <div className="flex justify-between"><span>Girilen Tutar (KDV Dahil)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV Hariç Tutar</span><span>{formatCurrencyWithType(base, cur)}</span></div>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(vatAmt, cur)}</span></div>
+                              <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered, cur)}</span></div>
+                            </>);
+                          }
+                          return (<>
+                            <div className="flex justify-between"><span>Ara Toplam (KDV Hariç)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                            {vr > 0 && (<>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(entered * vr / 100, cur)}</span></div>
+                              <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered * (1 + vr / 100), cur)}</span></div>
+                            </>)}
+                            {vr === 0 && (<div className="flex justify-between font-semibold"><span>Toplam</span><span>{formatCurrencyWithType(entered, cur)}</span></div>)}
+                          </>);
+                        })()}
                       </div>
                     )}
                   </div>
@@ -1470,34 +1489,28 @@ export default function SubcontractorHakedis() {
                   {/* Updated Summary with Extra Items for Götürü Bedel */}
                   {extraItems.length > 0 && (
                     <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
-                      <div className="flex justify-between">
-                        <span>Sözleşme Ödemesi</span>
-                        <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
-                      </div>
-                      <div className="flex justify-between text-amber-600">
-                        <span>Ek İşler Toplamı</span>
-                        <span className="font-medium">{formatCurrencyWithType(extraItems.reduce((sum, i) => sum + i.amount, 0), selectedContract.currency)}</span>
-                      </div>
-                      <div className="border-t pt-2 flex justify-between">
-                        <span className="font-medium">Ara Toplam</span>
-                        <span className="font-semibold">
-                          {formatCurrencyWithType((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0), selectedContract.currency)}
-                        </span>
-                      </div>
-                      {vatRate !== '' && Number(vatRate) > 0 && (
-                        <>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>KDV (%{vatRate})</span>
-                            <span>{formatCurrencyWithType(((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0)) * Number(vatRate) / 100, selectedContract.currency)}</span>
-                          </div>
-                          <div className="border-t pt-2 flex justify-between">
-                            <span className="font-medium">KDV Dahil Toplam</span>
-                            <span className="font-semibold text-primary">
-                              {formatCurrencyWithType(((parseFloat(paymentAmount) || 0) + extraItems.reduce((sum, i) => sum + i.amount, 0)) * (1 + Number(vatRate) / 100), selectedContract.currency)}
-                            </span>
-                          </div>
-                        </>
-                      )}
+                      {(() => {
+                        const payBase = parseFloat(paymentAmount) || 0;
+                        const extraTotal = extraItems.reduce((sum, i) => sum + i.amount, 0);
+                        const entered = payBase + extraTotal;
+                        const vr = vatRate !== '' ? Number(vatRate) : 0;
+                        const cur = selectedContract.currency;
+                        return (<>
+                          <div className="flex justify-between"><span>Sözleşme Ödemesi</span><span className="font-medium">{formatCurrencyWithType(payBase, cur)}</span></div>
+                          <div className="flex justify-between text-amber-600"><span>Ek İşler Toplamı</span><span className="font-medium">{formatCurrencyWithType(extraTotal, cur)}</span></div>
+                          {vatInclusive && vr > 0 ? (<>
+                            <div className="border-t pt-2 flex justify-between"><span className="font-medium">Girilen Toplam (KDV Dahil)</span><span className="font-semibold">{formatCurrencyWithType(entered, cur)}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>KDV Hariç Tutar</span><span>{formatCurrencyWithType(entered / (1 + vr / 100), cur)}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(entered - entered / (1 + vr / 100), cur)}</span></div>
+                          </>) : (<>
+                            <div className="border-t pt-2 flex justify-between"><span className="font-medium">Ara Toplam (KDV Hariç)</span><span className="font-semibold">{formatCurrencyWithType(entered, cur)}</span></div>
+                            {vr > 0 && (<>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(entered * vr / 100, cur)}</span></div>
+                              <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered * (1 + vr / 100), cur)}</span></div>
+                            </>)}
+                          </>)}
+                        </>);
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1706,30 +1719,29 @@ export default function SubcontractorHakedis() {
 
                   {birimFiyatTotal > 0 && (
                     <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
-                      <div className="flex justify-between">
-                        <span>Ara Toplam</span>
-                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
-                      </div>
-                      {vatRate !== '' && Number(vatRate) > 0 && (
-                        <>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>KDV (%{vatRate})</span>
-                            <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, selectedContract.currency)}</span>
-                          </div>
-                          <div className="border-t pt-2 flex justify-between">
-                            <span className="font-medium">KDV Dahil Toplam</span>
-                            <span className="font-semibold text-primary">
-                              {formatCurrencyWithType(birimFiyatTotal * (1 + Number(vatRate) / 100), selectedContract.currency)}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                      {(vatRate === '' || Number(vatRate) === 0) && (
-                        <div className="flex justify-between font-semibold">
-                          <span>Toplam</span>
-                          <span>{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const entered = birimFiyatTotal;
+                        const vr = vatRate !== '' ? Number(vatRate) : 0;
+                        const cur = selectedContract.currency;
+                        if (vatInclusive && vr > 0) {
+                          const base = entered / (1 + vr / 100);
+                          const vatAmt = entered - base;
+                          return (<>
+                            <div className="flex justify-between"><span>Girilen Toplam (KDV Dahil)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>KDV Hariç Tutar</span><span>{formatCurrencyWithType(base, cur)}</span></div>
+                            <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(vatAmt, cur)}</span></div>
+                            <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered, cur)}</span></div>
+                          </>);
+                        }
+                        return (<>
+                          <div className="flex justify-between"><span>Ara Toplam (KDV Hariç)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                          {vr > 0 && (<>
+                            <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(entered * vr / 100, cur)}</span></div>
+                            <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered * (1 + vr / 100), cur)}</span></div>
+                          </>)}
+                          {vr === 0 && (<div className="flex justify-between font-semibold"><span>Toplam</span><span>{formatCurrencyWithType(entered, cur)}</span></div>)}
+                        </>);
+                      })()}
                     </div>
                   )}
                 </div>
