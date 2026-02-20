@@ -1108,24 +1108,49 @@ export default function WorkEntries() {
 
               {/* Totals */}
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>Sözleşme Tutarı</span>
-                  <span className="text-primary">{formatCurrencyWithType(selectedEntry.totalAmount, selectedEntry.currency)}</span>
-                </div>
                 {(() => {
-                  const paidAmount = subcontractorHakedisler
-                    .filter(h => h.contractId === selectedEntry.id)
-                    .reduce((sum, h) => sum + h.totalAmount, 0);
-                  const remainingBalance = selectedEntry.totalAmount - paidAmount;
-                  
+                  const vatRate = selectedEntry.vatRate || 0;
+                  const subtotal = selectedEntry.totalAmount;
+                  const vatAmount = vatRate > 0 ? subtotal * (vatRate / 100) : 0;
+                  const totalWithVat = subtotal + vatAmount;
+
+                  const approvedHakedisler = subcontractorHakedisler.filter(h => h.contractId === selectedEntry.id);
+                  const hakedisSubtotal = approvedHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
+                  const hakedisVat = approvedHakedisler.reduce((sum, h) => {
+                    const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+                    return sum + hVat;
+                  }, 0);
+                  const hakedisTotalWithVat = hakedisSubtotal + hakedisVat;
+
+                  const paidTotal = approvedHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+                  const remainingBalance = totalWithVat - paidTotal;
+
                   return (
                     <>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Toplam Hakediş</span>
-                        <span className="text-green-600 font-medium">{formatCurrencyWithType(paidAmount, selectedEntry.currency)}</span>
+                        <span className="text-muted-foreground">Sözleşme Tutarı (KDV Hariç)</span>
+                        <span className="font-medium">{formatCurrencyWithType(subtotal, selectedEntry.currency)}</span>
+                      </div>
+                      {vatRate > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">KDV (%{vatRate})</span>
+                          <span className="font-medium">{formatCurrencyWithType(vatAmount, selectedEntry.currency)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm font-semibold">
+                        <span>Sözleşme Tutarı (KDV Dahil)</span>
+                        <span className="text-primary">{formatCurrencyWithType(totalWithVat, selectedEntry.currency)}</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2 flex justify-between text-sm">
+                        <span className="text-muted-foreground">Toplam Hakediş (KDV Dahil)</span>
+                        <span className="text-green-600 font-medium">{formatCurrencyWithType(hakedisTotalWithVat, selectedEntry.currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Ödenen Tutar (KDV Dahil)</span>
+                        <span className="font-medium">{formatCurrencyWithType(paidTotal, selectedEntry.currency)}</span>
                       </div>
                       <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                        <span className="font-semibold">Kalan Bakiye</span>
+                        <span className="font-semibold">Kalan Bakiye (KDV Dahil)</span>
                         <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
                           {formatCurrencyWithType(remainingBalance, selectedEntry.currency)}
                         </span>
