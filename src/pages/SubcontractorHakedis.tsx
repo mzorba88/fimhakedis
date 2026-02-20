@@ -1890,51 +1890,98 @@ export default function SubcontractorHakedis() {
 
                 {/* Total and Payment Summary */}
                 <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span>Bu Hakediş Tutarı</span>
-                    <span className="text-primary text-lg">
-                      {formatCurrencyWithType(selectedHakedis.totalAmount, selectedHakedis.currency)}
-                    </span>
-                  </div>
+                  {(() => {
+                    const hVatRate = selectedHakedis.vatRate || 0;
+                    const hSubtotal = selectedHakedis.totalAmount;
+                    const hVatAmount = hVatRate > 0 ? hSubtotal * (hVatRate / 100) : 0;
+                    const hTotalWithVat = hSubtotal + hVatAmount;
+
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Bu Hakediş Tutarı (KDV Hariç)</span>
+                          <span className="font-medium">{formatCurrencyWithType(hSubtotal, selectedHakedis.currency)}</span>
+                        </div>
+                        {hVatRate > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">KDV (%{hVatRate})</span>
+                            <span className="font-medium">{formatCurrencyWithType(hVatAmount, selectedHakedis.currency)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm font-semibold">
+                          <span>Bu Hakediş Tutarı (KDV Dahil)</span>
+                          <span className="text-primary text-lg">{formatCurrencyWithType(hTotalWithVat, selectedHakedis.currency)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                   {(() => {
                     const contract = workEntries.find(e => e.id === selectedHakedis.contractId);
                     if (!contract) return null;
-                    
-                    const totalPaid = subcontractorHakedisler
-                      .filter(h => h.contractId === selectedHakedis.contractId)
-                      .reduce((sum, h) => sum + h.totalAmount, 0);
-                    const previousPaid = subcontractorHakedisler
-                      .filter(h => h.contractId === selectedHakedis.contractId && h.id !== selectedHakedis.id)
-                      .reduce((sum, h) => sum + h.totalAmount, 0);
-                    const remainingBalance = contract.totalAmount - totalPaid;
-                    
+
+                    const cVatRate = contract.vatRate || 0;
+                    const cSubtotal = contract.totalAmount;
+                    const cVatAmount = cVatRate > 0 ? cSubtotal * (cVatRate / 100) : 0;
+                    const cTotalWithVat = cSubtotal + cVatAmount;
+
+                    const allHakedisler = subcontractorHakedisler.filter(h => h.contractId === selectedHakedis.contractId);
+                    const totalHakedisWithVat = allHakedisler.reduce((sum, h) => {
+                      const hv = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+                      return sum + h.totalAmount + hv;
+                    }, 0);
+                    const previousPaidWithVat = allHakedisler
+                      .filter(h => h.id !== selectedHakedis.id)
+                      .reduce((sum, h) => {
+                        const hv = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+                        return sum + h.totalAmount + hv;
+                      }, 0);
+                    const paidTotal = allHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+                    const remainingBalance = cTotalWithVat - paidTotal;
+
                     return (
                       <>
                         {selectedHakedis.hakedisType === 'kesin_hesap' && (
                           <div className="border-t pt-2 mt-2 space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="font-medium">Önceki Ödemeler</span>
-                              <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaid, contract.currency)}</span>
+                              <span className="font-medium">Önceki Ödemeler (KDV Dahil)</span>
+                              <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaidWithVat, contract.currency)}</span>
                             </div>
                             <div className="flex justify-between text-sm border-t pt-2 mt-1">
-                              <span className="font-bold">Net Ödenecek Tutar</span>
-                              <span className={`font-bold text-lg ${(selectedHakedis.totalAmount - previousPaid) >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                                {formatCurrencyWithType(selectedHakedis.totalAmount - previousPaid, contract.currency)}
+                              <span className="font-bold">Net Ödenecek Tutar (KDV Dahil)</span>
+                              <span className={`font-bold text-lg ${(selectedHakedis.totalAmount - previousPaidWithVat) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                                {formatCurrencyWithType(
+                                  (selectedHakedis.totalAmount + (selectedHakedis.vatRate ? selectedHakedis.totalAmount * (selectedHakedis.vatRate / 100) : 0)) - previousPaidWithVat,
+                                  contract.currency
+                                )}
                               </span>
                             </div>
                           </div>
                         )}
                         <div className="border-t pt-2 mt-2 space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Sözleşme Tutarı</span>
-                            <span className="font-medium">{formatCurrencyWithType(contract.totalAmount, contract.currency)}</span>
+                            <span className="text-muted-foreground">Sözleşme Tutarı (KDV Hariç)</span>
+                            <span className="font-medium">{formatCurrencyWithType(cSubtotal, contract.currency)}</span>
+                          </div>
+                          {cVatRate > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">KDV (%{cVatRate})</span>
+                              <span className="font-medium">{formatCurrencyWithType(cVatAmount, contract.currency)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm font-semibold">
+                            <span>Sözleşme Tutarı (KDV Dahil)</span>
+                            <span>{formatCurrencyWithType(cTotalWithVat, contract.currency)}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Toplam Hakediş</span>
-                            <span className="text-primary font-medium">{formatCurrencyWithType(totalPaid, contract.currency)}</span>
+                            <span className="text-muted-foreground">Toplam Hakediş (KDV Dahil)</span>
+                            <span className="text-primary font-medium">{formatCurrencyWithType(totalHakedisWithVat, contract.currency)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Ödenen Tutar (KDV Dahil)</span>
+                            <span className="font-medium">{formatCurrencyWithType(paidTotal, contract.currency)}</span>
                           </div>
                           <div className="flex justify-between text-sm border-t pt-2 mt-1">
-                            <span className="font-semibold">Kalan Bakiye</span>
+                            <span className="font-semibold">Kalan Bakiye (KDV Dahil)</span>
                             <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-primary'}`}>
                               {formatCurrencyWithType(remainingBalance, contract.currency)}
                             </span>
