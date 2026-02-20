@@ -32,6 +32,7 @@ import {
 import { exportSingleContractToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -100,6 +101,9 @@ export default function WorkEntries() {
     description: '',
   });
 
+  // VAT inclusive checkbox
+  const [vatInclusive, setVatInclusive] = useState(false);
+
   // Götürü Bedel - Payment Plan
   const [paymentPlan, setPaymentPlan] = useState<PaymentInstallment[]>([]);
 
@@ -167,6 +171,11 @@ export default function WorkEntries() {
       totalAmount = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
     } else {
       totalAmount = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
+    }
+
+    // If vatInclusive is checked, back-calculate the base amount (KDV hariç)
+    if (vatInclusive && newEntry.vatRate !== '' && Number(newEntry.vatRate) > 0) {
+      totalAmount = totalAmount / (1 + Number(newEntry.vatRate) / 100);
     }
 
     return { totalAmount };
@@ -308,6 +317,7 @@ export default function WorkEntries() {
     setIsDialogOpen(false);
     setIsEditMode(false);
     setSelectedEntry(null);
+    setVatInclusive(false);
     setNewEntry({
       projectId: '',
       workCategory: '',
@@ -797,14 +807,27 @@ export default function WorkEntries() {
               {/* VAT Rate */}
               <div className="space-y-2">
                 <Label>KDV Oranı (%)</Label>
-                <Input
-                  type="number"
-                  placeholder="Örn: 20"
-                  min="0"
-                  max="100"
-                  value={newEntry.vatRate}
-                  onChange={(e) => setNewEntry({ ...newEntry, vatRate: e.target.value })}
-                />
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Örn: 20"
+                    min="0"
+                    max="100"
+                    value={newEntry.vatRate}
+                    onChange={(e) => setNewEntry({ ...newEntry, vatRate: e.target.value })}
+                    className="flex-1"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <Checkbox
+                      id="vatInclusive"
+                      checked={vatInclusive}
+                      onCheckedChange={(checked) => setVatInclusive(checked === true)}
+                    />
+                    <Label htmlFor="vatInclusive" className="text-xs font-normal cursor-pointer whitespace-nowrap">
+                      Dahil
+                    </Label>
+                  </div>
+                </div>
               </div>
 
               {/* Date */}
@@ -933,30 +956,65 @@ export default function WorkEntries() {
             {/* Amount Preview with VAT */}
             {amounts.totalAmount > 0 && (
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Ara Toplam</span>
-                  <span className="font-medium">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
-                </div>
-                {newEntry.vatRate !== '' && Number(newEntry.vatRate) > 0 && (
-                  <>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>KDV (%{newEntry.vatRate})</span>
-                      <span>{formatCurrencyWithType(amounts.totalAmount * Number(newEntry.vatRate) / 100, newEntry.currency)}</span>
-                    </div>
-                    <div className="border-t pt-2 flex justify-between text-sm">
-                      <span className="font-medium">KDV Dahil Toplam</span>
-                      <span className="font-semibold text-primary">
-                        {formatCurrencyWithType(amounts.totalAmount * (1 + Number(newEntry.vatRate) / 100), newEntry.currency)}
-                      </span>
-                    </div>
-                  </>
-                )}
-                {(newEntry.vatRate === '' || Number(newEntry.vatRate) === 0) && (
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Toplam</span>
-                    <span className="font-semibold text-primary">{formatCurrencyWithType(amounts.totalAmount, newEntry.currency)}</span>
-                  </div>
-                )}
+                {(() => {
+                  const enteredTotal = amounts.totalAmount;
+                  const vr = newEntry.vatRate !== '' ? Number(newEntry.vatRate) : 0;
+                  
+                  if (vatInclusive && vr > 0) {
+                    // Entered amounts are VAT-inclusive
+                    const baseAmount = enteredTotal / (1 + vr / 100);
+                    const vatAmount = enteredTotal - baseAmount;
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Girilen Tutar (KDV Dahil)</span>
+                          <span className="font-medium">{formatCurrencyWithType(enteredTotal, newEntry.currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>KDV Hariç Tutar</span>
+                          <span>{formatCurrencyWithType(baseAmount, newEntry.currency)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>KDV (%{vr})</span>
+                          <span>{formatCurrencyWithType(vatAmount, newEntry.currency)}</span>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between text-sm">
+                          <span className="font-medium">KDV Dahil Toplam</span>
+                          <span className="font-semibold text-primary">{formatCurrencyWithType(enteredTotal, newEntry.currency)}</span>
+                        </div>
+                      </>
+                    );
+                  }
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Ara Toplam (KDV Hariç)</span>
+                        <span className="font-medium">{formatCurrencyWithType(enteredTotal, newEntry.currency)}</span>
+                      </div>
+                      {vr > 0 && (
+                        <>
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>KDV (%{vr})</span>
+                            <span>{formatCurrencyWithType(enteredTotal * vr / 100, newEntry.currency)}</span>
+                          </div>
+                          <div className="border-t pt-2 flex justify-between text-sm">
+                            <span className="font-medium">KDV Dahil Toplam</span>
+                            <span className="font-semibold text-primary">
+                              {formatCurrencyWithType(enteredTotal * (1 + vr / 100), newEntry.currency)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {vr === 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">Toplam</span>
+                          <span className="font-semibold text-primary">{formatCurrencyWithType(enteredTotal, newEntry.currency)}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>
