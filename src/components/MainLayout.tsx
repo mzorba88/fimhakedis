@@ -94,7 +94,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0 overflow-x-hidden">
           {/* Header */}
           <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
             <div className="flex h-14 items-center justify-between px-4">
