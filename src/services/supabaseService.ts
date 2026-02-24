@@ -241,30 +241,33 @@ export const fetchHakedisler = async (): Promise<SubcontractorHakedis[]> => {
 };
 
 export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | 'createdAt' | 'updatedAt'>): Promise<SubcontractorHakedis> => {
+  const insertData: any = {
+    hakedis_no: hakedis.hakedisNo,
+    hakedis_type: hakedis.hakedisType,
+    subcontractor: hakedis.subcontractor,
+    contract_type: hakedis.contractType,
+    currency: hakedis.currency,
+    vat_rate: hakedis.vatRate,
+    date: hakedis.date,
+    description: hakedis.description,
+    payment_amount: hakedis.paymentAmount,
+    hakedis_items: hakedis.hakedisItems as any,
+    extra_items: hakedis.extraItems as any,
+    total_amount: hakedis.totalAmount,
+    created_by: hakedis.createdBy,
+    approval_status: hakedis.approvalStatus,
+    payment_status: hakedis.paymentStatus,
+    paid_amount: hakedis.paidAmount || 0,
+    contract_exceeded_note: hakedis.contractExceededNote,
+  };
+  // Only set nullable FK fields if they have values
+  if (hakedis.projectId) insertData.project_id = hakedis.projectId;
+  if (hakedis.contractId) insertData.contract_id = hakedis.contractId;
+  if (hakedis.contractNo) insertData.contract_no = hakedis.contractNo;
+
   const { data, error } = await supabase
     .from('hakedisler')
-    .insert({
-      hakedis_no: hakedis.hakedisNo,
-      hakedis_type: hakedis.hakedisType,
-      project_id: hakedis.projectId,
-      subcontractor: hakedis.subcontractor,
-      contract_id: hakedis.contractId,
-      contract_no: hakedis.contractNo,
-      contract_type: hakedis.contractType,
-      currency: hakedis.currency,
-      vat_rate: hakedis.vatRate,
-      date: hakedis.date,
-      description: hakedis.description,
-      payment_amount: hakedis.paymentAmount,
-      hakedis_items: hakedis.hakedisItems as any,
-      extra_items: hakedis.extraItems as any,
-      total_amount: hakedis.totalAmount,
-      created_by: hakedis.createdBy,
-      approval_status: hakedis.approvalStatus,
-      payment_status: hakedis.paymentStatus,
-      paid_amount: hakedis.paidAmount || 0,
-      contract_exceeded_note: hakedis.contractExceededNote,
-    })
+    .insert(insertData)
     .select()
     .single();
   
