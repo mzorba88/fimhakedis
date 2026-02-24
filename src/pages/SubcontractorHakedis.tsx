@@ -72,11 +72,13 @@ export default function SubcontractorHakedis() {
     projects, 
     workEntries,
     subcontractorHakedisler,
+    subcontractors,
     addSubcontractorHakedis,
     updateSubcontractorHakedis,
     deleteSubcontractorHakedis,
     currentUser,
-    addActivityLog
+    addActivityLog,
+    addSubcontractor,
   } = useHakedisStore();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +92,21 @@ export default function SubcontractorHakedis() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingHakedisId, setEditingHakedisId] = useState<string | null>(null);
   const [selectedHakedis, setSelectedHakedis] = useState<HakedisType | null>(null);
+
+  // Small contractless hakediş dialog state
+  const [isSmallHakedisDialogOpen, setIsSmallHakedisDialogOpen] = useState(false);
+  const [smallProjectMode, setSmallProjectMode] = useState<'existing' | 'custom'>('existing');
+  const [smallProjectId, setSmallProjectId] = useState('');
+  const [smallProjectName, setSmallProjectName] = useState('');
+  const [smallSubcontractorMode, setSmallSubcontractorMode] = useState<'existing' | 'custom'>('existing');
+  const [smallSubcontractor, setSmallSubcontractor] = useState('');
+  const [smallCustomSubcontractor, setSmallCustomSubcontractor] = useState('');
+  const [smallDate, setSmallDate] = useState(new Date().toISOString().split('T')[0]);
+  const [smallDescription, setSmallDescription] = useState('');
+  const [smallAmount, setSmallAmount] = useState('');
+  const [smallCurrency, setSmallCurrency] = useState<Currency>('TRY');
+  const [smallVatRate, setSmallVatRate] = useState('10');
+  const [smallVatInclusive, setSmallVatInclusive] = useState(false);
   
   // Form state
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -512,6 +529,105 @@ export default function SubcontractorHakedis() {
     }
   };
 
+  const resetSmallForm = () => {
+    setSmallProjectMode('existing');
+    setSmallProjectId('');
+    setSmallProjectName('');
+    setSmallSubcontractorMode('existing');
+    setSmallSubcontractor('');
+    setSmallCustomSubcontractor('');
+    setSmallDate(new Date().toISOString().split('T')[0]);
+    setSmallDescription('');
+    setSmallAmount('');
+    setSmallCurrency('TRY');
+    setSmallVatRate('10');
+    setSmallVatInclusive(false);
+  };
+
+  const handleSmallHakedisSubmit = async () => {
+    const subcontractorName = smallSubcontractorMode === 'existing' ? smallSubcontractor : smallCustomSubcontractor.trim();
+    if (!subcontractorName) {
+      toast.error('Lütfen altyüklenici seçin veya girin');
+      return;
+    }
+    if (!smallDescription.trim()) {
+      toast.error('Lütfen açıklama girin');
+      return;
+    }
+    const rawAmount = parseFloat(smallAmount) || 0;
+    if (rawAmount <= 0) {
+      toast.error('Lütfen geçerli bir tutar girin');
+      return;
+    }
+
+    // Calculate base amount
+    const vr = smallVatRate !== '' ? Number(smallVatRate) : 0;
+    let totalAmount = rawAmount;
+    if (smallVatInclusive && vr > 0) {
+      totalAmount = rawAmount / (1 + vr / 100);
+    }
+
+    // Build project label for description
+    const projectLabel = smallProjectMode === 'existing' 
+      ? projects.find(p => p.id === smallProjectId)?.projectName || '' 
+      : smallProjectName.trim();
+
+    try {
+      // If new subcontractor, add to DB
+      if (smallSubcontractorMode === 'custom' && smallCustomSubcontractor.trim()) {
+        await addSubcontractor(smallCustomSubcontractor.trim());
+      }
+
+      // Generate hakediş number using counter
+      const hakedisCount = subcontractorHakedisler.filter(h => !h.contractId).length;
+      const hakedisNo = `KH-S${(hakedisCount + 1).toString().padStart(3, '0')}`;
+
+      const newHakedis = await addSubcontractorHakedis({
+        hakedisNo,
+        hakedisType: 'ara_hakedis',
+        projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (undefined as any),
+        subcontractor: subcontractorName,
+        contractId: undefined as any,
+        contractNo: undefined as any,
+        contractType: 'goturu_bedel',
+        currency: smallCurrency,
+        vatRate: vr || undefined,
+        date: smallDate,
+        description: `${smallProjectMode === 'custom' && smallProjectName.trim() ? `[Proje: ${smallProjectName.trim()}] ` : ''}${smallDescription.trim()}`,
+        paymentAmount: totalAmount,
+        totalAmount,
+        createdBy: currentUser.id,
+        approvalStatus: 'onay_bekliyor',
+        paidAmount: 0,
+        paymentStatus: 'odenmedi',
+      });
+
+      await addActivityLog(
+        'hakedis_created',
+        `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
+        `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+        newHakedis.id,
+        'hakedis'
+      );
+
+      toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+      setIsSmallHakedisDialogOpen(false);
+      resetSmallForm();
+    } catch (error) {
+      console.error('Error saving small hakedis:', error);
+      toast.error('Hakediş kaydedilemedi');
+    }
+  };
+
+  // Unique subcontractor names for dropdown
+  const allSubcontractorNames = useMemo(() => {
+    const names = new Set<string>();
+    subcontractors.forEach(s => names.add(s.name));
+    workEntries.forEach(e => names.add(e.subcontractor));
+    subcontractorHakedisler.forEach(h => names.add(h.subcontractor));
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'tr'));
+  }, [subcontractors, workEntries, subcontractorHakedisler]);
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -523,10 +639,16 @@ export default function SubcontractorHakedis() {
               Altyüklenici sözleşmelerine ait hakediş kayıtları
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
-            <Plus className="h-4 w-4" />
-            Yeni Hakediş
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={() => setIsSmallHakedisDialogOpen(true)} variant="outline" className="gap-2 w-full sm:w-auto touch-target">
+              <Receipt className="h-4 w-4" />
+              Sözleşmesiz Küçük Hakediş
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
+              <Plus className="h-4 w-4" />
+              Yeni Hakediş
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -594,7 +716,7 @@ export default function SubcontractorHakedis() {
               >
                 <MobileCardHeader
                   title={hakedis.hakedisNo}
-                  subtitle={`${project?.projectCode} - ${hakedis.subcontractor} • ${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']}`}
+                  subtitle={`${project?.projectCode || 'Küçük İş'} - ${hakedis.subcontractor} • ${hakedis.contractId ? hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis'] : 'Sözleşmesiz'}`}
                   badge={
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={hakedis.approvalStatus} size="sm" />
@@ -745,7 +867,7 @@ export default function SubcontractorHakedis() {
                                 {hakedis.hakedisNo}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • {contractTypeLabels[hakedis.contractType]}
+                                {hakedis.contractId ? `${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • ${contractTypeLabels[hakedis.contractType]}` : 'Sözleşmesiz Küçük Hakediş'}
                               </p>
                             </div>
                             {hakedis.contractExceededNote && (
@@ -760,10 +882,10 @@ export default function SubcontractorHakedis() {
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-sm font-medium text-foreground">
-                            {project?.projectCode}
+                            {project?.projectCode || 'Küçük İş'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {project?.projectName}
+                            {project?.projectName || '-'}
                           </p>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
@@ -1781,12 +1903,12 @@ export default function SubcontractorHakedis() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Sözleşme No</p>
-                    <p className="font-medium">{selectedHakedis.contractNo}</p>
+                    <p className="font-medium">{selectedHakedis.contractNo || 'Sözleşmesiz'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Proje</p>
                     <p className="font-medium">
-                      {projects.find(p => p.id === selectedHakedis.projectId)?.projectName || '-'}
+                      {projects.find(p => p.id === selectedHakedis.projectId)?.projectName || 'Küçük İş'}
                     </p>
                   </div>
                   <div>
@@ -1799,7 +1921,7 @@ export default function SubcontractorHakedis() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Sözleşme Tipi</p>
-                    <p className="font-medium">{contractTypeLabels[selectedHakedis.contractType]}</p>
+                    <p className="font-medium">{selectedHakedis.contractId ? contractTypeLabels[selectedHakedis.contractType] : 'Sözleşmesiz Küçük Hakediş'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Tarih</p>
@@ -2075,6 +2197,159 @@ export default function SubcontractorHakedis() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Small Contractless Hakediş Dialog */}
+        <Dialog open={isSmallHakedisDialogOpen} onOpenChange={(open) => { if (!open) { resetSmallForm(); } setIsSmallHakedisDialogOpen(open); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Sözleşmesiz Küçük Hakediş</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Project */}
+              <div className="space-y-2">
+                <Label>Proje</Label>
+                <Select value={smallProjectMode} onValueChange={(v: 'existing' | 'custom') => { setSmallProjectMode(v); setSmallProjectId(''); setSmallProjectName(''); }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="existing">Mevcut Proje</SelectItem>
+                    <SelectItem value="custom">Küçük İş (Serbest Giriş)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {smallProjectMode === 'existing' ? (
+                  <Select value={smallProjectId} onValueChange={setSmallProjectId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Proje seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input placeholder="Proje / iş adını yazın" value={smallProjectName} onChange={e => setSmallProjectName(e.target.value)} />
+                )}
+              </div>
+
+              {/* Subcontractor */}
+              <div className="space-y-2">
+                <Label>Altyüklenici</Label>
+                <Select value={smallSubcontractorMode} onValueChange={(v: 'existing' | 'custom') => { setSmallSubcontractorMode(v); setSmallSubcontractor(''); setSmallCustomSubcontractor(''); }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="existing">Mevcut Altyüklenici</SelectItem>
+                    <SelectItem value="custom">Yeni Altyüklenici</SelectItem>
+                  </SelectContent>
+                </Select>
+                {smallSubcontractorMode === 'existing' ? (
+                  <Select value={smallSubcontractor} onValueChange={setSmallSubcontractor}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Altyüklenici seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allSubcontractorNames.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input placeholder="Altyüklenici adını yazın" value={smallCustomSubcontractor} onChange={e => setSmallCustomSubcontractor(e.target.value)} />
+                )}
+              </div>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <Label>Tarih</Label>
+                <Input type="date" value={smallDate} onChange={e => setSmallDate(e.target.value)} />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label>Açıklama</Label>
+                <Textarea placeholder="Hakediş açıklaması" value={smallDescription} onChange={e => setSmallDescription(e.target.value)} rows={3} />
+              </div>
+
+              {/* Amount + Currency */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-2">
+                  <Label>Tutar</Label>
+                  <Input type="number" placeholder="0.00" value={smallAmount} onChange={e => setSmallAmount(e.target.value)} min="0" step="0.01" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Para Birimi</Label>
+                  <Select value={smallCurrency} onValueChange={(v: Currency) => setSmallCurrency(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TRY">₺ TRY</SelectItem>
+                      <SelectItem value="USD">$ USD</SelectItem>
+                      <SelectItem value="EUR">€ EUR</SelectItem>
+                      <SelectItem value="GBP">£ GBP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* VAT Rate + Inclusive */}
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <div className="flex items-center gap-3">
+                  <Input type="number" className="w-24" value={smallVatRate} onChange={e => setSmallVatRate(e.target.value)} min="0" step="1" />
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="small-vat-inclusive" checked={smallVatInclusive} onCheckedChange={(checked) => setSmallVatInclusive(checked === true)} />
+                    <Label htmlFor="small-vat-inclusive" className="text-sm cursor-pointer">Dahil</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calculated totals */}
+              {(() => {
+                const rawAmt = parseFloat(smallAmount) || 0;
+                const vr = smallVatRate !== '' ? Number(smallVatRate) : 0;
+                let baseAmount = rawAmt;
+                if (smallVatInclusive && vr > 0) {
+                  baseAmount = rawAmt / (1 + vr / 100);
+                }
+                const vatAmount = vr > 0 ? baseAmount * (vr / 100) : 0;
+                const totalWithVat = baseAmount + vatAmount;
+
+                return rawAmt > 0 ? (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    {smallVatInclusive && vr > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Girilen Tutar (KDV Dahil)</span>
+                        <span>{formatCurrencyWithType(rawAmt, smallCurrency)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">KDV Hariç Tutar</span>
+                      <span>{formatCurrencyWithType(baseAmount, smallCurrency)}</span>
+                    </div>
+                    {vr > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">KDV (%{vr})</span>
+                        <span>{formatCurrencyWithType(vatAmount, smallCurrency)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold border-t pt-2">
+                      <span>KDV Dahil Toplam</span>
+                      <span className="text-primary">{formatCurrencyWithType(totalWithVat, smallCurrency)}</span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { resetSmallForm(); setIsSmallHakedisDialogOpen(false); }}>İptal</Button>
+              <Button onClick={handleSmallHakedisSubmit}>Hakediş Oluştur</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

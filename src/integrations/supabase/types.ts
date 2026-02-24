@@ -154,8 +154,8 @@ export type Database = {
           approval_status: string
           approved_by: string | null
           contract_exceeded_note: string | null
-          contract_id: string
-          contract_no: string
+          contract_id: string | null
+          contract_no: string | null
           contract_type: string
           created_at: string
           created_by: string
@@ -171,7 +171,7 @@ export type Database = {
           paid_date: string | null
           payment_amount: number | null
           payment_status: string
-          project_id: string
+          project_id: string | null
           rejection_reason: string | null
           subcontractor: string
           total_amount: number
@@ -183,8 +183,8 @@ export type Database = {
           approval_status?: string
           approved_by?: string | null
           contract_exceeded_note?: string | null
-          contract_id: string
-          contract_no: string
+          contract_id?: string | null
+          contract_no?: string | null
           contract_type: string
           created_at?: string
           created_by: string
@@ -200,7 +200,7 @@ export type Database = {
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
-          project_id: string
+          project_id?: string | null
           rejection_reason?: string | null
           subcontractor: string
           total_amount?: number
@@ -212,8 +212,8 @@ export type Database = {
           approval_status?: string
           approved_by?: string | null
           contract_exceeded_note?: string | null
-          contract_id?: string
-          contract_no?: string
+          contract_id?: string | null
+          contract_no?: string | null
           contract_type?: string
           created_at?: string
           created_by?: string
@@ -229,7 +229,7 @@ export type Database = {
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
-          project_id?: string
+          project_id?: string | null
           rejection_reason?: string | null
           subcontractor?: string
           total_amount?: number
