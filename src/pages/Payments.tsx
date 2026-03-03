@@ -554,10 +554,8 @@ export default function Payments() {
             <table className="w-full">
               <thead>
               <tr className="border-b bg-muted/50">
-                  <SortableTableHeader label="Hakediş No" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Toplam Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Ödenen</th>
@@ -589,14 +587,6 @@ export default function Payments() {
                         className="group hover:bg-muted/30"
                       >
                         <td className="px-4 py-4">
-                          <p className="font-medium text-foreground">
-                            {hakedis.hakedisNo}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {contractTypeLabels[hakedis.contractType]}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4">
                           <p className="text-sm font-medium text-foreground">
                             {project?.projectCode}
                           </p>
@@ -606,9 +596,6 @@ export default function Payments() {
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {hakedis.subcontractor}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {hakedis.contractNo}
                         </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
                           {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}

@@ -715,8 +715,8 @@ export default function SubcontractorHakedis() {
                 }}
               >
                 <MobileCardHeader
-                  title={hakedis.hakedisNo}
-                  subtitle={`${project?.projectCode || 'Küçük İş'} - ${hakedis.subcontractor} • ${hakedis.contractId ? hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis'] : 'Sözleşmesiz'}`}
+                  title={`${project?.projectCode || 'Küçük İş'} - ${hakedis.subcontractor}`}
+                  subtitle={hakedis.contractId ? `${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • ${contractTypeLabels[hakedis.contractType]}` : 'Sözleşmesiz Küçük Hakediş'}
                   badge={
                     <div className="flex flex-col items-end gap-1">
                       <StatusBadge status={hakedis.approvalStatus} size="sm" />
@@ -831,7 +831,6 @@ export default function SubcontractorHakedis() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <SortableTableHeader label="Hakediş No" sortKey="hakedisNo" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
@@ -863,11 +862,11 @@ export default function SubcontractorHakedis() {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
                             <div>
-                              <p className="font-medium text-foreground">
-                                {hakedis.hakedisNo}
+                              <p className="text-sm font-medium text-foreground">
+                                {project?.projectCode || 'Küçük İş'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {hakedis.contractId ? `${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • ${contractTypeLabels[hakedis.contractType]}` : 'Sözleşmesiz Küçük Hakediş'}
+                                {project?.projectName || '-'}
                               </p>
                             </div>
                             {hakedis.contractExceededNote && (
@@ -879,14 +878,6 @@ export default function SubcontractorHakedis() {
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-medium text-foreground">
-                            {project?.projectCode || 'Küçük İş'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {project?.projectName || '-'}
-                          </p>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {hakedis.subcontractor}

@@ -392,8 +392,8 @@ export default function WorkEntries() {
                 }}
               >
                 <MobileCardHeader
-                  title={entry.contractNo}
-                  subtitle={`${project?.projectCode} - ${entry.subcontractor}`}
+                  title={`${project?.projectCode} - ${entry.subcontractor}`}
+                  subtitle={`${entry.workCategory} • ${contractTypeLabels[entry.contractType]}`}
                 />
                 <div className="space-y-0.5">
                   <MobileCardRow label="İş Kalemi" value={
@@ -500,8 +500,7 @@ export default function WorkEntries() {
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Sözleşme No" sortKey="contractNo" currentSort={sortConfig} onSort={handleSort} />
+                   <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Sözleşme Tipi" sortKey="contractType" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -545,11 +544,6 @@ export default function WorkEntries() {
                             <Calendar className="h-4 w-4" />
                             {formatDate(entry.date)}
                           </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-medium text-primary">
-                            {entry.contractNo}
-                          </p>
                         </td>
                         <td className="px-4 py-4">
                           <p className="text-sm text-foreground">
