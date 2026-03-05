@@ -28,9 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
+// jspdf, html2canvas, xlsx loaded dynamically when needed
 import formanLogo from '@/assets/forman-logo.png';
 
 export default function Reports() {
@@ -236,6 +234,7 @@ export default function Reports() {
     document.body.appendChild(container);
     
   try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -243,6 +242,7 @@ export default function Reports() {
         backgroundColor: '#ffffff',
       });
       
+      const { default: jsPDF } = await import('jspdf');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/png');
       
@@ -278,13 +278,14 @@ export default function Reports() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const data = generateReportData();
     if (!data) {
       toast.error('Lütfen bir proje seçin');
       return;
     }
 
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     
     // Header info with branding

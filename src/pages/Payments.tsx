@@ -29,8 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// jspdf and html2canvas loaded dynamically when needed
 import formanLogo from '@/assets/forman-logo.png';
 import {
   Dialog,
@@ -382,6 +381,7 @@ export default function Payments() {
     document.body.appendChild(container);
     
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -389,6 +389,7 @@ export default function Payments() {
         backgroundColor: '#ffffff',
       });
       
+      const { default: jsPDF } = await import('jspdf');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/png');
       
