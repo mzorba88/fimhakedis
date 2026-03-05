@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useHakedisStore } from '@/store/hakedisStore';
 import * as api from '@/services/supabaseService';
-import { defaultSubcontractors } from '@/data/mockData';
 
 export function useSupabaseData() {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,9 +18,6 @@ export function useSupabaseData() {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Initialize subcontractors first
-      await api.initializeSubcontractors(defaultSubcontractors);
 
       // Load all data in parallel
       const [projects, contracts, hakedisler, subcontractors, activityLogs] = await Promise.all([
