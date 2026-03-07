@@ -28,8 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-// jspdf, html2canvas, xlsx loaded dynamically when needed
-import formanLogo from '@/assets/forman-logo.png';
+// jspdf, jspdf-autotable, xlsx loaded dynamically when needed
 
 export default function Reports() {
   const { projects, workEntries, subcontractorHakedisler } = useHakedisStore();

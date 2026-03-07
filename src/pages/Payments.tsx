@@ -29,8 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-// jspdf and html2canvas loaded dynamically when needed
-import formanLogo from '@/assets/forman-logo.png';
+// jspdf and jspdf-autotable loaded dynamically when needed
 import {
   Dialog,
   DialogContent,
