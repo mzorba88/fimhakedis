@@ -1,239 +1,209 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { 
   WorkEntry, 
   SubcontractorHakedis, 
   Project,
   formatCurrencyWithType,
   formatDate,
-  contractTypeLabels
+  contractTypeLabels,
+  hakedisTypeLabels,
+  paymentStatusLabels,
+  approvalStatusLabels
 } from '@/types/hakedis';
-import formanLogo from '@/assets/forman-logo.png';
+
+const loadPdfLibs = async () => {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
+  return { jsPDF, autoTable };
+};
+
+const COLORS = {
+  primary: [59, 130, 246] as [number, number, number],
+  indigo: [99, 102, 241] as [number, number, number],
+  green: [34, 197, 94] as [number, number, number],
+  amber: [245, 158, 11] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+  gray: [107, 114, 128] as [number, number, number],
+  lightGray: [249, 250, 251] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  dark: [26, 26, 26] as [number, number, number],
+};
+
+function addHeader(doc: any, title: string) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(...COLORS.dark);
+  doc.text(title, pageWidth / 2, 18, { align: 'center' });
+  
+  // Report date
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.gray);
+  doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString())}`, pageWidth - 14, 18, { align: 'right' });
+  
+  // Line under header
+  doc.setDrawColor(...COLORS.primary);
+  doc.setLineWidth(0.5);
+  doc.line(14, 22, pageWidth - 14, 22);
+  
+  return 28;
+}
+
+function addSectionTitle(doc: any, title: string, y: number, color: [number, number, number] = COLORS.primary) {
+  doc.setFontSize(11);
+  doc.setTextColor(...COLORS.dark);
+  doc.text(title, 14, y);
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.8);
+  doc.line(14, y + 1.5, 80, y + 1.5);
+  return y + 6;
+}
+
+function addSignatureBlock(doc: any, y: number) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const colWidth = (pageWidth - 28) / 2;
+  
+  y += 10;
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.dark);
+  
+  doc.text('Direktör Onayı:', 14 + colWidth / 2, y, { align: 'center' });
+  doc.text('Muhasebe Onayı:', 14 + colWidth + colWidth / 2, y, { align: 'center' });
+  
+  y += 18;
+  doc.setDrawColor(...COLORS.dark);
+  doc.line(24, y, 24 + colWidth - 20, y);
+  doc.line(14 + colWidth + 10, y, 14 + colWidth + colWidth - 10, y);
+  
+  y += 4;
+  doc.setFontSize(7);
+  doc.setTextColor(...COLORS.gray);
+  doc.text('İmza / Tarih', 14 + colWidth / 2, y, { align: 'center' });
+  doc.text('İmza / Tarih', 14 + colWidth + colWidth / 2, y, { align: 'center' });
+  
+  return y;
+}
 
 export const generateContractPDF = async (
   entry: WorkEntry, 
   project: Project | undefined,
   subcontractorHakedisler: SubcontractorHakedis[]
 ) => {
-  // Calculate financial data
+  const { jsPDF, autoTable } = await loadPdfLibs();
+  const doc = new jsPDF('p', 'mm', 'a4');
+  
+  let y = addHeader(doc, 'ALTYÜKLENICI SÖZLEŞME RAPORU');
+
+  // Contract Info
+  y = addSectionTitle(doc, 'Sözleşme Bilgileri', y, COLORS.primary);
+  
+  autoTable(doc, {
+    startY: y,
+    body: [
+      ['Sözleşme No', entry.contractNo, 'Proje', `${project?.projectCode || '-'} - ${project?.projectName || '-'}`],
+      ['Altyüklenici', entry.subcontractor, 'İş Kalemi', entry.workCategory],
+      ['Sözleşme Tipi', contractTypeLabels[entry.contractType], 'Tarih', formatDate(entry.date)],
+      ['Onay Durumu', approvalStatusLabels[entry.approvalStatus], 'Ödeme Durumu', paymentStatusLabels[entry.paymentStatus]],
+      ...(entry.description ? [['Açıklama', { content: entry.description, colSpan: 3 }]] : []),
+    ],
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 2: { fontStyle: 'bold', cellWidth: 30 } },
+    alternateRowStyles: { fillColor: COLORS.lightGray },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  // Work items for birim fiyat
+  if (entry.contractType === 'birim_fiyat' && entry.workItemEntries?.length) {
+    y = addSectionTitle(doc, 'İş Kalemleri', y, COLORS.indigo);
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Açıklama', 'Birim', 'Miktar', 'Birim Fiyat', 'Toplam']],
+      body: entry.workItemEntries.map((item, idx) => [
+        idx + 1,
+        item.description || item.workCategory,
+        item.unit,
+        item.quantity,
+        formatCurrencyWithType(item.unitPrice, entry.currency),
+        formatCurrencyWithType(item.quantity * item.unitPrice, entry.currency),
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: COLORS.indigo, textColor: COLORS.white },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 15, halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  // Payment plan for götürü bedel
+  if (entry.contractType === 'goturu_bedel' && entry.paymentPlan?.length) {
+    y = addSectionTitle(doc, 'Ödeme Planı', y, COLORS.indigo);
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Açıklama', 'Tutar', 'Durum']],
+      body: entry.paymentPlan.map((p, idx) => [
+        idx + 1,
+        p.description || '-',
+        formatCurrencyWithType(p.amount, entry.currency),
+        p.isPaid ? '✓ Ödendi' : '○ Ödenmedi',
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: COLORS.indigo, textColor: COLORS.white },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'center' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  // Financial summary
   const subtotal = entry.totalAmount;
   const vatAmount = entry.vatRate ? subtotal * (entry.vatRate / 100) : 0;
   const totalWithVat = subtotal + vatAmount;
-  const contractAmountWithVat = totalWithVat; // KDV dahil sözleşme tutarı
   
-  // Payment tracking - tüm onaylı hakedişlerdeki ödenen tutarların toplamı
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.contractId === entry.id && h.approvalStatus === 'onaylandi');
-  // KDV dahil hakediş toplamları
   const totalHakedisAmount = approvedHakedisler.reduce((sum, h) => {
     const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
     return sum + h.totalAmount + hVat;
   }, 0);
   const paidAmount = approvedHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-  const remainingBalance = contractAmountWithVat - paidAmount;
+  const remainingBalance = totalWithVat - paidAmount;
 
-  // Create a temporary container for the PDF content - optimized for single page
-  const container = document.createElement('div');
-  container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 20px; background: white; font-family: Arial, sans-serif;';
+  y = addSectionTitle(doc, 'Tutar Bilgileri', y, COLORS.green);
   
-  // Generate work items table rows
-  let workItemsHtml = '';
-  if (entry.contractType === 'birim_fiyat' && entry.workItemEntries && entry.workItemEntries.length > 0) {
-    const rows = entry.workItemEntries.map((item, idx) => `
-      <tr style="background: ${idx % 2 === 0 ? '#f9fafb' : 'white'};">
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${item.description || item.workCategory}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.unit}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${item.quantity}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(item.unitPrice, entry.currency)}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(item.quantity * item.unitPrice, entry.currency)}</td>
-      </tr>
-    `).join('');
-    
-    workItemsHtml = `
-      <div style="margin-bottom: 25px;">
-        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">İş Kalemleri</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #6366f1; color: white;">
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 40px;">#</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 60px;">Birim</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd; width: 80px;">Miktar</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd; width: 100px;">Birim Fiyat</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd; width: 100px;">Toplam</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `;
+  const financialRows: any[][] = [
+    ['Sözleşme Tutarı (KDV Hariç)', formatCurrencyWithType(subtotal, entry.currency)],
+  ];
+  if (entry.vatRate) {
+    financialRows.push([`KDV (%${entry.vatRate})`, formatCurrencyWithType(vatAmount, entry.currency)]);
   }
+  financialRows.push(
+    ['Sözleşme Tutarı (KDV Dahil)', formatCurrencyWithType(totalWithVat, entry.currency)],
+    ['Toplam Hakediş Tutarı (KDV Dahil)', formatCurrencyWithType(totalHakedisAmount, entry.currency)],
+    ['Ödenen Tutar (KDV Dahil)', formatCurrencyWithType(paidAmount, entry.currency)],
+    ['Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(remainingBalance, entry.currency)],
+  );
 
-  // Generate payment plan table rows
-  let paymentPlanHtml = '';
-  if (entry.contractType === 'goturu_bedel' && entry.paymentPlan && entry.paymentPlan.length > 0) {
-    const rows = entry.paymentPlan.map((p, idx) => `
-      <tr style="background: ${idx % 2 === 0 ? '#f9fafb' : 'white'};">
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; border: 1px solid #ddd;">${p.description || '-'}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(p.amount, entry.currency)}</td>
-        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${p.isPaid ? '✓ Ödendi' : '○ Ödenmedi'}</td>
-      </tr>
-    `).join('');
-    
-    paymentPlanHtml = `
-      <div style="margin-bottom: 25px;">
-        <h2 style="font-size: 16px; margin-bottom: 10px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 5px;">Ödeme Planı</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #6366f1; color: white;">
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 40px;">#</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd; width: 120px;">Tutar</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd; width: 100px;">Durum</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
+  autoTable(doc, {
+    startY: y,
+    body: financialRows,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 }, 1: { halign: 'right' } },
+    alternateRowStyles: { fillColor: COLORS.lightGray },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
 
-  // Balance section - tüm sözleşme tipleri için göster
-  const balanceHtml = `
-    <tr>
-      <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Toplam Hakediş Tutarı (KDV Dahil)</td>
-      <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, entry.currency)}</td>
-    </tr>
-    <tr style="background: #f9fafb;">
-      <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
-      <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(paidAmount, entry.currency)}</td>
-    </tr>
-    <tr>
-      <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye (KDV Dahil)</td>
-      <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, entry.currency)}</td>
-    </tr>
-  `;
+  addSignatureBlock(doc, y);
   
-  container.innerHTML = `
-    <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-      <img src="${formanLogo}" style="height: 35px;" />
-      <div style="text-align: right;">
-        <h1 style="font-size: 18px; margin: 0; color: #1a1a1a;">ALTYÜKLENICI SÖZLEŞME RAPORU</h1>
-        <p style="font-size: 10px; color: #666; margin: 2px 0 0 0;">Rapor Tarihi: ${formatDate(new Date().toISOString())}</p>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 12px;">
-      <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 3px;">Sözleşme Bilgileri</h2>
-      <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-        <tbody>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 25%;">Sözleşme No</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; width: 25%;">${entry.contractNo}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 25%;">Proje</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 25%;">${project?.projectCode} - ${project?.projectName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Altyüklenici</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${entry.subcontractor}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">İş Kalemi</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${entry.workCategory}</td>
-          </tr>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Sözleşme Tipi</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${contractTypeLabels[entry.contractType]}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Tarih</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatDate(entry.date)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    
-    ${workItemsHtml}
-    ${paymentPlanHtml}
-    
-    <div style="margin-bottom: 12px;">
-      <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 3px;">Tutar Bilgileri</h2>
-      <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-        <tbody>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı (KDV Hariç)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">${formatCurrencyWithType(subtotal, entry.currency)}</td>
-          </tr>
-          ${entry.vatRate ? `
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">KDV (%${entry.vatRate})</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(vatAmount, entry.currency)}</td>
-          </tr>
-          ` : ''}
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Sözleşme Tutarı (KDV Dahil)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(contractAmountWithVat, entry.currency)}</td>
-          </tr>
-          ${balanceHtml}
-        </tbody>
-      </table>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-      <div style="text-align: center; width: 45%;">
-        <p style="font-size: 10px; margin-bottom: 20px;">Direktör Onayı:</p>
-        <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
-        <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
-      </div>
-      <div style="text-align: center; width: 45%;">
-        <p style="font-size: 10px; margin-bottom: 20px;">Muhasebe Onayı:</p>
-        <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
-        <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(container);
-  
-  try {
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-    });
-    
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Calculate dimensions to fit on single page
-    const pageWidth = 190;
-    const pageHeight = 277; // Leave margin
-    const imgRatio = canvas.width / canvas.height;
-    const pageRatio = pageWidth / pageHeight;
-    
-    let imgWidth, imgHeight;
-    if (imgRatio > pageRatio) {
-      imgWidth = pageWidth;
-      imgHeight = pageWidth / imgRatio;
-    } else {
-      imgHeight = pageHeight;
-      imgWidth = pageHeight * imgRatio;
-    }
-    
-    const xOffset = (210 - imgWidth) / 2;
-    const yOffset = 10;
-    
-    pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
-    
-    pdf.save(`sozlesme-raporu-${entry.contractNo}.pdf`);
-  } catch (error) {
-    console.error('PDF oluşturma hatası:', error);
-    throw error;
-  } finally {
-    document.body.removeChild(container);
-  }
+  doc.save(`sozlesme-raporu-${entry.contractNo}.pdf`);
 };
 
 export const generateHakedisPDF = async (
@@ -242,243 +212,161 @@ export const generateHakedisPDF = async (
   contract: WorkEntry | undefined,
   subcontractorHakedisler: SubcontractorHakedis[]
 ) => {
-  // Calculate financial data (KDV dahil)
+  const { jsPDF, autoTable } = await loadPdfLibs();
+  const doc = new jsPDF('p', 'mm', 'a4');
+  
+  let y = addHeader(doc, 'ALTYÜKLENICI HAKEDİŞ RAPORU');
+
+  // Hakedis Info
+  y = addSectionTitle(doc, 'Hakediş Bilgileri', y, COLORS.primary);
+  
+  const infoRows: any[][] = [
+    ['Hakediş No', hakedis.hakedisNo, 'Sözleşme No', hakedis.contractNo || '-'],
+    ['Altyüklenici', hakedis.subcontractor, 'Proje', `${project?.projectCode || '-'} - ${project?.projectName || '-'}`],
+    ['Sözleşme Tipi', contractTypeLabels[hakedis.contractType], 'Tarih', formatDate(hakedis.date)],
+    ['Hakediş Tipi', hakedisTypeLabels[hakedis.hakedisType], 'Onay Durumu', approvalStatusLabels[hakedis.approvalStatus]],
+  ];
+  if (hakedis.description) {
+    infoRows.push(['Açıklama', { content: hakedis.description, colSpan: 3 }]);
+  }
+
+  autoTable(doc, {
+    startY: y,
+    body: infoRows,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 2: { fontStyle: 'bold', cellWidth: 30 } },
+    alternateRowStyles: { fillColor: COLORS.lightGray },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 6;
+
+  // Hakedis items
+  if (hakedis.contractType === 'birim_fiyat' && hakedis.hakedisItems?.length) {
+    y = addSectionTitle(doc, 'Hakediş Kalemleri', y, COLORS.indigo);
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Açıklama', 'Birim', 'Miktar', 'B.Fiyat', 'Tutar']],
+      body: hakedis.hakedisItems.map((item, idx) => [
+        idx + 1,
+        item.description || item.workCategory,
+        item.unit,
+        item.quantity,
+        formatCurrencyWithType(item.unitPrice, hakedis.currency),
+        formatCurrencyWithType(item.amount, hakedis.currency),
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: COLORS.indigo, textColor: COLORS.white },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 15, halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  // Extra items
+  if (hakedis.extraItems?.length) {
+    y = addSectionTitle(doc, 'Sözleşme Harici Ek İşler', y, COLORS.amber);
+    autoTable(doc, {
+      startY: y,
+      head: [['#', 'Açıklama', 'Birim', 'Miktar', 'B.Fiyat', 'Tutar']],
+      body: hakedis.extraItems.map((item, idx) => [
+        idx + 1,
+        item.description,
+        item.unit,
+        item.quantity,
+        formatCurrencyWithType(item.unitPrice, hakedis.currency),
+        formatCurrencyWithType(item.amount, hakedis.currency),
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: COLORS.amber, textColor: COLORS.white },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 15, halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+  }
+
+  // Financial summary
   const subtotal = hakedis.totalAmount;
   const vatAmount = hakedis.vatRate ? subtotal * (hakedis.vatRate / 100) : 0;
-  const totalWithVat = subtotal + vatAmount; // KDV dahil hakediş tutarı
+  const totalWithVat = subtotal + vatAmount;
   const hakedisPaidAmount = hakedis.paidAmount || 0;
   const hakedisRemainingBalance = totalWithVat - hakedisPaidAmount;
-  
-  // Contract summary - KDV dahil onaylı hakediş toplamları
-  const contractSubtotal = contract?.totalAmount || 0;
-  const contractVat = contract?.vatRate ? contractSubtotal * (contract.vatRate / 100) : 0;
-  const contractTotal = contractSubtotal + contractVat; // KDV dahil sözleşme tutarı
-  const approvedContractHakedisler = subcontractorHakedisler.filter(h => h.contractId === hakedis.contractId && h.approvalStatus === 'onaylandi');
-  const totalHakedisAmount = approvedContractHakedisler.reduce((sum, h) => {
-    const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
-    return sum + h.totalAmount + hVat;
-  }, 0);
-  const totalPaidOnContract = approvedContractHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-  const remainingBalance = contractTotal - totalPaidOnContract;
 
-  // Create a temporary container for the PDF content - optimized for single page
-  const container = document.createElement('div');
-  container.style.cssText = 'position: absolute; left: -9999px; top: 0; width: 800px; padding: 20px; background: white; font-family: Arial, sans-serif;';
+  y = addSectionTitle(doc, 'Tutar Bilgileri', y, COLORS.green);
   
-  // Generate hakediş items table rows
-  let hakedisItemsHtml = '';
-  if (hakedis.contractType === 'birim_fiyat' && hakedis.hakedisItems && hakedis.hakedisItems.length > 0) {
-    const rows = hakedis.hakedisItems.map((item, idx) => `
-      <tr style="background: ${idx % 2 === 0 ? '#f9fafb' : 'white'};">
-        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: center;">${idx + 1}</td>
-        <td style="padding: 4px 6px; border: 1px solid #ddd;">${item.description || item.workCategory}</td>
-        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: center;">${item.unit}</td>
-        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: right;">${item.quantity}</td>
-        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(item.unitPrice, hakedis.currency)}</td>
-        <td style="padding: 4px 6px; border: 1px solid #ddd; text-align: right;">${formatCurrencyWithType(item.amount, hakedis.currency)}</td>
-      </tr>
-    `).join('');
-    
-    hakedisItemsHtml = `
-      <div style="margin-bottom: 12px;">
-        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #6366f1; padding-bottom: 3px;">Hakediş Kalemleri</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
-          <thead>
-            <tr style="background: #6366f1; color: white;">
-              <th style="padding: 4px 6px; text-align: center; border: 1px solid #ddd; width: 30px;">#</th>
-              <th style="padding: 4px 6px; text-align: left; border: 1px solid #ddd;">Açıklama</th>
-              <th style="padding: 4px 6px; text-align: center; border: 1px solid #ddd; width: 50px;">Birim</th>
-              <th style="padding: 4px 6px; text-align: right; border: 1px solid #ddd; width: 60px;">Miktar</th>
-              <th style="padding: 4px 6px; text-align: right; border: 1px solid #ddd; width: 80px;">B.Fiyat</th>
-              <th style="padding: 4px 6px; text-align: right; border: 1px solid #ddd; width: 80px;">Tutar</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `;
+  const finRows: any[][] = [
+    ['Hakediş Tutarı (KDV Hariç)', formatCurrencyWithType(subtotal, hakedis.currency)],
+  ];
+  if (hakedis.vatRate) {
+    finRows.push([`KDV (%${hakedis.vatRate})`, formatCurrencyWithType(vatAmount, hakedis.currency)]);
+  }
+  finRows.push(
+    ['Hakediş Tutarı (KDV Dahil)', formatCurrencyWithType(totalWithVat, hakedis.currency)],
+    ['Ödenen Tutar (KDV Dahil)', formatCurrencyWithType(hakedisPaidAmount, hakedis.currency)],
+    ['Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)],
+    ['Ödeme Durumu', hakedis.paymentStatus === 'odendi' ? '✓ Ödendi' : hakedis.paymentStatus === 'kismen_odendi' ? '◑ Kısmen Ödendi' : '○ Ödenmedi'],
+  );
+  if (hakedis.paidDate) {
+    finRows.push(['Ödeme Tarihi', formatDate(hakedis.paidDate)]);
   }
 
-  // Contract summary section - compact
-  let contractSummaryHtml = '';
+  autoTable(doc, {
+    startY: y,
+    body: finRows,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 }, 1: { halign: 'right' } },
+    alternateRowStyles: { fillColor: COLORS.lightGray },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+
+  // Contract exceeded warning
+  if (hakedis.contractExceededNote) {
+    doc.setFillColor(254, 242, 242);
+    doc.setDrawColor(...COLORS.red);
+    doc.roundedRect(14, y, doc.internal.pageSize.getWidth() - 28, 10, 2, 2, 'FD');
+    doc.setFontSize(8);
+    doc.setTextColor(...COLORS.red);
+    doc.text(`⚠ UYARI: ${hakedis.contractExceededNote}`, 18, y + 6);
+    y += 14;
+  }
+
+  // Contract summary
   if (contract) {
-    contractSummaryHtml = `
-      <div style="margin-bottom: 12px;">
-        <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #f59e0b; padding-bottom: 3px;">Sözleşme Özeti</h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-          <tbody>
-            <tr style="background: #f9fafb;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Sözleşme Tutarı (KDV Dahil)</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(contractTotal, contract.currency)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Toplam Hakediş Tutarı (KDV Dahil)</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(totalHakedisAmount, contract.currency)}</td>
-            </tr>
-            <tr style="background: #f9fafb;">
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(totalPaidOnContract, contract.currency)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 8px; border: 1px solid #ddd;">Kalan Bakiye (KDV Dahil)</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${remainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(remainingBalance, contract.currency)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-  
-  container.innerHTML = `
-    <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-      <img src="${formanLogo}" style="height: 35px;" />
-      <div style="text-align: right;">
-        <h1 style="font-size: 18px; margin: 0; color: #1a1a1a;">ALTYÜKLENICI HAKEDİŞ RAPORU</h1>
-        <p style="font-size: 10px; color: #666; margin: 2px 0 0 0;">Rapor Tarihi: ${formatDate(new Date().toISOString())}</p>
-      </div>
-    </div>
-    
-    <div style="margin-bottom: 12px;">
-      <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #3b82f6; padding-bottom: 3px;">Hakediş Bilgileri</h2>
-      <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-        <tbody>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 20%;">Hakediş No</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; width: 30%;">${hakedis.hakedisNo}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 20%;">Sözleşme No</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 30%;">${hakedis.contractNo}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Altyüklenici</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${hakedis.subcontractor}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Proje</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${project?.projectCode} - ${project?.projectName}</td>
-          </tr>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Sözleşme Tipi</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${contractTypeLabels[hakedis.contractType]}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Tarih</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatDate(hakedis.date)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    
-    ${hakedis.description ? `
-    <div style="margin-bottom: 12px;">
-      <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #8b5cf6; padding-bottom: 3px;">Hakediş Açıklaması</h2>
-      <div style="padding: 8px 10px; background: #f3f4f6; border: 1px solid #ddd; border-radius: 4px; font-size: 10px;">
-        ${hakedis.description}
-      </div>
-    </div>
-    ` : ''}
-    
-    ${hakedisItemsHtml}
-    
-    <div style="margin-bottom: 12px;">
-      <h2 style="font-size: 12px; margin-bottom: 6px; color: #1a1a1a; border-bottom: 2px solid #22c55e; padding-bottom: 3px;">Tutar Bilgileri</h2>
-      <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-        <tbody>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; width: 50%;">Hakediş Tutarı (KDV Hariç)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(subtotal, hakedis.currency)}</td>
-          </tr>
-          ${hakedis.vatRate ? `
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">KDV (%${hakedis.vatRate})</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatCurrencyWithType(vatAmount, hakedis.currency)}</td>
-          </tr>
-          ` : ''}
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Hakediş Tutarı (KDV Dahil)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">${formatCurrencyWithType(totalWithVat, hakedis.currency)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödenen Tutar (KDV Dahil)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: #16a34a;">${formatCurrencyWithType(hakedisPaidAmount, hakedis.currency)}</td>
-          </tr>
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold;">Kalan Bakiye (KDV Dahil)</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-weight: bold; color: ${hakedisRemainingBalance > 0 ? '#dc2626' : '#22c55e'};">${formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödeme Durumu</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${hakedis.paymentStatus === 'odendi' ? '✓ Ödendi' : hakedis.paymentStatus === 'kismen_odendi' ? '◑ Kısmen Ödendi' : '○ Ödenmedi'}</td>
-          </tr>
-          ${hakedis.paidDate ? `
-          <tr style="background: #f9fafb;">
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">Ödeme Tarihi</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd;">${formatDate(hakedis.paidDate)}</td>
-          </tr>
-          ` : ''}
-        </tbody>
-      </table>
-    </div>
-    
-    ${hakedis.contractExceededNote ? `
-    <div style="margin-bottom: 12px; padding: 8px 10px; background: #fef2f2; border: 2px solid #dc2626; border-radius: 6px;">
-      <p style="font-size: 10px; color: #991b1b; margin: 0; font-weight: bold;">
-        ⚠️ UYARI: ${hakedis.contractExceededNote}
-      </p>
-    </div>
-    ` : ''}
-    
-    ${contractSummaryHtml}
-    
-    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
-      <div style="text-align: center; width: 45%;">
-        <p style="font-size: 10px; margin-bottom: 20px;">Direktör Onayı:</p>
-        <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
-        <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
-      </div>
-      <div style="text-align: center; width: 45%;">
-        <p style="font-size: 10px; margin-bottom: 20px;">Muhasebe Onayı:</p>
-        <div style="border-bottom: 1px solid #333; margin-bottom: 3px;"></div>
-        <p style="font-size: 8px; color: #666;">İmza / Tarih</p>
-      </div>
-    </div>
-  `;
-  
-  document.body.appendChild(container);
-  
-  try {
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
+    const contractSubtotal = contract.totalAmount;
+    const contractVat = contract.vatRate ? contractSubtotal * (contract.vatRate / 100) : 0;
+    const contractTotal = contractSubtotal + contractVat;
+    const approvedContractHakedisler = subcontractorHakedisler.filter(h => h.contractId === hakedis.contractId && h.approvalStatus === 'onaylandi');
+    const totalHakedisAmount = approvedContractHakedisler.reduce((sum, h) => {
+      const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+      return sum + h.totalAmount + hVat;
+    }, 0);
+    const totalPaidOnContract = approvedContractHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+
+    y = addSectionTitle(doc, 'Sözleşme Özeti', y, COLORS.amber);
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Sözleşme Tutarı (KDV Dahil)', formatCurrencyWithType(contractTotal, contract.currency)],
+        ['Toplam Hakediş Tutarı (KDV Dahil)', formatCurrencyWithType(totalHakedisAmount, contract.currency)],
+        ['Ödenen Tutar (KDV Dahil)', formatCurrencyWithType(totalPaidOnContract, contract.currency)],
+        ['Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(contractTotal - totalPaidOnContract, contract.currency)],
+      ],
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 }, 1: { halign: 'right' } },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      margin: { left: 14, right: 14 },
     });
-    
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Calculate dimensions to fit on single page
-    const pageWidth = 190;
-    const pageHeight = 277; // Leave margin
-    const imgRatio = canvas.width / canvas.height;
-    const pageRatio = pageWidth / pageHeight;
-    
-    let imgWidth, imgHeight;
-    if (imgRatio > pageRatio) {
-      imgWidth = pageWidth;
-      imgHeight = pageWidth / imgRatio;
-    } else {
-      imgHeight = pageHeight;
-      imgWidth = pageHeight * imgRatio;
-    }
-    
-    const xOffset = (210 - imgWidth) / 2;
-    const yOffset = 10;
-    
-    pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
-    
-    pdf.save(`hakedis-raporu-${hakedis.hakedisNo}.pdf`);
-  } catch (error) {
-    console.error('PDF oluşturma hatası:', error);
-    throw error;
-  } finally {
-    document.body.removeChild(container);
+    y = (doc as any).lastAutoTable.finalY + 4;
   }
+
+  addSignatureBlock(doc, y);
+  
+  doc.save(`hakedis-raporu-${hakedis.hakedisNo}.pdf`);
 };
