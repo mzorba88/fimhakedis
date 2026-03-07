@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { 
   formatCurrencyWithType, 
   formatDate, 
@@ -9,26 +8,25 @@ import {
   WorkEntry, 
   SubcontractorHakedis, 
   Project, 
-  Currency 
 } from '@/types/hakedis';
 import { toast } from 'sonner';
+
+const loadXLSX = () => import('xlsx');
 
 const dateStr = () => new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
 
 /** Export a single contract to Excel with financial summary */
-export function exportSingleContractToExcel(
+export async function exportSingleContractToExcel(
   entry: WorkEntry,
   project: Project | undefined,
   hakedisler: SubcontractorHakedis[]
 ) {
+  const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
   const relatedHakedisler = hakedisler.filter(h => h.contractId === entry.id && h.approvalStatus === 'onaylandi');
 
-  // KDV dahil sözleşme tutarı
   const vatAmount = entry.vatRate ? entry.totalAmount * (entry.vatRate / 100) : 0;
   const contractTotalWithVat = entry.totalAmount + vatAmount;
-
-  // KDV dahil hakediş toplamı
   const hakedisTotal = relatedHakedisler.reduce((sum, h) => {
     const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
     return sum + h.totalAmount + hVat;
@@ -66,7 +64,6 @@ export function exportSingleContractToExcel(
     ['Kalan Bakiye (KDV Dahil)', remaining],
   ].filter(r => r.length > 0);
 
-  // Add hakedis detail if exists
   if (relatedHakedisler.length > 0) {
     data.push([], ['HAKEDİŞ DETAYLARI']);
     data.push(['#', 'Hakediş No', 'Tip', 'Tutar (KDV Hariç)', 'KDV', 'Tutar (KDV Dahil)', 'Ödenen', 'Kalan', 'Durum', 'Tarih']);
@@ -96,25 +93,23 @@ export function exportSingleContractToExcel(
 }
 
 /** Export a single hakedis to Excel with financial summary */
-export function exportSingleHakedisToExcel(
+export async function exportSingleHakedisToExcel(
   hakedis: SubcontractorHakedis,
   project: Project | undefined,
   contract: WorkEntry | undefined,
   allHakedisler: SubcontractorHakedis[]
 ) {
+  const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
 
-  // KDV dahil hakediş tutarı
   const hakedisVat = hakedis.vatRate ? hakedis.totalAmount * (hakedis.vatRate / 100) : 0;
   const hakedisTotalWithVat = hakedis.totalAmount + hakedisVat;
   const remaining = hakedisTotalWithVat - (hakedis.paidAmount || 0);
 
-  // KDV dahil sözleşme tutarı
   const contractSubtotal = contract?.totalAmount || 0;
   const contractVat = contract?.vatRate ? contractSubtotal * (contract.vatRate / 100) : 0;
   const contractTotalWithVat = contractSubtotal + contractVat;
 
-  // Previous hakedisler for same contract (KDV dahil)
   const sameContractHakedisler = allHakedisler.filter(h => h.contractId === hakedis.contractId && h.approvalStatus === 'onaylandi');
   const totalHakedisOnContract = sameContractHakedisler.reduce((sum, h) => {
     const hVat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
@@ -168,7 +163,6 @@ export function exportSingleHakedisToExcel(
     data.push([], ['UYARI', hakedis.contractExceededNote]);
   }
 
-  // Hakedis items detail
   if (hakedis.hakedisItems && hakedis.hakedisItems.length > 0) {
     data.push([], ['İŞ KALEMLERİ']);
     data.push(['#', 'İş Kalemi', 'Birim', 'Miktar', 'Birim Fiyat', 'Tutar (KDV Hariç)']);
@@ -193,11 +187,12 @@ export function exportSingleHakedisToExcel(
 }
 
 /** Export a single payment record to Excel */
-export function exportSinglePaymentToExcel(
+export async function exportSinglePaymentToExcel(
   hakedis: SubcontractorHakedis,
   project: Project | undefined,
   contract: WorkEntry | undefined
 ) {
+  const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
   const remaining = hakedis.totalAmount - (hakedis.paidAmount || 0);
 
