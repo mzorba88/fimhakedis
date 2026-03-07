@@ -1331,7 +1331,7 @@ export default function SubcontractorHakedis() {
                           <Label className="text-sm">İş Açıklaması</Label>
                           <Input placeholder="Örn: Ek işler" value={newExtraItem.description || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, description: e.target.value }))} />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           <div className="space-y-2">
                             <Label className="text-sm">Miktar</Label>
                             <Input type="number" placeholder="0" value={newExtraItem.quantity || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))} />
@@ -1340,7 +1340,7 @@ export default function SubcontractorHakedis() {
                             <Label className="text-sm">Birim</Label>
                             <Input placeholder="m², adet, kg..." value={newExtraItem.unit || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unit: e.target.value }))} />
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-2 col-span-2 sm:col-span-1">
                             <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
                             <Input type="number" placeholder="0.00" value={newExtraItem.unitPrice || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))} />
                           </div>
