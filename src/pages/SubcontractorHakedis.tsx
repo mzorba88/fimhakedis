@@ -182,11 +182,12 @@ export default function SubcontractorHakedis() {
   // Filtered hakedisler
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const matchesSearch = 
-      hakedis.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.contractNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.hakedisNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectName.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
+      (hakedis.contractNo || '').toLowerCase().includes(query) ||
+      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
+      (project?.projectName || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     const matchesApproval = filterApproval === 'all' || hakedis.approvalStatus === filterApproval;
     const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
