@@ -124,7 +124,7 @@ export default function Payments() {
           comparison = a.totalAmount - b.totalAmount;
           break;
         case 'paymentStatus':
-          comparison = a.paymentStatus.localeCompare(b.paymentStatus);
+          comparison = (a.paymentStatus || '').localeCompare(b.paymentStatus || '');
           break;
         default:
           comparison = 0;

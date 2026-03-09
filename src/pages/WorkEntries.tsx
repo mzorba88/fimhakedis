@@ -140,19 +140,19 @@ export default function WorkEntries() {
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
           break;
         case 'workCategory':
-          comparison = a.workCategory.localeCompare(b.workCategory);
+          comparison = (a.workCategory || '').localeCompare(b.workCategory || '');
           break;
         case 'subcontractor':
-          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          comparison = (a.subcontractor || '').localeCompare(b.subcontractor || '');
           break;
         case 'date':
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case 'contractNo':
-          comparison = a.contractNo.localeCompare(b.contractNo);
+          comparison = (a.contractNo || '').localeCompare(b.contractNo || '');
           break;
         case 'contractType':
-          comparison = a.contractType.localeCompare(b.contractType);
+          comparison = (a.contractType || '').localeCompare(b.contractType || '');
           break;
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;

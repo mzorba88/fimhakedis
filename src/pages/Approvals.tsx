@@ -83,10 +83,10 @@ export default function Approvals() {
       let comparison = 0;
       switch (sortConfig.key) {
         case 'hakedisNo':
-          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          comparison = (a.hakedisNo || '').localeCompare(b.hakedisNo || '');
           break;
         case 'subcontractor':
-          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          comparison = (a.subcontractor || '').localeCompare(b.subcontractor || '');
           break;
         case 'project':
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
