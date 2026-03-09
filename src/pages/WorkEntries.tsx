@@ -114,11 +114,12 @@ export default function WorkEntries() {
 
   const filteredEntries = workEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
-    const matchesSearch = 
-      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (entry.workCategory || '').toLowerCase().includes(query) ||
+      (entry.subcontractor || '').toLowerCase().includes(query) ||
+      (project?.projectName || '').toLowerCase().includes(query) ||
+      (project?.projectCode || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
     return matchesSearch && matchesProject;
   });
