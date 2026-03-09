@@ -114,11 +114,12 @@ export default function WorkEntries() {
 
   const filteredEntries = workEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
-    const matchesSearch = 
-      entry.workCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (entry.workCategory || '').toLowerCase().includes(query) ||
+      (entry.subcontractor || '').toLowerCase().includes(query) ||
+      (project?.projectName || '').toLowerCase().includes(query) ||
+      (project?.projectCode || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
     return matchesSearch && matchesProject;
   });
@@ -139,19 +140,19 @@ export default function WorkEntries() {
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
           break;
         case 'workCategory':
-          comparison = a.workCategory.localeCompare(b.workCategory);
+          comparison = (a.workCategory || '').localeCompare(b.workCategory || '');
           break;
         case 'subcontractor':
-          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          comparison = (a.subcontractor || '').localeCompare(b.subcontractor || '');
           break;
         case 'date':
           comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
           break;
         case 'contractNo':
-          comparison = a.contractNo.localeCompare(b.contractNo);
+          comparison = (a.contractNo || '').localeCompare(b.contractNo || '');
           break;
         case 'contractType':
-          comparison = a.contractType.localeCompare(b.contractType);
+          comparison = (a.contractType || '').localeCompare(b.contractType || '');
           break;
         case 'totalAmount':
           comparison = a.totalAmount - b.totalAmount;

@@ -59,12 +59,13 @@ export default function Approvals() {
 
   const filteredHakedisler = pendingHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const matchesSearch = 
-      hakedis.hakedisNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.contractNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
+      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
+      (hakedis.contractNo || '').toLowerCase().includes(query) ||
+      (project?.projectName || '').toLowerCase().includes(query) ||
+      (project?.projectCode || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     return matchesSearch && matchesProject;
   });
@@ -82,10 +83,10 @@ export default function Approvals() {
       let comparison = 0;
       switch (sortConfig.key) {
         case 'hakedisNo':
-          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          comparison = (a.hakedisNo || '').localeCompare(b.hakedisNo || '');
           break;
         case 'subcontractor':
-          comparison = a.subcontractor.localeCompare(b.subcontractor);
+          comparison = (a.subcontractor || '').localeCompare(b.subcontractor || '');
           break;
         case 'project':
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');

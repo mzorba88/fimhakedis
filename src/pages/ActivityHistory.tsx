@@ -67,10 +67,11 @@ export default function ActivityHistory() {
   const [filterType, setFilterType] = useState<string>('all');
 
   const filteredLogs = activityLogs.filter(log => {
-    const matchesSearch = 
-      log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (log.details?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (log.userName || '').toLowerCase().includes(query) ||
+      (log.description || '').toLowerCase().includes(query) ||
+      (log.details || '').toLowerCase().includes(query);
     
     const matchesType = filterType === 'all' || log.type === filterType;
     

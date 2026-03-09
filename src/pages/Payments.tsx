@@ -84,12 +84,13 @@ export default function Payments() {
 
   const filteredHakedisler = approvedHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const matchesSearch = 
-      hakedis.subcontractor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.hakedisNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hakedis.contractNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project?.projectCode.toLowerCase().includes(searchQuery.toLowerCase());
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !query ||
+      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
+      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
+      (hakedis.contractNo || '').toLowerCase().includes(query) ||
+      (project?.projectName || '').toLowerCase().includes(query) ||
+      (project?.projectCode || '').toLowerCase().includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
     return matchesSearch && matchesProject && matchesPayment;
@@ -108,13 +109,13 @@ export default function Payments() {
       let comparison = 0;
       switch (sortConfig.key) {
         case 'hakedisNo':
-          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          comparison = (a.hakedisNo || '').localeCompare(b.hakedisNo || '');
           break;
         case 'project':
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
           break;
         case 'contractNo':
-          comparison = a.contractNo.localeCompare(b.contractNo);
+          comparison = (a.contractNo || '').localeCompare(b.contractNo || '');
           break;
         case 'approvalDate':
           comparison = new Date(a.approvalDate || a.createdAt).getTime() - new Date(b.approvalDate || b.createdAt).getTime();
@@ -123,7 +124,7 @@ export default function Payments() {
           comparison = a.totalAmount - b.totalAmount;
           break;
         case 'paymentStatus':
-          comparison = a.paymentStatus.localeCompare(b.paymentStatus);
+          comparison = (a.paymentStatus || '').localeCompare(b.paymentStatus || '');
           break;
         default:
           comparison = 0;
