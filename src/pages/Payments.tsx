@@ -109,13 +109,13 @@ export default function Payments() {
       let comparison = 0;
       switch (sortConfig.key) {
         case 'hakedisNo':
-          comparison = a.hakedisNo.localeCompare(b.hakedisNo);
+          comparison = (a.hakedisNo || '').localeCompare(b.hakedisNo || '');
           break;
         case 'project':
           comparison = (projectA?.projectCode || '').localeCompare(projectB?.projectCode || '');
           break;
         case 'contractNo':
-          comparison = a.contractNo.localeCompare(b.contractNo);
+          comparison = (a.contractNo || '').localeCompare(b.contractNo || '');
           break;
         case 'approvalDate':
           comparison = new Date(a.approvalDate || a.createdAt).getTime() - new Date(b.approvalDate || b.createdAt).getTime();
