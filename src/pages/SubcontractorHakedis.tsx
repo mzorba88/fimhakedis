@@ -996,6 +996,7 @@ export default function SubcontractorHakedis() {
           setIsDialogOpen(open);
         }}>
           <DialogContent className="sm:max-w-2xl top-[5%] translate-y-0 overflow-visible p-0">
+            <div className="max-h-[calc(100vh-2rem)] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Hakediş Düzenle' : 'Yeni Hakediş Kaydı'}</DialogTitle>
             </DialogHeader>
