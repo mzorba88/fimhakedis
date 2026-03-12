@@ -131,12 +131,14 @@ export default function SubcontractorHakedis() {
   const [vatInclusive, setVatInclusive] = useState(false);
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
-    workEntries.forEach(entry => {
-      if (entry.projectId === selectedProjectId) {
-        subs.add(entry.subcontractor);
-      }
+
+    workEntries.forEach((entry) => {
+      if (entry.projectId !== selectedProjectId) return;
+      const subcontractorName = entry.subcontractor?.trim();
+      if (subcontractorName) subs.add(subcontractorName);
     });
-    return Array.from(subs).sort();
+
+    return Array.from(subs).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [workEntries, selectedProjectId]);
 
   // Get contracts for selected project and subcontractor
