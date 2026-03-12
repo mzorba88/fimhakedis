@@ -995,7 +995,8 @@ export default function SubcontractorHakedis() {
           if (!open) resetForm();
           setIsDialogOpen(open);
         }}>
-          <DialogContent className="sm:max-w-2xl top-[5%] translate-y-0">
+          <DialogContent className="sm:max-w-2xl top-[5%] translate-y-0 overflow-visible p-0">
+            <div className="max-h-[calc(100vh-2rem)] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Hakediş Düzenle' : 'Yeni Hakediş Kaydı'}</DialogTitle>
             </DialogHeader>
@@ -1873,6 +1874,7 @@ export default function SubcontractorHakedis() {
                   <Calculator className="h-4 w-4 mr-2" />
                   {isEditMode ? 'Güncelle' : 'Hakediş Oluştur'}
                 </Button>
+              </div>
               </div>
             </div>
           </DialogContent>
