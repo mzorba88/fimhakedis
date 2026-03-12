@@ -1875,6 +1875,7 @@ export default function SubcontractorHakedis() {
                   {isEditMode ? 'Güncelle' : 'Hakediş Oluştur'}
                 </Button>
               </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
