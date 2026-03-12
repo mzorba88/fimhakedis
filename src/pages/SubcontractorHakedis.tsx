@@ -995,7 +995,7 @@ export default function SubcontractorHakedis() {
           if (!open) resetForm();
           setIsDialogOpen(open);
         }}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-2xl top-[5%] translate-y-0">
             <DialogHeader>
               <DialogTitle>{isEditMode ? 'Hakediş Düzenle' : 'Yeni Hakediş Kaydı'}</DialogTitle>
             </DialogHeader>
