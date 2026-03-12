@@ -81,6 +81,7 @@ export default function SubcontractorHakedis() {
     addActivityLog,
     addSubcontractor,
   } = useHakedisStore();
+  const isMobile = useIsMobile();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
