@@ -66,6 +66,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function SubcontractorHakedis() {
   const { 
@@ -80,6 +81,7 @@ export default function SubcontractorHakedis() {
     addActivityLog,
     addSubcontractor,
   } = useHakedisStore();
+  const isMobile = useIsMobile();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -129,12 +131,14 @@ export default function SubcontractorHakedis() {
   const [vatInclusive, setVatInclusive] = useState(false);
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
-    workEntries.forEach(entry => {
-      if (entry.projectId === selectedProjectId) {
-        subs.add(entry.subcontractor);
-      }
+
+    workEntries.forEach((entry) => {
+      if (entry.projectId !== selectedProjectId) return;
+      const subcontractorName = entry.subcontractor?.trim();
+      if (subcontractorName) subs.add(subcontractorName);
     });
-    return Array.from(subs).sort();
+
+    return Array.from(subs).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [workEntries, selectedProjectId]);
 
   // Get contracts for selected project and subcontractor
@@ -1031,25 +1035,46 @@ export default function SubcontractorHakedis() {
               {selectedProjectId && (
                 <div className="space-y-2">
                   <Label>Altyüklenici</Label>
-                  <Select 
-                    value={selectedSubcontractor} 
-                    onValueChange={(value) => {
-                      setSelectedSubcontractor(value);
-                      setSelectedContractId('');
-                    }}
-                    disabled={isEditMode}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Altyüklenici seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
+
+                  {isMobile ? (
+                    <select
+                      value={selectedSubcontractor}
+                      onChange={(e) => {
+                        setSelectedSubcontractor(e.target.value);
+                        setSelectedContractId('');
+                      }}
+                      disabled={isEditMode || contractSubcontractors.length === 0}
+                      className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Altyüklenici seçin</option>
                       {contractSubcontractors.map((sub) => (
-                        <SelectItem key={sub} value={sub}>
+                        <option key={sub} value={sub}>
                           {sub}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                  ) : (
+                    <Select
+                      value={selectedSubcontractor}
+                      onValueChange={(value) => {
+                        setSelectedSubcontractor(value);
+                        setSelectedContractId('');
+                      }}
+                      disabled={isEditMode || contractSubcontractors.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Altyüklenici seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractSubcontractors.map((sub) => (
+                          <SelectItem key={sub} value={sub}>
+                            {sub}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
                   {contractSubcontractors.length === 0 && (
                     <p className="text-xs text-muted-foreground">
                       Bu projede kayıtlı sözleşme bulunmuyor.
