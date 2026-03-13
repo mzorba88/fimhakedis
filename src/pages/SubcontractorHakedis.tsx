@@ -583,29 +583,39 @@ export default function SubcontractorHakedis() {
         await addSubcontractor(smallCustomSubcontractor.trim());
       }
 
-      // Generate hakediş number using counter
-      const hakedisCount = subcontractorHakedisler.filter(h => !h.contractId).length;
-      const hakedisNo = `KH-S${(hakedisCount + 1).toString().padStart(3, '0')}`;
+      // Generate hakediş number using counter - use max existing number to avoid duplicates
+      const existingSmallNos = subcontractorHakedisler
+        .filter(h => !h.contractId && h.hakedisNo?.startsWith('KH-S'))
+        .map(h => {
+          const num = parseInt(h.hakedisNo.replace('KH-S', ''), 10);
+          return isNaN(num) ? 0 : num;
+        });
+      const nextNum = existingSmallNos.length > 0 ? Math.max(...existingSmallNos) + 1 : 1;
+      const hakedisNo = `KH-S${nextNum.toString().padStart(3, '0')}`;
 
-      const newHakedis = await addSubcontractorHakedis({
+      const hakedisData = {
         hakedisNo,
-        hakedisType: 'ara_hakedis',
-        projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (undefined as any),
+        hakedisType: 'ara_hakedis' as const,
+        projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (null as any),
         subcontractor: subcontractorName,
-        contractId: undefined as any,
-        contractNo: undefined as any,
-        contractType: 'goturu_bedel',
+        contractId: null as any,
+        contractNo: null as any,
+        contractType: 'goturu_bedel' as const,
         currency: smallCurrency,
-        vatRate: vr || undefined,
+        vatRate: vr > 0 ? vr : null,
         date: smallDate,
         description: `${smallProjectMode === 'custom' && smallProjectName.trim() ? `[Proje: ${smallProjectName.trim()}] ` : ''}${smallDescription.trim()}`,
         paymentAmount: totalAmount,
         totalAmount,
         createdBy: currentUser.id,
-        approvalStatus: 'onay_bekliyor',
+        approvalStatus: 'onay_bekliyor' as ApprovalStatus,
         paidAmount: 0,
-        paymentStatus: 'odenmedi',
-      });
+        paymentStatus: 'odenmedi' as PaymentStatus,
+      };
+
+      console.log('Saving small hakedis with data:', JSON.stringify(hakedisData));
+
+      const newHakedis = await addSubcontractorHakedis(hakedisData);
 
       await addActivityLog(
         'hakedis_created',
@@ -618,9 +628,10 @@ export default function SubcontractorHakedis() {
       toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
       setIsSmallHakedisDialogOpen(false);
       resetSmallForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving small hakedis:', error);
-      toast.error('Hakediş kaydedilemedi');
+      console.error('Error details:', error?.message, error?.details, error?.hint, error?.code);
+      toast.error(`Hakediş kaydedilemedi: ${error?.message || 'Bilinmeyen hata'}`);
     }
   };
 
