@@ -593,18 +593,23 @@ export default function SubcontractorHakedis() {
       const nextNum = existingSmallNos.length > 0 ? Math.max(...existingSmallNos) + 1 : 1;
       const hakedisNo = `KH-S${nextNum.toString().padStart(3, '0')}`;
 
-      const hakedisData = {
-        hakedisNo,
-        hakedisType: 'ara_hakedis' as const,
-        projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (null as any),
-        subcontractor: subcontractorName,
-        contractId: null as any,
-        contractNo: null as any,
-        contractType: 'goturu_bedel' as const,
-        currency: smallCurrency,
-        vatRate: vr > 0 ? vr : null,
-        date: smallDate,
-        description: `${smallProjectMode === 'custom' && smallProjectName.trim() ? `[Proje: ${smallProjectName.trim()}] ` : ''}${smallDescription.trim()}`,
+        // Get work category for the subcontractor
+        const selectedSub = subcontractors.find(s => s.name === subcontractorName);
+        const workCategoryLabel = selectedSub?.workCategory ? `[${selectedSub.workCategory}] ` : '';
+        const projectPrefix = smallProjectMode === 'custom' && smallProjectName.trim() ? `[Proje: ${smallProjectName.trim()}] ` : '';
+
+        const hakedisData = {
+          hakedisNo,
+          hakedisType: 'ara_hakedis' as const,
+          projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (null as any),
+          subcontractor: subcontractorName,
+          contractId: null as any,
+          contractNo: null as any,
+          contractType: 'goturu_bedel' as const,
+          currency: smallCurrency,
+          vatRate: vr > 0 ? vr : null,
+          date: smallDate,
+          description: `${workCategoryLabel}${projectPrefix}${smallDescription.trim()}`,
         paymentAmount: totalAmount,
         totalAmount,
         createdBy: currentUser.id,
