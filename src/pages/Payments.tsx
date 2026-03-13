@@ -736,19 +736,40 @@ export default function Payments() {
 
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
                     <h3 className="text-sm font-semibold text-foreground mb-3">Finansal Özet</h3>
-                    <div className="flex justify-between text-sm border-b pb-2">
-                      <span className="text-muted-foreground">Sözleşme Tutarı</span>
-                      <span className="font-semibold">{formatCurrencyWithType(contractAmount, hakedis.currency)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Hakediş Tutarı</span>
-                      <span className="font-semibold">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
+                    {contractAmount > 0 && (
+                      <div className="flex justify-between text-sm border-b pb-2">
+                        <span className="text-muted-foreground">Sözleşme Tutarı</span>
+                        <span className="font-semibold">{formatCurrencyWithType(contractAmount, hakedis.currency)}</span>
+                      </div>
+                    )}
+                    {(() => {
+                      const vatRate = hakedis.vatRate || 0;
+                      const kdvHaric = vatRate > 0 ? hakedis.totalAmount / (1 + vatRate / 100) : hakedis.totalAmount;
+                      const kdvTutar = hakedis.totalAmount - kdvHaric;
+                      return (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">KDV Hariç Tutar</span>
+                            <span className="font-semibold">{formatCurrencyWithType(kdvHaric, hakedis.currency)}</span>
+                          </div>
+                          {vatRate > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">KDV (%{vatRate})</span>
+                              <span className="font-semibold">{formatCurrencyWithType(kdvTutar, hakedis.currency)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm border-t pt-2">
+                            <span className="text-muted-foreground font-medium">KDV Dahil Toplam</span>
+                            <span className="font-bold">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                    <div className="flex justify-between text-sm border-t pt-2">
                       <span className="text-muted-foreground">Ödenen Tutar</span>
                       <span className="font-semibold text-[hsl(var(--status-paid))]">{formatCurrencyWithType(paidSoFar, hakedis.currency)}</span>
                     </div>
-                    <div className="flex justify-between text-sm border-t pt-2">
+                    <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground font-medium">Kalan Bakiye</span>
                       <span className={`font-bold ${remaining > 0 ? 'text-[hsl(var(--status-pending))]' : 'text-[hsl(var(--status-paid))]'}`}>
                         {formatCurrencyWithType(remaining, hakedis.currency)}
