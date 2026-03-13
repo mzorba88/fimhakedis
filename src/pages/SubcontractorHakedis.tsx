@@ -2289,6 +2289,15 @@ export default function SubcontractorHakedis() {
                 ) : (
                   <Input placeholder="Altyüklenici adını yazın" value={smallCustomSubcontractor} onChange={e => setSmallCustomSubcontractor(e.target.value)} />
                 )}
+                {/* Show work category of selected subcontractor */}
+                {smallSubcontractorMode === 'existing' && smallSubcontractor && (() => {
+                  const sub = subcontractors.find(s => s.name === smallSubcontractor);
+                  return sub?.workCategory ? (
+                    <div className="text-sm text-muted-foreground bg-muted/50 rounded px-3 py-1.5">
+                      İş Kalemi: <span className="font-medium text-foreground">{sub.workCategory}</span>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Date */}
