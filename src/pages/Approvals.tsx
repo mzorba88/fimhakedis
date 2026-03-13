@@ -156,7 +156,7 @@ export default function Approvals() {
     setRejectDialogOpen(true);
   };
 
-  const isDirector = currentUser.role === 'direktor';
+  const isDirector = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
 
   return (
     <MainLayout>

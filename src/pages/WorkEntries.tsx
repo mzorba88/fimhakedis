@@ -424,7 +424,7 @@ export default function WorkEntries() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  {currentUser.role === 'direktor' && (
+                  {(currentUser.role === 'direktor' || currentUser.role === 'muhasebe') && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -569,7 +569,7 @@ export default function WorkEntries() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {currentUser.role === 'direktor' && (
+                            {(currentUser.role === 'direktor' || currentUser.role === 'muhasebe') && (
                               <Button
                                 variant="ghost"
                                 size="sm"
