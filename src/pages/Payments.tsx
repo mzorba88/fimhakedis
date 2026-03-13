@@ -374,7 +374,7 @@ export default function Payments() {
   };
 
   const canManagePayments = currentUser.role === 'muhasebe' || currentUser.role === 'direktor';
-  const canCancelApproval = currentUser.role === 'direktor';
+  const canCancelApproval = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
 
   const handleCancelApproval = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
