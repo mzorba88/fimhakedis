@@ -119,13 +119,13 @@ export default function Reports() {
       autoTable(doc, {
         startY: y,
         body: [
-          ['Proje Adı', data.project.projectName, 'Proje Kodu', data.project.projectCode],
-          ['Lokasyon', data.project.location, 'Dönem', `${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}`],
+          ['Proje Adi', data.project.projectName, 'Proje Kodu', data.project.projectCode],
+          ['Lokasyon', data.project.location, 'Donem', `${data.periodStart ? formatDate(data.periodStart) : 'Baslangic'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugun'}`],
         ],
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2.5 },
+        styles: { font: 'Roboto', fontSize: 8, cellPadding: 2.5 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 2: { fontStyle: 'bold', cellWidth: 30 } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
