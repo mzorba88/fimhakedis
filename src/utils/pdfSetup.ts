@@ -16,7 +16,7 @@ const COLORS = {
 export { COLORS };
 
 let fontCache: { regular: string; bold: string } | null = null;
-let logoCache: string | null = null;
+let logoCache: { dataUrl: string; width: number; height: number } | null = null;
 
 async function loadFonts(): Promise<{ regular: string; bold: string }> {
   if (fontCache) return fontCache;
@@ -42,7 +42,7 @@ async function loadFonts(): Promise<{ regular: string; bold: string }> {
   return fontCache;
 }
 
-async function loadLogo(): Promise<string> {
+async function loadLogo(): Promise<{ dataUrl: string; width: number; height: number }> {
   if (logoCache) return logoCache;
 
   const response = await fetch(formanLogoUrl);
@@ -51,8 +51,13 @@ async function loadLogo(): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      logoCache = reader.result as string;
-      resolve(logoCache);
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        logoCache = { dataUrl, width: img.naturalWidth, height: img.naturalHeight };
+        resolve(logoCache);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(blob);
   });
@@ -79,11 +84,14 @@ export async function setupPdfFont(doc: any) {
 
 export async function addCompanyHeader(doc: any, title: string): Promise<number> {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const logoDataUrl = await loadLogo();
+  const logo = await loadLogo();
 
-  // Logo top-left
+  // Logo top-left — maintain original aspect ratio, fit to max height 18mm
   try {
-    doc.addImage(logoDataUrl, 'PNG', 14, 6, 18, 18);
+    const maxH = 18;
+    const ratio = logo.width / logo.height;
+    const logoW = maxH * ratio;
+    doc.addImage(logo.dataUrl, 'PNG', 14, 6, logoW, maxH);
   } catch {
     // fallback if logo fails
   }
