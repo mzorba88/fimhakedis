@@ -132,15 +132,11 @@ export default function Reports() {
       
       // Entries table
       if (data.entries.length > 0) {
-        doc.setFontSize(11);
-        doc.text('Hakediş Kalemleri', 14, y);
-        doc.setDrawColor(99, 102, 241);
-        doc.line(14, y + 1.5, 80, y + 1.5);
-        y += 6;
+        y = addSectionTitle(doc, 'Hakedis Kalemleri', y, COLORS.indigo);
         
         autoTable(doc, {
           startY: y,
-          head: [['#', 'İş Kalemi', 'Altyüklenici', 'Söz. Tipi', 'Tutar']],
+          head: [['#', 'Is Kalemi', 'Altyuklenici', 'Soz. Tipi', 'Tutar']],
           body: data.entries.map((entry, idx) => [
             idx + 1,
             entry.workCategory,
@@ -149,9 +145,9 @@ export default function Reports() {
             formatCurrencyWithType(entry.totalAmount, entry.currency),
           ]),
           theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
-          alternateRowStyles: { fillColor: [249, 250, 251] },
+          styles: { font: 'Roboto', fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: COLORS.indigo, textColor: COLORS.white },
+          alternateRowStyles: { fillColor: COLORS.lightGray },
           columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 4: { halign: 'right' } },
           margin: { left: 14, right: 14 },
         });
@@ -159,11 +155,7 @@ export default function Reports() {
       }
       
       // Financial Summary
-      doc.setFontSize(11);
-      doc.text('Finansal Özet', 14, y);
-      doc.setDrawColor(34, 197, 94);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Finansal Ozet', y, COLORS.green);
       
       autoTable(doc, {
         startY: y,
