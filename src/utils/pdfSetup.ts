@@ -84,11 +84,14 @@ export async function setupPdfFont(doc: any) {
 
 export async function addCompanyHeader(doc: any, title: string): Promise<number> {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const logoDataUrl = await loadLogo();
+  const logo = await loadLogo();
 
-  // Logo top-left
+  // Logo top-left — maintain original aspect ratio, fit to max height 18mm
   try {
-    doc.addImage(logoDataUrl, 'PNG', 14, 6, 18, 18);
+    const maxH = 18;
+    const ratio = logo.width / logo.height;
+    const logoW = maxH * ratio;
+    doc.addImage(logo.dataUrl, 'PNG', 14, 6, logoW, maxH);
   } catch {
     // fallback if logo fails
   }
