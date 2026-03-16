@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-// jspdf, jspdf-autotable, xlsx loaded dynamically when needed
+import { loadPdfLibs, setupPdfFont, addCompanyHeader, addSectionTitle, addSignatureBlock, COLORS } from '@/utils/pdfSetup';
 
 export default function Reports() {
   const { projects, workEntries, subcontractorHakedisler } = useHakedisStore();
@@ -105,61 +105,38 @@ export default function Reports() {
     }
 
     try {
-      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable'),
-      ]);
+      const { jsPDF, autoTable } = await loadPdfLibs();
       
       const doc = new jsPDF('p', 'mm', 'a4');
+      await setupPdfFont(doc);
       const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
-      doc.setFontSize(16);
-      doc.setTextColor(26, 26, 26);
-      doc.text('HAKEDİŞ RAPORU', pageWidth / 2, 18, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setTextColor(107, 114, 128);
-      doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString())}`, pageWidth - 14, 18, { align: 'right' });
-      doc.setDrawColor(59, 130, 246);
-      doc.setLineWidth(0.5);
-      doc.line(14, 22, pageWidth - 14, 22);
-      
-      let y = 28;
+      let y = await addCompanyHeader(doc, 'HAKEDIS RAPORU');
       
       // Project Info
-      doc.setFontSize(11);
-      doc.setTextColor(26, 26, 26);
-      doc.text('Proje Bilgileri', 14, y);
-      doc.setDrawColor(59, 130, 246);
-      doc.setLineWidth(0.8);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Proje Bilgileri', y, COLORS.primary);
       
       autoTable(doc, {
         startY: y,
         body: [
-          ['Proje Adı', data.project.projectName, 'Proje Kodu', data.project.projectCode],
-          ['Lokasyon', data.project.location, 'Dönem', `${data.periodStart ? formatDate(data.periodStart) : 'Başlangıç'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugün'}`],
+          ['Proje Adi', data.project.projectName, 'Proje Kodu', data.project.projectCode],
+          ['Lokasyon', data.project.location, 'Donem', `${data.periodStart ? formatDate(data.periodStart) : 'Baslangic'} - ${data.periodEnd ? formatDate(data.periodEnd) : 'Bugun'}`],
         ],
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2.5 },
+        styles: { font: 'Roboto', fontSize: 8, cellPadding: 2.5 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 }, 2: { fontStyle: 'bold', cellWidth: 30 } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
       
       // Entries table
       if (data.entries.length > 0) {
-        doc.setFontSize(11);
-        doc.text('Hakediş Kalemleri', 14, y);
-        doc.setDrawColor(99, 102, 241);
-        doc.line(14, y + 1.5, 80, y + 1.5);
-        y += 6;
+        y = addSectionTitle(doc, 'Hakedis Kalemleri', y, COLORS.indigo);
         
         autoTable(doc, {
           startY: y,
-          head: [['#', 'İş Kalemi', 'Altyüklenici', 'Söz. Tipi', 'Tutar']],
+          head: [['#', 'Is Kalemi', 'Altyuklenici', 'Soz. Tipi', 'Tutar']],
           body: data.entries.map((entry, idx) => [
             idx + 1,
             entry.workCategory,
@@ -168,9 +145,9 @@ export default function Reports() {
             formatCurrencyWithType(entry.totalAmount, entry.currency),
           ]),
           theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
-          alternateRowStyles: { fillColor: [249, 250, 251] },
+          styles: { font: 'Roboto', fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: COLORS.indigo, textColor: COLORS.white },
+          alternateRowStyles: { fillColor: COLORS.lightGray },
           columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 4: { halign: 'right' } },
           margin: { left: 14, right: 14 },
         });
@@ -178,66 +155,43 @@ export default function Reports() {
       }
       
       // Financial Summary
-      doc.setFontSize(11);
-      doc.text('Finansal Özet', 14, y);
-      doc.setDrawColor(34, 197, 94);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Finansal Ozet', y, COLORS.green);
       
       autoTable(doc, {
         startY: y,
         body: [
-          ['Toplam Sözleşme Tutarı', formatCurrency(data.contractTotal)],
-          ['Toplam Hakediş Tutarı', formatCurrency(data.hakedisTotal)],
-          ['Ödenen Tutar', formatCurrency(data.paidTotal)],
+          ['Toplam Sozlesme Tutari', formatCurrency(data.contractTotal)],
+          ['Toplam Hakedis Tutari', formatCurrency(data.hakedisTotal)],
+          ['Odenen Tutar', formatCurrency(data.paidTotal)],
           ['Kalan Bakiye', formatCurrency(data.remainingBalance)],
         ],
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 }, 1: { halign: 'right' } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
       
       // Period Summary
-      doc.setFontSize(11);
-      doc.text('Dönem Özeti', 14, y);
-      doc.setDrawColor(99, 102, 241);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Donem Ozeti', y, COLORS.indigo);
       
       autoTable(doc, {
         startY: y,
         body: [
-          ['Önceki Toplam', formatCurrency(data.previousTotal)],
-          ['Bu Dönem', formatCurrency(data.currentPeriodTotal)],
-          ['Kümülatif Toplam', formatCurrency(data.cumulativeTotal)],
+          ['Onceki Toplam', formatCurrency(data.previousTotal)],
+          ['Bu Donem', formatCurrency(data.currentPeriodTotal)],
+          ['Kumulatif Toplam', formatCurrency(data.cumulativeTotal)],
         ],
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 }, 1: { halign: 'right' } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 10;
       
-      // Signature block
-      const colWidth = (pageWidth - 28) / 2;
-      y += 10;
-      doc.setFontSize(9);
-      doc.setTextColor(26, 26, 26);
-      doc.text('Direktör Onayı:', 14 + colWidth / 2, y, { align: 'center' });
-      doc.text('Muhasebe Onayı:', 14 + colWidth + colWidth / 2, y, { align: 'center' });
-      y += 18;
-      doc.setDrawColor(26, 26, 26);
-      doc.line(24, y, 24 + colWidth - 20, y);
-      doc.line(14 + colWidth + 10, y, 14 + colWidth + colWidth - 10, y);
-      y += 4;
-      doc.setFontSize(7);
-      doc.setTextColor(107, 114, 128);
-      doc.text('İmza / Tarih', 14 + colWidth / 2, y, { align: 'center' });
-      doc.text('İmza / Tarih', 14 + colWidth + colWidth / 2, y, { align: 'center' });
+      addSignatureBlock(doc, y);
       
       const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
       doc.save(`hakedis-raporu-${data.project.projectCode}-${dateStr}.pdf`);
