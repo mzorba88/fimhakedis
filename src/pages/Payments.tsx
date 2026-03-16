@@ -281,70 +281,47 @@ export default function Payments() {
       y = (doc as any).lastAutoTable.finalY + 6;
       
       // Financial Info
-      doc.setFontSize(11);
-      doc.text('Tutar Bilgileri', 14, y);
-      doc.setDrawColor(34, 197, 94);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Tutar Bilgileri', y, COLORS.green);
       
       const finRows: any[][] = [
-        ['Sözleşme Tutarı', formatCurrencyWithType(contractAmount, hakedis.currency)],
-        ['Hakediş Tutarı', formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)],
-        ['Ödenen Tutar', formatCurrencyWithType(hakedis.paidAmount || 0, hakedis.currency)],
+        ['Sozlesme Tutari', formatCurrencyWithType(contractAmount, hakedis.currency)],
+        ['Hakedis Tutari', formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)],
+        ['Odenen Tutar', formatCurrencyWithType(hakedis.paidAmount || 0, hakedis.currency)],
         ['Kalan Bakiye', formatCurrencyWithType(hakedis.totalAmount - (hakedis.paidAmount || 0), hakedis.currency)],
-        ['Ödeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Ödendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kısmen Ödendi' : 'Ödenmedi'],
+        ['Odeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Odendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kismen Odendi' : 'Odenmedi'],
       ];
-      if (hakedis.paidDate) finRows.push(['Ödeme Tarihi', formatDate(hakedis.paidDate)]);
+      if (hakedis.paidDate) finRows.push(['Odeme Tarihi', formatDate(hakedis.paidDate)]);
       
       autoTable(doc, {
         startY: y,
         body: finRows,
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { halign: 'right' } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
       
       // Approval Info
-      doc.setFontSize(11);
-      doc.text('Onay Bilgileri', 14, y);
-      doc.setDrawColor(99, 102, 241);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      y = addSectionTitle(doc, 'Onay Bilgileri', y, COLORS.indigo);
       
       autoTable(doc, {
         startY: y,
         body: [
-          ['Onay Durumu', 'Onaylandı'],
+          ['Onay Durumu', 'Onaylandi'],
           ['Onaylayan', hakedis.approvedBy || '-'],
           ['Onay Tarihi', hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'],
         ],
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 10;
       
-      // Signature block
-      const colWidth = (pageWidth - 28) / 2;
-      y += 10;
-      doc.setFontSize(9);
-      doc.setTextColor(26, 26, 26);
-      doc.text('Direktör Onayı:', 14 + colWidth / 2, y, { align: 'center' });
-      doc.text('Muhasebe Onayı:', 14 + colWidth + colWidth / 2, y, { align: 'center' });
-      y += 18;
-      doc.setDrawColor(26, 26, 26);
-      doc.line(24, y, 24 + colWidth - 20, y);
-      doc.line(14 + colWidth + 10, y, 14 + colWidth + colWidth - 10, y);
-      y += 4;
-      doc.setFontSize(7);
-      doc.setTextColor(107, 114, 128);
-      doc.text('İmza / Tarih', 14 + colWidth / 2, y, { align: 'center' });
-      doc.text('İmza / Tarih', 14 + colWidth + colWidth / 2, y, { align: 'center' });
+      addSignatureBlock(doc, y);
       
       doc.save(`odeme-raporu-${hakedis.hakedisNo}.pdf`);
       toast.success('PDF raporu oluşturuldu');
