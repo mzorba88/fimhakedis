@@ -16,7 +16,7 @@ const COLORS = {
 export { COLORS };
 
 let fontCache: { regular: string; bold: string } | null = null;
-let logoCache: string | null = null;
+let logoCache: { dataUrl: string; width: number; height: number } | null = null;
 
 async function loadFonts(): Promise<{ regular: string; bold: string }> {
   if (fontCache) return fontCache;
