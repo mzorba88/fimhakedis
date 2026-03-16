@@ -42,7 +42,7 @@ async function loadFonts(): Promise<{ regular: string; bold: string }> {
   return fontCache;
 }
 
-async function loadLogo(): Promise<string> {
+async function loadLogo(): Promise<{ dataUrl: string; width: number; height: number }> {
   if (logoCache) return logoCache;
 
   const response = await fetch(formanLogoUrl);
@@ -51,8 +51,13 @@ async function loadLogo(): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => {
-      logoCache = reader.result as string;
-      resolve(logoCache);
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        logoCache = { dataUrl, width: img.naturalWidth, height: img.naturalHeight };
+        resolve(logoCache);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(blob);
   });
