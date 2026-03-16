@@ -251,50 +251,31 @@ export default function Payments() {
     const contractAmount = contract?.totalAmount || 0;
     
     try {
-      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable'),
-      ]);
+      const { jsPDF, autoTable } = await loadPdfLibs();
       
       const doc = new jsPDF('p', 'mm', 'a4');
+      await setupPdfFont(doc);
       const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
-      doc.setFontSize(16);
-      doc.setTextColor(26, 26, 26);
-      doc.text('ÖDEME RAPORU', pageWidth / 2, 18, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setTextColor(107, 114, 128);
-      doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString())}`, pageWidth - 14, 18, { align: 'right' });
-      doc.setDrawColor(59, 130, 246);
-      doc.setLineWidth(0.5);
-      doc.line(14, 22, pageWidth - 14, 22);
+      let y = await addCompanyHeader(doc, 'ODEME RAPORU');
       
-      let y = 28;
-      
-      // Hakediş Info
-      doc.setFontSize(11);
-      doc.setTextColor(26, 26, 26);
-      doc.text('Hakediş Bilgileri', 14, y);
-      doc.setDrawColor(59, 130, 246);
-      doc.setLineWidth(0.8);
-      doc.line(14, y + 1.5, 80, y + 1.5);
-      y += 6;
+      // Hakedis Info
+      y = addSectionTitle(doc, 'Hakedis Bilgileri', y, COLORS.primary);
       
       autoTable(doc, {
         startY: y,
         body: [
-          ['Hakediş No', hakedis.hakedisNo],
-          ['Sözleşme No', hakedis.contractNo || '-'],
-          ['Altyüklenici', hakedis.subcontractor],
+          ['Hakedis No', hakedis.hakedisNo],
+          ['Sozlesme No', hakedis.contractNo || '-'],
+          ['Altyuklenici', hakedis.subcontractor],
           ['Proje', `${project?.projectCode || '-'} - ${project?.projectName || '-'}`],
-          ['Sözleşme Tipi', contractTypeLabels[hakedis.contractType]],
+          ['Sozlesme Tipi', contractTypeLabels[hakedis.contractType]],
           ['Tarih', formatDate(hakedis.date)],
         ],
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 3 },
+        styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
-        alternateRowStyles: { fillColor: [249, 250, 251] },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
         margin: { left: 14, right: 14 },
       });
       y = (doc as any).lastAutoTable.finalY + 6;
