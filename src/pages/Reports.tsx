@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-// jspdf, jspdf-autotable, xlsx loaded dynamically when needed
+import { loadPdfLibs, setupPdfFont, addCompanyHeader, addSectionTitle, addSignatureBlock, COLORS } from '@/utils/pdfSetup';
 
 export default function Reports() {
   const { projects, workEntries, subcontractorHakedisler } = useHakedisStore();
