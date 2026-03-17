@@ -565,6 +565,8 @@ export default function SubcontractorHakedis() {
     setSmallCurrency('TRY');
     setSmallVatRate('10');
     setSmallVatInclusive(false);
+    setIsEditMode(false);
+    setEditingHakedisId(null);
   };
 
   const handleSmallHakedisSubmit = async () => {
