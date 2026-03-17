@@ -640,17 +640,36 @@ export default function SubcontractorHakedis() {
 
       console.log('Saving small hakedis with data:', JSON.stringify(hakedisData));
 
-      const newHakedis = await addSubcontractorHakedis(hakedisData);
+      if (isEditMode && editingHakedisId) {
+        const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
+        await updateSubcontractorHakedis(editingHakedisId, {
+          ...hakedisData,
+          hakedisNo: existingHakedis?.hakedisNo || hakedisData.hakedisNo,
+          approvalStatus: existingHakedis?.approvalStatus === 'revize' ? 'onay_bekliyor' as ApprovalStatus : existingHakedis?.approvalStatus || 'onay_bekliyor' as ApprovalStatus,
+        });
 
-      await addActivityLog(
-        'hakedis_created',
-        `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
-        `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
-        newHakedis.id,
-        'hakedis'
-      );
+        await addActivityLog(
+          'hakedis_updated',
+          `${existingHakedis?.hakedisNo} Sözleşmesiz Küçük Hakediş güncellendi`,
+          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}`,
+          editingHakedisId,
+          'hakedis'
+        );
 
-      toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+        toast.success('Hakediş güncellendi');
+      } else {
+        const newHakedis = await addSubcontractorHakedis(hakedisData);
+
+        await addActivityLog(
+          'hakedis_created',
+          `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
+          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+          newHakedis.id,
+          'hakedis'
+        );
+
+        toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+      }
       setIsSmallHakedisDialogOpen(false);
       resetSmallForm();
     } catch (error: any) {
