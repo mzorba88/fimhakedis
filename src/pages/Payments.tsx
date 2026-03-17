@@ -469,7 +469,7 @@ export default function Payments() {
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Toplam Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Maliyet Tutarı" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Ödenen</th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Kalan</th>
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
