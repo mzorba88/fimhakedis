@@ -513,9 +513,7 @@ export default function Payments() {
                           {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
-                          </p>
+                          <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>

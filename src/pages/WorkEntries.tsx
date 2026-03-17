@@ -403,11 +403,9 @@ export default function WorkEntries() {
                   <MobileCardRow label="Sözleşme Tipi" value={contractTypeLabels[entry.contractType]} />
                   <MobileCardRow label="Tarih" value={formatDate(entry.date)} />
                   <MobileCardRow 
-                    label="Tutar" 
+                    label="Maliyet Tutarı" 
                     value={
-                      <span className="font-semibold text-primary">
-                        {formatCurrencyWithType(entry.totalAmount, entry.currency)}
-                      </span>
+                      <AmountCell totalAmount={entry.totalAmount} vatRate={entry.vatRate} currency={entry.currency} />
                     } 
                   />
                 </div>

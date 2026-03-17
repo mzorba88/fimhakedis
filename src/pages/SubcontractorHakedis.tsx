@@ -792,11 +792,9 @@ export default function SubcontractorHakedis() {
                   } />
                   <MobileCardRow label="Tarih" value={formatDate(hakedis.date)} />
                   <MobileCardRow 
-                    label="Tutar" 
+                    label="Maliyet Tutarı" 
                     value={
-                      <span className="font-semibold text-primary">
-                        {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
-                      </span>
+                      <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                     } 
                   />
                 </div>
