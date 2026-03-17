@@ -338,6 +338,33 @@ export default function Payments() {
   const canManagePayments = currentUser.role === 'muhasebe' || currentUser.role === 'direktor';
   const canCancelApproval = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
 
+  const handleVatUpdate = async () => {
+    if (!vatEditHakedisId) return;
+    const newVatRate = vatEditValue === '' ? 0 : parseFloat(vatEditValue);
+    if (isNaN(newVatRate) || newVatRate < 0 || newVatRate > 100) {
+      toast.error('Geçerli bir KDV oranı girin (0-100)');
+      return;
+    }
+    try {
+      await updateSubcontractorHakedis(vatEditHakedisId, { vatRate: newVatRate });
+      const hakedis = subcontractorHakedisler.find(h => h.id === vatEditHakedisId);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_vat_updated',
+          `${hakedis.hakedisNo} hakediş KDV oranı güncellendi: %${newVatRate}`,
+          `Altyüklenici: ${hakedis.subcontractor}`,
+          vatEditHakedisId,
+          'hakedis'
+        );
+      }
+      toast.success(`KDV oranı %${newVatRate} olarak güncellendi`);
+      setVatEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating VAT rate:', error);
+      toast.error('KDV oranı güncellenemedi');
+    }
+  };
+
   const handleCancelApproval = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
     try {
