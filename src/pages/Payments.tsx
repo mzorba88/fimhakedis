@@ -857,8 +857,54 @@ export default function Payments() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* VAT Edit Dialog */}
+        <Dialog open={vatEditDialogOpen} onOpenChange={setVatEditDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>KDV Oranını Düzenle</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Örn: 20"
+                  value={vatEditValue}
+                  onChange={(e) => setVatEditValue(e.target.value)}
+                />
+              </div>
+              {vatEditHakedisId && (() => {
+                const h = subcontractorHakedisler.find(x => x.id === vatEditHakedisId);
+                if (!h) return null;
+                const vr = vatEditValue === '' ? 0 : parseFloat(vatEditValue) || 0;
+                const vatAmt = h.totalAmount * (vr / 100);
+                return (
+                  <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">KDV Hariç</span>
+                      <span>{formatCurrencyWithType(h.totalAmount, h.currency)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">KDV (%{vr})</span>
+                      <span>{formatCurrencyWithType(vatAmt, h.currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t pt-1">
+                      <span>KDV Dahil</span>
+                      <span>{formatCurrencyWithType(h.totalAmount + vatAmt, h.currency)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setVatEditDialogOpen(false)}>İptal</Button>
+              <Button onClick={handleVatUpdate}>Kaydet</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
 }
-
