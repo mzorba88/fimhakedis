@@ -308,7 +308,25 @@ export default function SubcontractorHakedis() {
     }
 
     const contract = workEntries.find(e => e.id === hakedis.contractId);
-    if (!contract) return;
+    
+    // For contractless (small) hakediş, open the small hakediş dialog for editing
+    if (!contract) {
+      setSmallProjectMode('existing');
+      setSmallProjectId(hakedis.projectId || '');
+      setSmallSubcontractorMode('existing');
+      setSmallSubcontractor(hakedis.subcontractor);
+      setSmallDate(hakedis.date);
+      setSmallDescription(hakedis.description || '');
+      setSmallAmount(String(hakedis.totalAmount || 0));
+      setSmallCurrency((hakedis.currency as Currency) || 'TRY');
+      setSmallVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
+      setSmallVatInclusive(false);
+      setIsEditMode(true);
+      setEditingHakedisId(hakedis.id);
+      setIsDetailDialogOpen(false);
+      setIsSmallHakedisDialogOpen(true);
+      return;
+    }
 
     setSelectedProjectId(hakedis.projectId);
     setSelectedSubcontractor(hakedis.subcontractor);
