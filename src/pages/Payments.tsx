@@ -79,6 +79,9 @@ export default function Payments() {
   const [selectedHakedisForPartial, setSelectedHakedisForPartial] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedHakedisForDetail, setSelectedHakedisForDetail] = useState<string | null>(null);
+  const [vatEditDialogOpen, setVatEditDialogOpen] = useState(false);
+  const [vatEditHakedisId, setVatEditHakedisId] = useState<string | null>(null);
+  const [vatEditValue, setVatEditValue] = useState('');
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
