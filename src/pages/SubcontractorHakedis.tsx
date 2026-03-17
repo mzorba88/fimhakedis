@@ -896,7 +896,7 @@ export default function SubcontractorHakedis() {
                   <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Açıklama" sortKey="description" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Maliyet Tutarı" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <SortableTableHeader label="Onay Durumu" sortKey="approvalStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
