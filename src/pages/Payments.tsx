@@ -545,7 +545,22 @@ export default function Payments() {
                           {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
+                          <div className="flex items-start justify-end gap-1">
+                            <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
+                            {canManagePayments && (
+                              <button
+                                onClick={() => {
+                                  setVatEditHakedisId(hakedis.id);
+                                  setVatEditValue(hakedis.vatRate != null ? String(hakedis.vatRate) : '0');
+                                  setVatEditDialogOpen(true);
+                                }}
+                                className="mt-0.5 p-0.5 rounded hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                title="KDV Oranını Düzenle"
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
