@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 

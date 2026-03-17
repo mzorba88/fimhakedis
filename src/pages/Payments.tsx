@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
+import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
 import { 
