@@ -2429,7 +2429,7 @@ export default function SubcontractorHakedis() {
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => { resetSmallForm(); setIsSmallHakedisDialogOpen(false); }}>İptal</Button>
-              <Button onClick={handleSmallHakedisSubmit}>Hakediş Oluştur</Button>
+              <Button onClick={handleSmallHakedisSubmit}>{isEditMode ? 'Güncelle' : 'Hakediş Oluştur'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
