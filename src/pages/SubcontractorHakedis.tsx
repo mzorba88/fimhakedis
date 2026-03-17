@@ -308,7 +308,25 @@ export default function SubcontractorHakedis() {
     }
 
     const contract = workEntries.find(e => e.id === hakedis.contractId);
-    if (!contract) return;
+    
+    // For contractless (small) hakediş, open the small hakediş dialog for editing
+    if (!contract) {
+      setSmallProjectMode('existing');
+      setSmallProjectId(hakedis.projectId || '');
+      setSmallSubcontractorMode('existing');
+      setSmallSubcontractor(hakedis.subcontractor);
+      setSmallDate(hakedis.date);
+      setSmallDescription(hakedis.description || '');
+      setSmallAmount(String(hakedis.totalAmount || 0));
+      setSmallCurrency((hakedis.currency as Currency) || 'TRY');
+      setSmallVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
+      setSmallVatInclusive(false);
+      setIsEditMode(true);
+      setEditingHakedisId(hakedis.id);
+      setIsDetailDialogOpen(false);
+      setIsSmallHakedisDialogOpen(true);
+      return;
+    }
 
     setSelectedProjectId(hakedis.projectId);
     setSelectedSubcontractor(hakedis.subcontractor);
@@ -547,6 +565,8 @@ export default function SubcontractorHakedis() {
     setSmallCurrency('TRY');
     setSmallVatRate('10');
     setSmallVatInclusive(false);
+    setIsEditMode(false);
+    setEditingHakedisId(null);
   };
 
   const handleSmallHakedisSubmit = async () => {
@@ -620,17 +640,36 @@ export default function SubcontractorHakedis() {
 
       console.log('Saving small hakedis with data:', JSON.stringify(hakedisData));
 
-      const newHakedis = await addSubcontractorHakedis(hakedisData);
+      if (isEditMode && editingHakedisId) {
+        const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
+        await updateSubcontractorHakedis(editingHakedisId, {
+          ...hakedisData,
+          hakedisNo: existingHakedis?.hakedisNo || hakedisData.hakedisNo,
+          approvalStatus: existingHakedis?.approvalStatus === 'revize' ? 'onay_bekliyor' as ApprovalStatus : existingHakedis?.approvalStatus || 'onay_bekliyor' as ApprovalStatus,
+        });
 
-      await addActivityLog(
-        'hakedis_created',
-        `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
-        `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
-        newHakedis.id,
-        'hakedis'
-      );
+        await addActivityLog(
+          'hakedis_updated',
+          `${existingHakedis?.hakedisNo} Sözleşmesiz Küçük Hakediş güncellendi`,
+          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}`,
+          editingHakedisId,
+          'hakedis'
+        );
 
-      toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+        toast.success('Hakediş güncellendi');
+      } else {
+        const newHakedis = await addSubcontractorHakedis(hakedisData);
+
+        await addActivityLog(
+          'hakedis_created',
+          `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
+          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+          newHakedis.id,
+          'hakedis'
+        );
+
+        toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+      }
       setIsSmallHakedisDialogOpen(false);
       resetSmallForm();
     } catch (error: any) {
@@ -2390,7 +2429,7 @@ export default function SubcontractorHakedis() {
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => { resetSmallForm(); setIsSmallHakedisDialogOpen(false); }}>İptal</Button>
-              <Button onClick={handleSmallHakedisSubmit}>Hakediş Oluştur</Button>
+              <Button onClick={handleSmallHakedisSubmit}>{isEditMode ? 'Güncelle' : 'Hakediş Oluştur'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
