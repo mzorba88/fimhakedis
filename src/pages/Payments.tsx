@@ -16,7 +16,8 @@ import {
   XCircle,
   CreditCard,
   FileSpreadsheet,
-  Eye
+  Eye,
+  Pencil
 } from 'lucide-react';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -79,6 +80,9 @@ export default function Payments() {
   const [selectedHakedisForPartial, setSelectedHakedisForPartial] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedHakedisForDetail, setSelectedHakedisForDetail] = useState<string | null>(null);
+  const [vatEditDialogOpen, setVatEditDialogOpen] = useState(false);
+  const [vatEditHakedisId, setVatEditHakedisId] = useState<string | null>(null);
+  const [vatEditValue, setVatEditValue] = useState('');
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
@@ -335,6 +339,33 @@ export default function Payments() {
   const canManagePayments = currentUser.role === 'muhasebe' || currentUser.role === 'direktor';
   const canCancelApproval = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
 
+  const handleVatUpdate = async () => {
+    if (!vatEditHakedisId) return;
+    const newVatRate = vatEditValue === '' ? 0 : parseFloat(vatEditValue);
+    if (isNaN(newVatRate) || newVatRate < 0 || newVatRate > 100) {
+      toast.error('Geçerli bir KDV oranı girin (0-100)');
+      return;
+    }
+    try {
+      await updateSubcontractorHakedis(vatEditHakedisId, { vatRate: newVatRate });
+      const hakedis = subcontractorHakedisler.find(h => h.id === vatEditHakedisId);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_updated',
+          `${hakedis.hakedisNo} hakediş KDV oranı güncellendi: %${newVatRate}`,
+          `Altyüklenici: ${hakedis.subcontractor}`,
+          vatEditHakedisId,
+          'hakedis'
+        );
+      }
+      toast.success(`KDV oranı %${newVatRate} olarak güncellendi`);
+      setVatEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating VAT rate:', error);
+      toast.error('KDV oranı güncellenemedi');
+    }
+  };
+
   const handleCancelApproval = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
     try {
@@ -514,7 +545,22 @@ export default function Payments() {
                           {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
+                          <div className="flex items-start justify-end gap-1">
+                            <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
+                            {canManagePayments && (
+                              <button
+                                onClick={() => {
+                                  setVatEditHakedisId(hakedis.id);
+                                  setVatEditValue(hakedis.vatRate != null ? String(hakedis.vatRate) : '0');
+                                  setVatEditDialogOpen(true);
+                                }}
+                                className="mt-0.5 p-0.5 rounded hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                title="KDV Oranını Düzenle"
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
@@ -811,8 +857,54 @@ export default function Payments() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* VAT Edit Dialog */}
+        <Dialog open={vatEditDialogOpen} onOpenChange={setVatEditDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>KDV Oranını Düzenle</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>KDV Oranı (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Örn: 20"
+                  value={vatEditValue}
+                  onChange={(e) => setVatEditValue(e.target.value)}
+                />
+              </div>
+              {vatEditHakedisId && (() => {
+                const h = subcontractorHakedisler.find(x => x.id === vatEditHakedisId);
+                if (!h) return null;
+                const vr = vatEditValue === '' ? 0 : parseFloat(vatEditValue) || 0;
+                const vatAmt = h.totalAmount * (vr / 100);
+                return (
+                  <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">KDV Hariç</span>
+                      <span>{formatCurrencyWithType(h.totalAmount, h.currency)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">KDV (%{vr})</span>
+                      <span>{formatCurrencyWithType(vatAmt, h.currency)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t pt-1">
+                      <span>KDV Dahil</span>
+                      <span>{formatCurrencyWithType(h.totalAmount + vatAmt, h.currency)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setVatEditDialogOpen(false)}>İptal</Button>
+              <Button onClick={handleVatUpdate}>Kaydet</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
 }
-
