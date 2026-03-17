@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
+import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
 import { 
@@ -469,7 +470,7 @@ export default function Payments() {
                   <SortableTableHeader label="Proje" sortKey="project" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Onay Tarihi" sortKey="approvalDate" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Toplam Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Maliyet Tutarı" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Ödenen</th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Kalan</th>
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
@@ -513,9 +514,7 @@ export default function Payments() {
                           {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
-                          </p>
+                          <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>

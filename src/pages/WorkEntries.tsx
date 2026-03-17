@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
+import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 
@@ -403,11 +404,9 @@ export default function WorkEntries() {
                   <MobileCardRow label="Sözleşme Tipi" value={contractTypeLabels[entry.contractType]} />
                   <MobileCardRow label="Tarih" value={formatDate(entry.date)} />
                   <MobileCardRow 
-                    label="Tutar" 
+                    label="Maliyet Tutarı" 
                     value={
-                      <span className="font-semibold text-primary">
-                        {formatCurrencyWithType(entry.totalAmount, entry.currency)}
-                      </span>
+                      <AmountCell totalAmount={entry.totalAmount} vatRate={entry.vatRate} currency={entry.currency} />
                     } 
                   />
                 </div>
@@ -503,7 +502,7 @@ export default function WorkEntries() {
                   <SortableTableHeader label="Altyüklenici" sortKey="subcontractor" currentSort={sortConfig} onSort={handleSort} />
                    <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Sözleşme Tipi" sortKey="contractType" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Maliyet Tutarı" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     İşlem
                   </th>
@@ -552,9 +551,7 @@ export default function WorkEntries() {
                           </p>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
-                          </p>
+                          <AmountCell totalAmount={entry.totalAmount} vatRate={entry.vatRate} currency={entry.currency} />
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-center gap-1">

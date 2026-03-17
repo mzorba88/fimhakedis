@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
+import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { 
   formatCurrencyWithType, 
@@ -792,11 +793,9 @@ export default function SubcontractorHakedis() {
                   } />
                   <MobileCardRow label="Tarih" value={formatDate(hakedis.date)} />
                   <MobileCardRow 
-                    label="Tutar" 
+                    label="Maliyet Tutarı" 
                     value={
-                      <span className="font-semibold text-primary">
-                        {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
-                      </span>
+                      <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                     } 
                   />
                 </div>
@@ -896,7 +895,7 @@ export default function SubcontractorHakedis() {
                   <SortableTableHeader label="İş Kalemi" sortKey="workCategory" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Açıklama" sortKey="description" currentSort={sortConfig} onSort={handleSort} />
                   <SortableTableHeader label="Tarih" sortKey="date" currentSort={sortConfig} onSort={handleSort} />
-                  <SortableTableHeader label="Tutar" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
+                  <SortableTableHeader label="Maliyet Tutarı" sortKey="totalAmount" currentSort={sortConfig} onSort={handleSort} align="right" />
                   <SortableTableHeader label="Onay Durumu" sortKey="approvalStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   <SortableTableHeader label="Ödeme Durumu" sortKey="paymentStatus" currentSort={sortConfig} onSort={handleSort} align="center" />
                   <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -954,9 +953,7 @@ export default function SubcontractorHakedis() {
                           {formatDate(hakedis.date)}
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}
-                          </p>
+                          <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                         </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.approvalStatus} />
