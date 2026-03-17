@@ -350,7 +350,7 @@ export default function Payments() {
       const hakedis = subcontractorHakedisler.find(h => h.id === vatEditHakedisId);
       if (hakedis) {
         await addActivityLog(
-          'hakedis_vat_updated',
+          'hakedis_updated',
           `${hakedis.hakedisNo} hakediş KDV oranı güncellendi: %${newVatRate}`,
           `Altyüklenici: ${hakedis.subcontractor}`,
           vatEditHakedisId,
