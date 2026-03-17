@@ -22,6 +22,9 @@ export function AmountCell({ totalAmount, vatRate, currency, className = '' }: A
         <p className="text-sm font-semibold text-foreground">
           {formatCurrencyWithType(totalAmount, currency)}
         </p>
+        <p className="text-[11px] text-muted-foreground leading-tight">
+          KDV: %0
+        </p>
       </div>
     );
   }
