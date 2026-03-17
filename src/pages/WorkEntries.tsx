@@ -552,9 +552,7 @@ export default function WorkEntries() {
                           </p>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrencyWithType(entry.totalAmount, entry.currency)}
-                          </p>
+                          <AmountCell totalAmount={entry.totalAmount} vatRate={entry.vatRate} currency={entry.currency} />
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-center gap-1">
