@@ -145,8 +145,7 @@ export async function exportSingleHakedisToExcel(
       [`KDV (%${hakedis.vatRate})`, hakedisVat],
     ] : []),
     ['Hakediş Tutarı (KDV Dahil)', hakedisTotalWithVat],
-    ['Ödenen Tutar (KDV Dahil)', hakedis.paidAmount || 0],
-    ['Kalan Bakiye (KDV Dahil)', remaining],
+    ['Ödeme Gerçekleşince Kalan Bakiye (KDV Dahil)', remaining],
     [],
     ['FİNANSAL ÖZET - SÖZLEŞME GENELİ'],
     ['Sözleşme Tutarı (KDV Hariç)', contractSubtotal],
@@ -155,8 +154,7 @@ export async function exportSingleHakedisToExcel(
     ] : []),
     ['Sözleşme Tutarı (KDV Dahil)', contractTotalWithVat],
     ['Toplam Hakediş Tutarı (KDV Dahil)', totalHakedisOnContract],
-    ['Toplam Ödenen (KDV Dahil)', totalPaidOnContract],
-    ['Kalan Bakiye (KDV Dahil)', contractTotalWithVat - totalPaidOnContract],
+    ['Ödeme Gerçekleşince Kalan Bakiye (KDV Dahil)', contractTotalWithVat - totalHakedisOnContract],
   );
 
   if (hakedis.contractExceededNote) {

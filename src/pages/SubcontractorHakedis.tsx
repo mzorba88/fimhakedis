@@ -2181,12 +2181,8 @@ export default function SubcontractorHakedis() {
                             <span className="text-muted-foreground">Toplam Hakediş (KDV Dahil)</span>
                             <span className="text-primary font-medium">{formatCurrencyWithType(totalHakedisWithVat, contract.currency)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Ödenen Tutar (KDV Dahil)</span>
-                            <span className="font-medium">{formatCurrencyWithType(paidTotal, contract.currency)}</span>
-                          </div>
                           <div className="flex justify-between text-sm border-t pt-2 mt-1">
-                            <span className="font-semibold">Kalan Bakiye (KDV Dahil)</span>
+                            <span className="font-semibold">Ödeme Gerçekleşince Kalan Bakiye (KDV Dahil)</span>
                             <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-primary'}`}>
                               {formatCurrencyWithType(remainingBalance, contract.currency)}
                             </span>
