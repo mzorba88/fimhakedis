@@ -240,7 +240,6 @@ export const generateHakedisPDF = async (
   }
   finRows.push(
     ['Hakedis Tutari (KDV Dahil)', formatCurrencyWithType(totalWithVat, hakedis.currency)],
-    ['Odeme Gerceklesince Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)],
     ['Odeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Odendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kismen Odendi' : 'Odenmedi'],
   );
   if (hakedis.paidDate) {
@@ -280,6 +279,8 @@ export const generateHakedisPDF = async (
       return sum + h.totalAmount + hVat;
     }, 0);
     const totalPaidOnContract = approvedContractHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
+    const thisHakedisUnpaid = totalWithVat - (hakedis.paidAmount || 0);
+    const remainingAfterPayment = contractTotal - totalPaidOnContract - thisHakedisUnpaid;
 
     y = addSectionTitle(doc, 'Sozlesme Ozeti', y, COLORS.amber);
     autoTable(doc, {
@@ -287,7 +288,7 @@ export const generateHakedisPDF = async (
       body: [
         ['Sozlesme Tutari (KDV Dahil)', formatCurrencyWithType(contractTotal, contract.currency)],
         ['Toplam Hakedis Tutari (KDV Dahil)', formatCurrencyWithType(totalHakedisAmount, contract.currency)],
-        ['Odeme Gerceklesince Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(contractTotal - totalHakedisAmount, contract.currency)],
+        ['Odeme Gerceklesince Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(remainingAfterPayment, contract.currency)],
       ],
       theme: 'grid',
       styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
