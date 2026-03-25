@@ -240,8 +240,7 @@ export const generateHakedisPDF = async (
   }
   finRows.push(
     ['Hakedis Tutari (KDV Dahil)', formatCurrencyWithType(totalWithVat, hakedis.currency)],
-    ['Odenen Tutar (KDV Dahil)', formatCurrencyWithType(hakedisPaidAmount, hakedis.currency)],
-    ['Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)],
+    ['Odeme Gerceklesince Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(hakedisRemainingBalance, hakedis.currency)],
     ['Odeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Odendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kismen Odendi' : 'Odenmedi'],
   );
   if (hakedis.paidDate) {
@@ -288,8 +287,7 @@ export const generateHakedisPDF = async (
       body: [
         ['Sozlesme Tutari (KDV Dahil)', formatCurrencyWithType(contractTotal, contract.currency)],
         ['Toplam Hakedis Tutari (KDV Dahil)', formatCurrencyWithType(totalHakedisAmount, contract.currency)],
-        ['Odenen Tutar (KDV Dahil)', formatCurrencyWithType(totalPaidOnContract, contract.currency)],
-        ['Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(contractTotal - totalPaidOnContract, contract.currency)],
+        ['Odeme Gerceklesince Kalan Bakiye (KDV Dahil)', formatCurrencyWithType(contractTotal - totalHakedisAmount, contract.currency)],
       ],
       theme: 'grid',
       styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
