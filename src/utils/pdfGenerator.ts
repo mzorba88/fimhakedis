@@ -228,7 +228,7 @@ export const generateHakedisPDF = async (
   const vatAmount = hakedis.vatRate ? subtotal * (hakedis.vatRate / 100) : 0;
   const totalWithVat = subtotal + vatAmount;
   const hakedisPaidAmount = hakedis.paidAmount || 0;
-  const hakedisRemainingBalance = totalWithVat - hakedisPaidAmount;
+  const hakedisUnpaidPortion = totalWithVat - hakedisPaidAmount;
 
   y = addSectionTitle(doc, 'Tutar Bilgileri', y, COLORS.green);
   

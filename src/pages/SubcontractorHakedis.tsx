@@ -2141,7 +2141,10 @@ export default function SubcontractorHakedis() {
                         return sum + h.totalAmount + hv;
                       }, 0);
                     const paidTotal = allHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-                    const remainingBalance = cTotalWithVat - paidTotal;
+                    const hVatRateC = selectedHakedis.vatRate || 0;
+                    const hTotalWithVatC = selectedHakedis.totalAmount + (hVatRateC > 0 ? selectedHakedis.totalAmount * (hVatRateC / 100) : 0);
+                    const thisHakedisPaid = selectedHakedis.paidAmount || 0;
+                    const remainingAfterPayment = cTotalWithVat - paidTotal - (hTotalWithVatC - thisHakedisPaid);
 
                     return (
                       <>
@@ -2183,8 +2186,8 @@ export default function SubcontractorHakedis() {
                           </div>
                           <div className="flex justify-between text-sm border-t pt-2 mt-1">
                             <span className="font-semibold">Ödeme Gerçekleşince Kalan Bakiye (KDV Dahil)</span>
-                            <span className={`font-semibold ${remainingBalance > 0 ? 'text-amber-600' : remainingBalance < 0 ? 'text-destructive' : 'text-primary'}`}>
-                              {formatCurrencyWithType(remainingBalance, contract.currency)}
+                            <span className={`font-semibold ${remainingAfterPayment > 0 ? 'text-amber-600' : remainingAfterPayment < 0 ? 'text-destructive' : 'text-primary'}`}>
+                              {formatCurrencyWithType(remainingAfterPayment, contract.currency)}
                             </span>
                           </div>
                         </div>
