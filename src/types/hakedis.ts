@@ -290,6 +290,7 @@ export const workCategories = [
   'Mekanik Sıhhi Tesiat İşleri',
   'Nakliye İşleri',
   'Peyzaj İşleri',
+  'Proje Tasarım',
   'Seramik ve Mermer İşçilik',
   'Su İzolasyon',
   'Sulama İşleri',
