@@ -530,7 +530,9 @@ export default function SubcontractorHakedis() {
           totalAmount,
           contractExceededNote: exceeded ? contractExceededNote : undefined,
           createdBy: currentUser.id,
-          approvalStatus: 'onay_bekliyor',
+          approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
+          approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
+          approvalDate: currentUser.role === 'direktor' ? new Date().toISOString() : undefined,
           paidAmount: 0,
           paymentStatus: 'odenmedi',
         });
@@ -634,7 +636,9 @@ export default function SubcontractorHakedis() {
         paymentAmount: totalAmount,
         totalAmount,
         createdBy: currentUser.id,
-        approvalStatus: 'onay_bekliyor' as ApprovalStatus,
+        approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
+        approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
+        approvalDate: currentUser.role === 'direktor' ? new Date().toISOString() : undefined,
         paidAmount: 0,
         paymentStatus: 'odenmedi' as PaymentStatus,
       };
