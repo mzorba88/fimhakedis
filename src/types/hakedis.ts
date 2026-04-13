@@ -280,6 +280,7 @@ export const workCategories = [
   'Forklift İşleri',
   'Kalıp İşleri',
   'Karot İşleri',
+  'Kontrollük',
   'Kuyu Kazı',
   'Laminant Parke',
   'Mantolama',
