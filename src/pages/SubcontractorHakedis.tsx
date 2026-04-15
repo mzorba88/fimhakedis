@@ -508,10 +508,16 @@ export default function SubcontractorHakedis() {
         );
         toast.success(shouldResetToOnayBekliyor ? 'Hakediş güncellendi ve onaya sunuldu' : 'Hakediş güncellendi');
       } else {
-        // Generate hakediş number
-        const hakedisCount = subcontractorHakedisler.filter(h => h.contractId === selectedContractId).length;
+        // Generate hakediş number - use prefix-specific max to avoid duplicates
         const prefix = hakedisType === 'alelhesap' ? 'AH' : hakedisType === 'kesin_hesap' ? 'KH' : 'H';
-        const hakedisNo = `${contract.contractNo}-${prefix}${(hakedisCount + 1).toString().padStart(2, '0')}`;
+        const existingNos = subcontractorHakedisler
+          .filter(h => h.contractId === selectedContractId && h.hakedisNo?.includes(`-${prefix}`))
+          .map(h => {
+            const match = h.hakedisNo.match(new RegExp(`-${prefix}(\\d+)$`));
+            return match ? parseInt(match[1], 10) : 0;
+          });
+        const nextNum = existingNos.length > 0 ? Math.max(...existingNos) + 1 : 1;
+        const hakedisNo = `${contract.contractNo}-${prefix}${nextNum.toString().padStart(2, '0')}`;
 
         const newHakedis = await addSubcontractorHakedis({
           hakedisNo,
