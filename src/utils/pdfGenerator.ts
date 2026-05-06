@@ -143,7 +143,8 @@ export const generateHakedisPDF = async (
   hakedis: SubcontractorHakedis,
   project: Project | undefined,
   contract: WorkEntry | undefined,
-  subcontractorHakedisler: SubcontractorHakedis[]
+  subcontractorHakedisler: SubcontractorHakedis[],
+  options?: { autoPrint?: boolean }
 ) => {
   const { jsPDF, autoTable } = await loadPdfLibs();
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -300,6 +301,16 @@ export const generateHakedisPDF = async (
   }
 
   addSignatureBlock(doc, y);
-  
-  doc.save(`hakedis-raporu-${hakedis.hakedisNo}.pdf`);
+
+  if (options?.autoPrint) {
+    (doc as any).autoPrint();
+    const blobUrl = doc.output('bloburl');
+    const printWindow = window.open(blobUrl as any, '_blank');
+    if (!printWindow) {
+      // popup blocked — fallback to download
+      doc.save(`hakedis-raporu-${hakedis.hakedisNo}.pdf`);
+    }
+  } else {
+    doc.save(`hakedis-raporu-${hakedis.hakedisNo}.pdf`);
+  }
 };

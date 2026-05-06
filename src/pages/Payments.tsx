@@ -726,17 +726,6 @@ export default function Payments() {
                                               variant="destructive"
                                               onClick={() => handleCancelApproval(hakedis.id)}
                                               className="gap-1.5"
-                                            >
-                                              <XCircle className="h-4 w-4" />
-                                              Onay İptali
-                                            </Button>
-                                          )}
-                                          {canCancelApproval && !isPaid && (
-                                            <Button
-                                              size="sm"
-                                              variant="destructive"
-                                              onClick={() => handleCancelApproval(hakedis.id)}
-                                              className="gap-1.5"
                                               title="Onay İptal Et — düzenleme için"
                                             >
                                               <XCircle className="h-4 w-4" />
