@@ -22,7 +22,8 @@ import {
   Eye,
   Pencil,
   Trash2,
-  FileText
+  FileText,
+  Printer
 } from 'lucide-react';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -726,17 +727,6 @@ export default function Payments() {
                                               variant="destructive"
                                               onClick={() => handleCancelApproval(hakedis.id)}
                                               className="gap-1.5"
-                                            >
-                                              <XCircle className="h-4 w-4" />
-                                              Onay İptali
-                                            </Button>
-                                          )}
-                                          {canCancelApproval && !isPaid && (
-                                            <Button
-                                              size="sm"
-                                              variant="destructive"
-                                              onClick={() => handleCancelApproval(hakedis.id)}
-                                              className="gap-1.5"
                                               title="Onay İptal Et — düzenleme için"
                                             >
                                               <XCircle className="h-4 w-4" />
@@ -772,6 +762,24 @@ export default function Payments() {
                                           >
                                             <FileText className="h-4 w-4" />
                                             PDF
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={async () => {
+                                              try {
+                                                const project = projects.find(p => p.id === hakedis.projectId);
+                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler, { autoPrint: true });
+                                              } catch (error) {
+                                                toast.error('Yazdırma için PDF oluşturulamadı');
+                                              }
+                                            }}
+                                            className="gap-1.5"
+                                            title="Yazdır"
+                                          >
+                                            <Printer className="h-4 w-4" />
+                                            Yazdır
                                           </Button>
                                           <Button
                                             size="sm"
