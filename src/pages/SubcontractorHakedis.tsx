@@ -321,16 +321,19 @@ export default function SubcontractorHakedis() {
     
     // For contractless (small) hakediş, open the small hakediş dialog for editing
     if (!contract) {
-      setSmallProjectMode('existing');
-      setSmallProjectId(hakedis.projectId || '');
       setSmallSubcontractorMode('existing');
       setSmallSubcontractor(hakedis.subcontractor);
       setSmallDate(hakedis.date);
-      setSmallDescription(hakedis.description || '');
-      setSmallAmount(String(hakedis.totalAmount || 0));
       setSmallCurrency((hakedis.currency as Currency) || 'TRY');
-      setSmallVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
-      setSmallVatInclusive(false);
+      setSmallRows([{
+        projectMode: 'existing',
+        projectId: hakedis.projectId || '',
+        projectName: '',
+        description: hakedis.description || '',
+        amount: String(hakedis.totalAmount || 0),
+        vatRate: hakedis.vatRate !== undefined && hakedis.vatRate !== null ? String(hakedis.vatRate) : '10',
+        vatInclusive: false,
+      }]);
       setIsEditMode(true);
       setEditingHakedisId(hakedis.id);
       setIsDetailDialogOpen(false);
