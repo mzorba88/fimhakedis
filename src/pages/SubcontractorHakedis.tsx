@@ -94,6 +94,7 @@ export default function SubcontractorHakedis() {
   const [filterPayment, setFilterPayment] = useState<string>('all');
   const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'desc' });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isMultiDialogOpen, setIsMultiDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
