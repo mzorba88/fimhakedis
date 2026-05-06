@@ -531,153 +531,228 @@ export default function Payments() {
               </thead>
 
               <tbody className="divide-y">
-                <AnimatePresence>
-                  {sortedHakedisler.map((hakedis) => {
-                    const project = projects.find(p => p.id === hakedis.projectId);
-                    const isPaid = hakedis.paymentStatus === 'odendi';
-                    const paidAmount = hakedis.paidAmount || 0;
-                    const remainingAmount = hakedis.totalAmount - paidAmount;
-                    
+                {(() => {
+                  // Group: subcontractor -> projectKey -> hakedisler[]
+                  const subMap = new Map<string, Map<string, typeof sortedHakedisler>>();
+                  sortedHakedisler.forEach(h => {
+                    const subKey = h.subcontractor || '—';
+                    const projKey = h.projectId || '__none__';
+                    if (!subMap.has(subKey)) subMap.set(subKey, new Map());
+                    const pm = subMap.get(subKey)!;
+                    if (!pm.has(projKey)) pm.set(projKey, []);
+                    pm.get(projKey)!.push(h);
+                  });
+
+                  const subEntries = Array.from(subMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                  const colSpan = canManagePayments ? 9 : 8;
+
+                  return subEntries.map(([subName, projMap]) => {
+                    // Compute subcontractor totals per currency (remaining)
+                    const subTotals: Record<string, number> = {};
+                    let subHakedisCount = 0;
+                    projMap.forEach(arr => arr.forEach(h => {
+                      const remaining = h.totalAmount - (h.paidAmount || 0);
+                      subTotals[h.currency] = (subTotals[h.currency] || 0) + remaining;
+                      subHakedisCount++;
+                    }));
+
+                    const projEntries = Array.from(projMap.entries());
+
                     return (
-                      <motion.tr
-                        key={hakedis.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="group hover:bg-muted/30"
-                      >
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-medium text-foreground">
-                            {project?.projectCode}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {project?.projectName}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {hakedis.subcontractor}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex items-start justify-end gap-1">
-                            <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
-                            {canManagePayments && (
-                              <button
-                                onClick={() => {
-                                  setVatEditHakedisId(hakedis.id);
-                                  setVatEditValue(hakedis.vatRate != null ? String(hakedis.vatRate) : '0');
-                                  setVatEditDialogOpen(true);
-                                }}
-                                className="mt-0.5 p-0.5 rounded hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
-                                title="KDV Oranını Düzenle"
-                              >
-                                <Pencil className="h-3 w-3 text-muted-foreground" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                            {formatCurrencyWithType(paidAmount, hakedis.currency)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <p className={`text-sm font-semibold ${remainingAmount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                            {formatCurrencyWithType(remainingAmount, hakedis.currency)}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <StatusBadge status={hakedis.paymentStatus} />
-                          {isPaid && hakedis.paidDate && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatDate(hakedis.paidDate)}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedHakedisForDetail(hakedis.id);
-                              setDetailDialogOpen(true);
-                            }}
-                            className="gap-1.5"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Detay
-                          </Button>
-                        </td>
-                        {canManagePayments && (
-                          <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2 flex-wrap">
-                              {!isPaid && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
-                                    className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
-                                  >
-                                    <Banknote className="h-4 w-4" />
-                                    Tam Ödeme
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => {
-                                      setSelectedHakedisForPartial(hakedis.id);
-                                      setPartialPaymentAmount('');
-                                      setPartialPaymentDialogOpen(true);
-                                    }}
-                                    className="gap-1.5"
-                                  >
-                                    <CreditCard className="h-4 w-4" />
-                                    Kısmi Ödeme
-                                  </Button>
-                                </>
-                              )}
-                              {canCancelApproval && !isPaid && (
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleCancelApproval(hakedis.id)}
-                                  className="gap-1.5"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Onay İptali
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => generatePaymentPdf(hakedis)}
-                                className="gap-1.5"
-                              >
-                                <FileDown className="h-4 w-4" />
-                                PDF
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const project = projects.find(p => p.id === hakedis.projectId);
-                                  const contract = workEntries.find(c => c.id === hakedis.contractId);
-                                  exportSinglePaymentToExcel(hakedis, project, contract);
-                                }}
-                                className="gap-1.5"
-                              >
-                                <FileSpreadsheet className="h-4 w-4" />
-                                Excel
-                              </Button>
+                      <Fragment key={subName}>
+                        {/* Subcontractor header row */}
+                        <tr className="bg-primary/5 border-t-2 border-primary/30">
+                          <td colSpan={colSpan} className="px-4 py-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-foreground">
+                                {subName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {subHakedisCount} hakediş
+                              </span>
                             </div>
                           </td>
-                        )}
-                      </motion.tr>
+                        </tr>
+
+                        {projEntries.map(([projKey, hakedisler]) => {
+                          const project = projects.find(p => p.id === projKey);
+                          const projLabel = project ? `${project.projectCode} — ${project.projectName}` : 'Sözleşmesiz / Proje Yok';
+                          return (
+                            <Fragment key={`${subName}-${projKey}`}>
+                              {/* Project sub-header */}
+                              <tr className="bg-muted/40">
+                                <td colSpan={colSpan} className="px-4 py-1.5 text-xs font-medium text-muted-foreground">
+                                  ↳ {projLabel}
+                                </td>
+                              </tr>
+
+                              {hakedisler.map((hakedis) => {
+                                const isPaid = hakedis.paymentStatus === 'odendi';
+                                const paidAmount = hakedis.paidAmount || 0;
+                                const remainingAmount = hakedis.totalAmount - paidAmount;
+
+                                return (
+                                  <motion.tr
+                                    key={hakedis.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="group hover:bg-muted/30"
+                                  >
+                                    <td className="px-4 py-3 pl-8">
+                                      <p className="text-xs text-muted-foreground">{hakedis.hakedisNo}</p>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-foreground">
+                                      {hakedis.subcontractor}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                                      {hakedis.approvalDate ? formatDate(hakedis.approvalDate) : '-'}
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <div className="flex items-start justify-end gap-1">
+                                        <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
+                                        {canManagePayments && (
+                                          <button
+                                            onClick={() => {
+                                              setVatEditHakedisId(hakedis.id);
+                                              setVatEditValue(hakedis.vatRate != null ? String(hakedis.vatRate) : '0');
+                                              setVatEditDialogOpen(true);
+                                            }}
+                                            className="mt-0.5 p-0.5 rounded hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                            title="KDV Oranını Düzenle"
+                                          >
+                                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <p className={`text-sm font-medium ${paidAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                        {formatCurrencyWithType(paidAmount, hakedis.currency)}
+                                      </p>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <p className={`text-sm font-semibold ${remainingAmount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                                        {formatCurrencyWithType(remainingAmount, hakedis.currency)}
+                                      </p>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      <StatusBadge status={hakedis.paymentStatus} />
+                                      {isPaid && hakedis.paidDate && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {formatDate(hakedis.paidDate)}
+                                        </p>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setSelectedHakedisForDetail(hakedis.id);
+                                          setDetailDialogOpen(true);
+                                        }}
+                                        className="gap-1.5"
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                        Detay
+                                      </Button>
+                                    </td>
+                                    {canManagePayments && (
+                                      <td className="px-4 py-3 text-center">
+                                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                                          {!isPaid && (
+                                            <>
+                                              <Button
+                                                size="sm"
+                                                onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
+                                                className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
+                                              >
+                                                <Banknote className="h-4 w-4" />
+                                                Tam Ödeme
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => {
+                                                  setSelectedHakedisForPartial(hakedis.id);
+                                                  setPartialPaymentAmount('');
+                                                  setPartialPaymentDialogOpen(true);
+                                                }}
+                                                className="gap-1.5"
+                                              >
+                                                <CreditCard className="h-4 w-4" />
+                                                Kısmi Ödeme
+                                              </Button>
+                                            </>
+                                          )}
+                                          {canCancelApproval && !isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="destructive"
+                                              onClick={() => handleCancelApproval(hakedis.id)}
+                                              className="gap-1.5"
+                                            >
+                                              <XCircle className="h-4 w-4" />
+                                              Onay İptali
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => generatePaymentPdf(hakedis)}
+                                            className="gap-1.5"
+                                          >
+                                            <FileDown className="h-4 w-4" />
+                                            PDF
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                              const project = projects.find(p => p.id === hakedis.projectId);
+                                              const contract = workEntries.find(c => c.id === hakedis.contractId);
+                                              exportSinglePaymentToExcel(hakedis, project, contract);
+                                            }}
+                                            className="gap-1.5"
+                                          >
+                                            <FileSpreadsheet className="h-4 w-4" />
+                                            Excel
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    )}
+                                  </motion.tr>
+                                );
+                              })}
+                            </Fragment>
+                          );
+                        })}
+
+                        {/* Subcontractor totals row (remaining per currency) */}
+                        <tr className="bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-900/40">
+                          <td colSpan={colSpan} className="px-4 py-2.5">
+                            <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-1">
+                              <span className="text-xs font-medium text-muted-foreground mr-auto">
+                                <strong>{subName}</strong> — Bekleyen Ödeme Toplamı:
+                              </span>
+                              {Object.entries(subTotals)
+                                .filter(([, v]) => v > 0)
+                                .map(([cur, v]) => (
+                                  <span key={cur} className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                                    {formatCurrencyWithType(v, cur as Currency)}
+                                  </span>
+                                ))}
+                              {Object.values(subTotals).every(v => v <= 0) && (
+                                <span className="text-sm font-semibold text-green-600">Tamamı ödendi</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      </Fragment>
                     );
-                  })}
-                </AnimatePresence>
+                  });
+                })()}
               </tbody>
             </table>
           </div>
