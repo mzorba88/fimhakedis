@@ -72,7 +72,7 @@ export default function Payments() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
-  const [filterPayment, setFilterPayment] = useState<string>('all');
+  const [filterPayment, setFilterPayment] = useState<string>('odenmedi');
   const { sortConfig, handleSort } = useSorting({ key: 'approvalDate', direction: 'desc' });
   const [activeTab, setActiveTab] = useState('hakedisler');
   const [partialPaymentDialogOpen, setPartialPaymentDialogOpen] = useState(false);
