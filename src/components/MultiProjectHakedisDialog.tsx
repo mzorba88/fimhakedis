@@ -253,6 +253,20 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           const hakedisNo = `KH-S${String(nextSmallNum).padStart(3, '0')}`;
           nextSmallNum++;
 
+          const validItems = row.smallItems.filter(i => i.amount > 0 && i.description.trim());
+          const itemsAsExtra: ExtraWorkItem[] = validItems.map(i => ({
+            id: i.id,
+            description: i.description.trim(),
+            unit: i.unit,
+            unitPrice: i.unitPrice,
+            quantity: i.quantity,
+            amount: i.amount,
+          }));
+          const autoDescription = validItems.map(i =>
+            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, 'TRY')})`
+          ).join('; ');
+          const finalDescription = `${workCategoryLabel}${projectPrefix}${row.description.trim() || autoDescription}`;
+
           const data = {
             hakedisNo,
             hakedisType: 'ara_hakedis' as HakedisRecordType,
@@ -264,8 +278,9 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             currency: 'TRY' as Currency,
             vatRate: row.vatRate !== '' && Number(row.vatRate) > 0 ? Number(row.vatRate) : null,
             date: row.date,
-            description: `${workCategoryLabel}${projectPrefix}${row.description.trim()}`,
+            description: finalDescription,
             paymentAmount: totalAmount,
+            extraItems: itemsAsExtra.length > 0 ? itemsAsExtra : undefined,
             totalAmount,
             createdBy: currentUser.id,
             approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
