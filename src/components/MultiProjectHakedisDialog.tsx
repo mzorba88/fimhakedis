@@ -576,15 +576,90 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                         placeholder="Hakediş açıklaması" />
                     </div>
 
-                    {/* Amount input for small or götürü/alelhesap */}
-                    {(row.rowMode === 'small' ||
-                      (row.rowMode === 'contract' && contract &&
-                        (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel'))) && (
+                    {/* Amount input for contract götürü/alelhesap */}
+                    {row.rowMode === 'contract' && contract &&
+                      (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') && (
                       <div className="space-y-2">
                         <Label className="text-xs">Tutar ({currency})</Label>
                         <Input type="number" placeholder="0.00" value={row.amount}
                           onChange={e => updateRow(row.id, { amount: e.target.value })}
                           min="0" step="0.01" />
+                      </div>
+                    )}
+
+                    {/* Small mode item table */}
+                    {row.rowMode === 'small' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">İş Kalemleri</Label>
+                          <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                            onClick={() => updateRow(row.id, { smallItems: [...row.smallItems, makeSmallItem()] })}>
+                            <Plus className="h-3 w-3" /> Kalem Ekle
+                          </Button>
+                        </div>
+                        <div className="rounded border overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left p-2">Açıklama</th>
+                                <th className="text-left p-2 w-20">Birim</th>
+                                <th className="text-right p-2 w-24">Birim Fiyat</th>
+                                <th className="text-right p-2 w-20">Miktar</th>
+                                <th className="text-right p-2 w-28">Tutar</th>
+                                <th className="w-8"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.smallItems.map((item, sIdx) => {
+                                const updateItem = (patch: Partial<SmallItem>) => {
+                                  const updated = { ...item, ...patch };
+                                  updated.amount = (updated.quantity || 0) * (updated.unitPrice || 0);
+                                  updateRow(row.id, {
+                                    smallItems: row.smallItems.map((it, i) => i === sIdx ? updated : it),
+                                  });
+                                };
+                                return (
+                                  <tr key={item.id} className="border-t">
+                                    <td className="p-1.5">
+                                      <Input value={item.description} placeholder="İş açıklaması"
+                                        className="h-7 text-xs"
+                                        onChange={e => updateItem({ description: e.target.value })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input value={item.unit} placeholder="adet"
+                                        className="h-7 text-xs"
+                                        onChange={e => updateItem({ unit: e.target.value })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input type="number" value={item.unitPrice || ''} min="0" step="0.01"
+                                        className="h-7 text-xs text-right"
+                                        onChange={e => updateItem({ unitPrice: parseFloat(e.target.value) || 0 })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input type="number" value={item.quantity || ''} min="0" step="0.01"
+                                        className="h-7 text-xs text-right"
+                                        onChange={e => updateItem({ quantity: parseFloat(e.target.value) || 0 })} />
+                                    </td>
+                                    <td className="p-1.5 text-right font-medium">
+                                      {formatCurrencyWithType(item.amount, currency)}
+                                    </td>
+                                    <td className="p-1.5">
+                                      {row.smallItems.length > 1 && (
+                                        <Button type="button" variant="ghost" size="sm"
+                                          className="h-6 w-6 p-0 text-destructive"
+                                          onClick={() => updateRow(row.id, {
+                                            smallItems: row.smallItems.filter((_, i) => i !== sIdx),
+                                          })}>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
