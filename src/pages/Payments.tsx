@@ -162,23 +162,27 @@ export default function Payments() {
     toast.success('Döviz kurları güncellendi');
   };
 
-  // Calculate total unpaid in GBP
-  const totalUnpaidGBP = useMemo(() => {
+  // Calculate totals per currency and combined GBP equivalent
+  const { totalUnpaidGBP, unpaidByCurrency } = useMemo(() => {
     const unpaidHakedisler = approvedHakedisler.filter(h => h.paymentStatus !== 'odendi');
-    
-    return unpaidHakedisler.reduce((sum, h) => {
+    const byCurrency: Record<Currency, number> = { TRY: 0, USD: 0, EUR: 0, GBP: 0 };
+    let totalGBP = 0;
+
+    unpaidHakedisler.forEach((h) => {
       const currency = h.currency as Currency;
       const remainingAmount = h.totalAmount - (h.paidAmount || 0);
+      byCurrency[currency] = (byCurrency[currency] || 0) + remainingAmount;
+
       let amountInGBP = remainingAmount;
-      
       if (currency === 'GBP') {
         amountInGBP = remainingAmount;
       } else if (exchangeRates[currency]) {
         amountInGBP = remainingAmount / exchangeRates[currency];
       }
-      
-      return sum + amountInGBP;
-    }, 0);
+      totalGBP += amountInGBP;
+    });
+
+    return { totalUnpaidGBP: totalGBP, unpaidByCurrency: byCurrency };
   }, [approvedHakedisler, exchangeRates]);
 
   const handleMarkHakedisAsPaid = async (hakedisId: string) => {
@@ -441,6 +445,18 @@ export default function Payments() {
                 <span className="hidden sm:inline">Kurları Güncelle</span>
                 <span className="sm:hidden">Güncelle</span>
               </Button>
+            </div>
+
+            {/* Per-currency breakdown */}
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-3 border-t border-border/60">
+              {(['TRY', 'USD', 'EUR', 'GBP'] as Currency[]).map((cur) => (
+                <div key={cur} className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Bekleyen {cur}</p>
+                  <p className="text-sm sm:text-base font-semibold text-foreground">
+                    {formatCurrencyWithType(unpaidByCurrency[cur] || 0, cur)}
+                  </p>
+                </div>
+              ))}
             </div>
           </motion.div>
         </div>
