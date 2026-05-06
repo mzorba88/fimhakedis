@@ -2481,6 +2481,12 @@ export default function SubcontractorHakedis() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Multi-Project Hakediş Dialog (new) */}
+        <MultiProjectHakedisDialog
+          open={isMultiDialogOpen}
+          onOpenChange={setIsMultiDialogOpen}
+        />
       </div>
     </MainLayout>
   );
