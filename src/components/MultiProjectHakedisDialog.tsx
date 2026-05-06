@@ -24,6 +24,15 @@ interface Props {
 
 type RowMode = 'contract' | 'small';
 
+interface SmallItem {
+  id: string;
+  description: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  amount: number;
+}
+
 interface ProjectRow {
   id: string;
   projectMode: 'existing' | 'custom';
@@ -34,14 +43,25 @@ interface ProjectRow {
   hakedisType: HakedisRecordType;
   date: string;
   description: string;
-  // götürü bedel / alelhesap / small
+  // götürü bedel / alelhesap (contract mode)
   amount: string;
   // birim fiyat
   hakedisItems: HakedisItem[];
   extraItems: ExtraWorkItem[];
+  // small mode items
+  smallItems: SmallItem[];
   vatRate: string;
   vatInclusive: boolean;
 }
+
+const makeSmallItem = (): SmallItem => ({
+  id: crypto.randomUUID(),
+  description: '',
+  unit: 'adet',
+  unitPrice: 0,
+  quantity: 0,
+  amount: 0,
+});
 
 const makeRow = (): ProjectRow => ({
   id: crypto.randomUUID(),
@@ -56,6 +76,7 @@ const makeRow = (): ProjectRow => ({
   amount: '',
   hakedisItems: [],
   extraItems: [],
+  smallItems: [makeSmallItem()],
   vatRate: '10',
   vatInclusive: false,
 });
