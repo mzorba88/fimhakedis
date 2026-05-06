@@ -744,11 +744,7 @@ export default function SubcontractorHakedis() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={() => setIsSmallHakedisDialogOpen(true)} variant="outline" className="gap-2 w-full sm:w-auto touch-target">
-              <Receipt className="h-4 w-4" />
-              Sözleşmesiz Küçük Hakediş
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
+            <Button onClick={() => setIsMultiDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
               <Plus className="h-4 w-4" />
               Yeni Hakediş
             </Button>
