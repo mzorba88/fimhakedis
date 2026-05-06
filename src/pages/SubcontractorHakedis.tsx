@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
@@ -84,6 +85,7 @@ export default function SubcontractorHakedis() {
     addSubcontractor,
   } = useHakedisStore();
   const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -313,7 +315,7 @@ export default function SubcontractorHakedis() {
   const handleEditHakedis = (hakedis: HakedisType) => {
     // Only allow editing for pending approval or revision required hakedis
     if (hakedis.approvalStatus !== 'onay_bekliyor' && hakedis.approvalStatus !== 'revize') {
-      toast.error('Sadece onay bekleyen veya revize gerekli hakedişler düzenlenebilir');
+      toast.error('Sadece onay bekleyen veya revize gerekli hakedişler düzenlenebilir. Önce ödemeler ekranından "Onay İptali" ile düzenlenebilir hale getirin.');
       return;
     }
 
@@ -390,6 +392,20 @@ export default function SubcontractorHakedis() {
     setIsDetailDialogOpen(false);
     setIsDialogOpen(true);
   };
+
+  // Auto-open edit dialog when navigated with ?edit=<id>
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === editId);
+    if (hakedis) {
+      handleEditHakedis(hakedis);
+    }
+    // Clear param after handling
+    searchParams.delete('edit');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subcontractorHakedisler]);
 
   // Check if contract amount is exceeded
   const checkContractExceeded = (newTotalAmount: number, contractId: string, editingId?: string | null) => {

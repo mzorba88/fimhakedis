@@ -1,12 +1,15 @@
 import { useState, useMemo, useEffect, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
-import { 
-  Search, 
+import { generateHakedisPDF } from '@/utils/pdfGenerator';
+import { exportSingleHakedisToExcel } from '@/utils/excelExport';
+import {
+  Search,
   Wallet,
   Clock,
   AlertTriangle,
@@ -17,7 +20,9 @@ import {
   CreditCard,
   FileSpreadsheet,
   Eye,
-  Pencil
+  Pencil,
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,17 +64,20 @@ const fetchExchangeRates = async (): Promise<ExchangeRates> => {
 };
 
 export default function Payments() {
-  const { 
-    projects, 
+  const {
+    projects,
     workEntries,
     subcontractorHakedisler,
     markAsPaid,
     markHakedisAsPaid,
     updateSubcontractorHakedis,
+    deleteSubcontractorHakedis,
     currentUser,
     addActivityLog
   } = useHakedisStore();
-  
+
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPayment, setFilterPayment] = useState<string>('odenmedi');
@@ -83,6 +91,8 @@ export default function Payments() {
   const [vatEditDialogOpen, setVatEditDialogOpen] = useState(false);
   const [vatEditHakedisId, setVatEditHakedisId] = useState<string | null>(null);
   const [vatEditValue, setVatEditValue] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hakedisToDelete, setHakedisToDelete] = useState<string | null>(null);
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
@@ -395,6 +405,30 @@ export default function Payments() {
     }
   };
 
+  const handleDeleteHakedis = async () => {
+    if (!hakedisToDelete) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === hakedisToDelete);
+    try {
+      await deleteSubcontractorHakedis(hakedisToDelete);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_deleted',
+          `${hakedis.hakedisNo} hakedişi silindi`,
+          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+          hakedisToDelete,
+          'hakedis'
+        );
+      }
+      toast.success('Hakediş silindi');
+    } catch (error) {
+      console.error('Error deleting hakedis:', error);
+      toast.error('Silme işlemi başarısız');
+    } finally {
+      setDeleteDialogOpen(false);
+      setHakedisToDelete(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6">
@@ -697,13 +731,46 @@ export default function Payments() {
                                               Onay İptali
                                             </Button>
                                           )}
+                                          {canCancelApproval && !isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="destructive"
+                                              onClick={() => handleCancelApproval(hakedis.id)}
+                                              className="gap-1.5"
+                                              title="Onay İptal Et — düzenleme için"
+                                            >
+                                              <XCircle className="h-4 w-4" />
+                                              Onay İptali
+                                            </Button>
+                                          )}
+                                          {!isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => navigate(`/altyuklenici-hakedis?edit=${hakedis.id}`)}
+                                              className="gap-1.5"
+                                              title="Düzenle"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                              Düzenle
+                                            </Button>
+                                          )}
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => generatePaymentPdf(hakedis)}
+                                            onClick={async () => {
+                                              try {
+                                                const project = projects.find(p => p.id === hakedis.projectId);
+                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                                                toast.success('PDF rapor indirildi');
+                                              } catch (error) {
+                                                toast.error('PDF oluşturulamadı');
+                                              }
+                                            }}
                                             className="gap-1.5"
                                           >
-                                            <FileDown className="h-4 w-4" />
+                                            <FileText className="h-4 w-4" />
                                             PDF
                                           </Button>
                                           <Button
@@ -712,13 +779,28 @@ export default function Payments() {
                                             onClick={() => {
                                               const project = projects.find(p => p.id === hakedis.projectId);
                                               const contract = workEntries.find(c => c.id === hakedis.contractId);
-                                              exportSinglePaymentToExcel(hakedis, project, contract);
+                                              exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
                                             }}
                                             className="gap-1.5"
                                           >
                                             <FileSpreadsheet className="h-4 w-4" />
                                             Excel
                                           </Button>
+                                          {!isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setHakedisToDelete(hakedis.id);
+                                                setDeleteDialogOpen(true);
+                                              }}
+                                              className="gap-1.5 text-destructive hover:text-destructive"
+                                              title="Sil"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                              Sil
+                                            </Button>
+                                          )}
                                         </div>
                                       </td>
                                     )}
@@ -992,6 +1074,22 @@ export default function Payments() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setVatEditDialogOpen(false)}>İptal</Button>
               <Button onClick={handleVatUpdate}>Kaydet</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Hakediş Kaydını Sil</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground py-2">
+              Bu hakediş kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setHakedisToDelete(null); }}>İptal</Button>
+              <Button variant="destructive" onClick={handleDeleteHakedis}>Sil</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
