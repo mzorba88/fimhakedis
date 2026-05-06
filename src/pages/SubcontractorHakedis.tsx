@@ -70,6 +70,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MultiProjectHakedisDialog } from '@/components/MultiProjectHakedisDialog';
 
 export default function SubcontractorHakedis() {
   const { 
