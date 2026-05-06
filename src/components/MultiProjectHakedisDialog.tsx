@@ -570,7 +570,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label className="text-xs">Açıklama {row.rowMode === 'small' && <span className="text-destructive">*</span>}</Label>
+                      <Label className="text-xs">Genel Açıklama (opsiyonel)</Label>
                       <Textarea rows={2} value={row.description}
                         onChange={e => updateRow(row.id, { description: e.target.value })}
                         placeholder="Hakediş açıklaması" />
