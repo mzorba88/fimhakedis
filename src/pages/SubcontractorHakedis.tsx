@@ -393,6 +393,20 @@ export default function SubcontractorHakedis() {
     setIsDialogOpen(true);
   };
 
+  // Auto-open edit dialog when navigated with ?edit=<id>
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === editId);
+    if (hakedis) {
+      handleEditHakedis(hakedis);
+    }
+    // Clear param after handling
+    searchParams.delete('edit');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subcontractorHakedisler]);
+
   // Check if contract amount is exceeded
   const checkContractExceeded = (newTotalAmount: number, contractId: string, editingId?: string | null) => {
     const contract = workEntries.find(e => e.id === contractId);
