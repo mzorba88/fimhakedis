@@ -23,8 +23,16 @@ import {
   Pencil,
   Trash2,
   FileText,
-  Printer
+  Printer,
+  MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
