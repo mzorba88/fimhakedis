@@ -99,18 +99,26 @@ export default function SubcontractorHakedis() {
 
   // Small contractless hakediş dialog state
   const [isSmallHakedisDialogOpen, setIsSmallHakedisDialogOpen] = useState(false);
-  const [smallProjectMode, setSmallProjectMode] = useState<'existing' | 'custom'>('existing');
-  const [smallProjectId, setSmallProjectId] = useState('');
-  const [smallProjectName, setSmallProjectName] = useState('');
   const [smallSubcontractorMode, setSmallSubcontractorMode] = useState<'existing' | 'custom'>('existing');
   const [smallSubcontractor, setSmallSubcontractor] = useState('');
   const [smallCustomSubcontractor, setSmallCustomSubcontractor] = useState('');
   const [smallDate, setSmallDate] = useState(new Date().toISOString().split('T')[0]);
-  const [smallDescription, setSmallDescription] = useState('');
-  const [smallAmount, setSmallAmount] = useState('');
   const [smallCurrency, setSmallCurrency] = useState<Currency>('TRY');
-  const [smallVatRate, setSmallVatRate] = useState('10');
-  const [smallVatInclusive, setSmallVatInclusive] = useState(false);
+  // Multi-project rows for small hakediş
+  type SmallRow = {
+    projectMode: 'existing' | 'custom';
+    projectId: string;
+    projectName: string;
+    description: string;
+    amount: string;
+    vatRate: string;
+    vatInclusive: boolean;
+  };
+  const makeEmptyRow = (): SmallRow => ({
+    projectMode: 'existing', projectId: '', projectName: '',
+    description: '', amount: '', vatRate: '10', vatInclusive: false,
+  });
+  const [smallRows, setSmallRows] = useState<SmallRow[]>([makeEmptyRow()]);
   
   // Form state
   const [selectedProjectId, setSelectedProjectId] = useState('');
