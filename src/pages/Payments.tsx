@@ -22,7 +22,8 @@ import {
   Eye,
   Pencil,
   Trash2,
-  FileText
+  FileText,
+  Printer
 } from 'lucide-react';
 import { exportSinglePaymentToExcel } from '@/utils/excelExport';
 import { motion, AnimatePresence } from 'framer-motion';
