@@ -766,6 +766,24 @@ export default function Payments() {
                                           <Button
                                             size="sm"
                                             variant="outline"
+                                            onClick={async () => {
+                                              try {
+                                                const project = projects.find(p => p.id === hakedis.projectId);
+                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler, { autoPrint: true });
+                                              } catch (error) {
+                                                toast.error('Yazdırma için PDF oluşturulamadı');
+                                              }
+                                            }}
+                                            className="gap-1.5"
+                                            title="Yazdır"
+                                          >
+                                            <Printer className="h-4 w-4" />
+                                            Yazdır
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
                                             onClick={() => {
                                               const project = projects.find(p => p.id === hakedis.projectId);
                                               const contract = workEntries.find(c => c.id === hakedis.contractId);
