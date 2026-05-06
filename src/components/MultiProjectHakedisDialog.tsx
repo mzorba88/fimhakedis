@@ -174,9 +174,9 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
     const currency: Currency = (contract?.currency as Currency) || 'TRY';
     let base = 0;
     if (row.rowMode === 'small') {
-      const raw = parseFloat(row.amount) || 0;
+      const itemsTotal = row.smallItems.reduce((s, i) => s + i.amount, 0);
       const vr = row.vatRate !== '' ? Number(row.vatRate) : 0;
-      base = row.vatInclusive && vr > 0 ? raw / (1 + vr / 100) : raw;
+      base = row.vatInclusive && vr > 0 ? itemsTotal / (1 + vr / 100) : itemsTotal;
     } else if (contract) {
       if (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') {
         base = parseFloat(row.amount) || 0;
