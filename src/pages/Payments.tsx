@@ -6,7 +6,7 @@ import { SortableTableHeader, useSorting } from '@/components/SortableTableHeade
 import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
-import { generateHakedisPDF } from '@/utils/hakedisPdfExport';
+import { generateHakedisPDF } from '@/utils/pdfGenerator';
 import { exportSingleHakedisToExcel } from '@/utils/excelExport';
 import {
   Search,
