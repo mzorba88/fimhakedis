@@ -574,18 +574,12 @@ export default function SubcontractorHakedis() {
   };
 
   const resetSmallForm = () => {
-    setSmallProjectMode('existing');
-    setSmallProjectId('');
-    setSmallProjectName('');
     setSmallSubcontractorMode('existing');
     setSmallSubcontractor('');
     setSmallCustomSubcontractor('');
     setSmallDate(new Date().toISOString().split('T')[0]);
-    setSmallDescription('');
-    setSmallAmount('');
     setSmallCurrency('TRY');
-    setSmallVatRate('10');
-    setSmallVatInclusive(false);
+    setSmallRows([makeEmptyRow()]);
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
@@ -596,27 +590,20 @@ export default function SubcontractorHakedis() {
       toast.error('Lütfen altyüklenici seçin veya girin');
       return;
     }
-    if (!smallDescription.trim()) {
-      toast.error('Lütfen açıklama girin');
+
+    // Validate rows
+    const validRows = smallRows.filter(r => {
+      const amt = parseFloat(r.amount) || 0;
+      return amt > 0 && r.description.trim().length > 0;
+    });
+    if (validRows.length === 0) {
+      toast.error('Lütfen en az bir geçerli satır (proje + açıklama + tutar) girin');
       return;
     }
-    const rawAmount = parseFloat(smallAmount) || 0;
-    if (rawAmount <= 0) {
-      toast.error('Lütfen geçerli bir tutar girin');
+    if (isEditMode && validRows.length > 1) {
+      toast.error('Düzenleme modunda yalnızca tek satır kaydedilebilir');
       return;
     }
-
-    // Calculate base amount
-    const vr = smallVatRate !== '' ? Number(smallVatRate) : 0;
-    let totalAmount = rawAmount;
-    if (smallVatInclusive && vr > 0) {
-      totalAmount = rawAmount / (1 + vr / 100);
-    }
-
-    // Build project label for description
-    const projectLabel = smallProjectMode === 'existing' 
-      ? projects.find(p => p.id === smallProjectId)?.projectName || '' 
-      : smallProjectName.trim();
 
     try {
       // If new subcontractor, add to DB
@@ -624,25 +611,40 @@ export default function SubcontractorHakedis() {
         await addSubcontractor(smallCustomSubcontractor.trim());
       }
 
-      // Generate hakediş number using counter - use max existing number to avoid duplicates
+      const selectedSub = subcontractors.find(s => s.name === subcontractorName);
+      const workCategoryLabel = selectedSub?.workCategory ? `[${selectedSub.workCategory}] ` : '';
+
+      // Compute starting hakediş number
       const existingSmallNos = subcontractorHakedisler
         .filter(h => !h.contractId && h.hakedisNo?.startsWith('KH-S'))
         .map(h => {
           const num = parseInt(h.hakedisNo.replace('KH-S', ''), 10);
           return isNaN(num) ? 0 : num;
         });
-      const nextNum = existingSmallNos.length > 0 ? Math.max(...existingSmallNos) + 1 : 1;
-      const hakedisNo = `KH-S${nextNum.toString().padStart(3, '0')}`;
+      let nextNum = existingSmallNos.length > 0 ? Math.max(...existingSmallNos) + 1 : 1;
 
-        // Get work category for the subcontractor
-        const selectedSub = subcontractors.find(s => s.name === subcontractorName);
-        const workCategoryLabel = selectedSub?.workCategory ? `[${selectedSub.workCategory}] ` : '';
-        const projectPrefix = smallProjectMode === 'custom' && smallProjectName.trim() ? `[Proje: ${smallProjectName.trim()}] ` : '';
+      let createdCount = 0;
+      for (const row of validRows) {
+        const rawAmount = parseFloat(row.amount) || 0;
+        const vr = row.vatRate !== '' ? Number(row.vatRate) : 0;
+        let totalAmount = rawAmount;
+        if (row.vatInclusive && vr > 0) {
+          totalAmount = rawAmount / (1 + vr / 100);
+        }
+
+        const projectLabel = row.projectMode === 'existing'
+          ? projects.find(p => p.id === row.projectId)?.projectName || ''
+          : row.projectName.trim();
+        const projectPrefix = row.projectMode === 'custom' && row.projectName.trim()
+          ? `[Proje: ${row.projectName.trim()}] ` : '';
+
+        const hakedisNo = `KH-S${nextNum.toString().padStart(3, '0')}`;
+        nextNum++;
 
         const hakedisData = {
           hakedisNo,
           hakedisType: 'ara_hakedis' as const,
-          projectId: smallProjectMode === 'existing' && smallProjectId ? smallProjectId : (null as any),
+          projectId: row.projectMode === 'existing' && row.projectId ? row.projectId : (null as any),
           subcontractor: subcontractorName,
           contractId: null as any,
           contractNo: null as any,
@@ -650,48 +652,49 @@ export default function SubcontractorHakedis() {
           currency: smallCurrency,
           vatRate: vr > 0 ? vr : null,
           date: smallDate,
-          description: `${workCategoryLabel}${projectPrefix}${smallDescription.trim()}`,
-        paymentAmount: totalAmount,
-        totalAmount,
-        createdBy: currentUser.id,
-        approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
-        approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
-        approvalDate: currentUser.role === 'direktor' ? new Date().toISOString() : undefined,
-        paidAmount: 0,
-        paymentStatus: 'odenmedi' as PaymentStatus,
-      };
+          description: `${workCategoryLabel}${projectPrefix}${row.description.trim()}`,
+          paymentAmount: totalAmount,
+          totalAmount,
+          createdBy: currentUser.id,
+          approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
+          approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
+          approvalDate: currentUser.role === 'direktor' ? new Date().toISOString() : undefined,
+          paidAmount: 0,
+          paymentStatus: 'odenmedi' as PaymentStatus,
+        };
 
-      console.log('Saving small hakedis with data:', JSON.stringify(hakedisData));
+        if (isEditMode && editingHakedisId) {
+          const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
+          await updateSubcontractorHakedis(editingHakedisId, {
+            ...hakedisData,
+            hakedisNo: existingHakedis?.hakedisNo || hakedisData.hakedisNo,
+            approvalStatus: existingHakedis?.approvalStatus === 'revize' ? 'onay_bekliyor' as ApprovalStatus : existingHakedis?.approvalStatus || 'onay_bekliyor' as ApprovalStatus,
+          });
 
-      if (isEditMode && editingHakedisId) {
-        const existingHakedis = subcontractorHakedisler.find(h => h.id === editingHakedisId);
-        await updateSubcontractorHakedis(editingHakedisId, {
-          ...hakedisData,
-          hakedisNo: existingHakedis?.hakedisNo || hakedisData.hakedisNo,
-          approvalStatus: existingHakedis?.approvalStatus === 'revize' ? 'onay_bekliyor' as ApprovalStatus : existingHakedis?.approvalStatus || 'onay_bekliyor' as ApprovalStatus,
-        });
+          await addActivityLog(
+            'hakedis_updated',
+            `${existingHakedis?.hakedisNo} Sözleşmesiz Küçük Hakediş güncellendi`,
+            `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}`,
+            editingHakedisId,
+            'hakedis'
+          );
+        } else {
+          const newHakedis = await addSubcontractorHakedis(hakedisData);
+          await addActivityLog(
+            'hakedis_created',
+            `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
+            `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+            newHakedis.id,
+            'hakedis'
+          );
+          createdCount++;
+        }
+      }
 
-        await addActivityLog(
-          'hakedis_updated',
-          `${existingHakedis?.hakedisNo} Sözleşmesiz Küçük Hakediş güncellendi`,
-          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}`,
-          editingHakedisId,
-          'hakedis'
-        );
-
+      if (isEditMode) {
         toast.success('Hakediş güncellendi');
       } else {
-        const newHakedis = await addSubcontractorHakedis(hakedisData);
-
-        await addActivityLog(
-          'hakedis_created',
-          `${newHakedis.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
-          `Altyüklenici: ${subcontractorName} - Tutar: ${formatCurrencyWithType(totalAmount, smallCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
-          newHakedis.id,
-          'hakedis'
-        );
-
-        toast.success('Sözleşmesiz küçük hakediş oluşturuldu');
+        toast.success(createdCount > 1 ? `${createdCount} hakediş oluşturuldu` : 'Sözleşmesiz küçük hakediş oluşturuldu');
       }
       setIsSmallHakedisDialogOpen(false);
       resetSmallForm();
