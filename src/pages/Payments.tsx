@@ -64,17 +64,20 @@ const fetchExchangeRates = async (): Promise<ExchangeRates> => {
 };
 
 export default function Payments() {
-  const { 
-    projects, 
+  const {
+    projects,
     workEntries,
     subcontractorHakedisler,
     markAsPaid,
     markHakedisAsPaid,
     updateSubcontractorHakedis,
+    deleteSubcontractorHakedis,
     currentUser,
     addActivityLog
   } = useHakedisStore();
-  
+
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterPayment, setFilterPayment] = useState<string>('odenmedi');
@@ -88,6 +91,8 @@ export default function Payments() {
   const [vatEditDialogOpen, setVatEditDialogOpen] = useState(false);
   const [vatEditHakedisId, setVatEditHakedisId] = useState<string | null>(null);
   const [vatEditValue, setVatEditValue] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hakedisToDelete, setHakedisToDelete] = useState<string | null>(null);
 
   // Only show approved hakedisler
   const approvedHakedisler = subcontractorHakedisler.filter(h => h.approvalStatus === 'onaylandi');
