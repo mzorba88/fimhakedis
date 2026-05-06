@@ -24,6 +24,15 @@ interface Props {
 
 type RowMode = 'contract' | 'small';
 
+interface SmallItem {
+  id: string;
+  description: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  amount: number;
+}
+
 interface ProjectRow {
   id: string;
   projectMode: 'existing' | 'custom';
@@ -34,14 +43,25 @@ interface ProjectRow {
   hakedisType: HakedisRecordType;
   date: string;
   description: string;
-  // götürü bedel / alelhesap / small
+  // götürü bedel / alelhesap (contract mode)
   amount: string;
   // birim fiyat
   hakedisItems: HakedisItem[];
   extraItems: ExtraWorkItem[];
+  // small mode items
+  smallItems: SmallItem[];
   vatRate: string;
   vatInclusive: boolean;
 }
+
+const makeSmallItem = (): SmallItem => ({
+  id: crypto.randomUUID(),
+  description: '',
+  unit: 'adet',
+  unitPrice: 0,
+  quantity: 0,
+  amount: 0,
+});
 
 const makeRow = (): ProjectRow => ({
   id: crypto.randomUUID(),
@@ -56,6 +76,7 @@ const makeRow = (): ProjectRow => ({
   amount: '',
   hakedisItems: [],
   extraItems: [],
+  smallItems: [makeSmallItem()],
   vatRate: '10',
   vatInclusive: false,
 });
@@ -153,9 +174,9 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
     const currency: Currency = (contract?.currency as Currency) || 'TRY';
     let base = 0;
     if (row.rowMode === 'small') {
-      const raw = parseFloat(row.amount) || 0;
+      const itemsTotal = row.smallItems.reduce((s, i) => s + i.amount, 0);
       const vr = row.vatRate !== '' ? Number(row.vatRate) : 0;
-      base = row.vatInclusive && vr > 0 ? raw / (1 + vr / 100) : raw;
+      base = row.vatInclusive && vr > 0 ? itemsTotal / (1 + vr / 100) : itemsTotal;
     } else if (contract) {
       if (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') {
         base = parseFloat(row.amount) || 0;
@@ -189,8 +210,8 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
         const { base } = computeRowTotal(r);
         if (base <= 0) continue;
       } else {
-        const amt = parseFloat(r.amount) || 0;
-        if (amt <= 0 || !r.description.trim()) continue;
+        const validItems = r.smallItems.filter(i => i.amount > 0 && i.description.trim());
+        if (validItems.length === 0) continue;
       }
       validRows.push(r);
     }
@@ -232,6 +253,20 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           const hakedisNo = `KH-S${String(nextSmallNum).padStart(3, '0')}`;
           nextSmallNum++;
 
+          const validItems = row.smallItems.filter(i => i.amount > 0 && i.description.trim());
+          const itemsAsExtra: ExtraWorkItem[] = validItems.map(i => ({
+            id: i.id,
+            description: i.description.trim(),
+            unit: i.unit,
+            unitPrice: i.unitPrice,
+            quantity: i.quantity,
+            amount: i.amount,
+          }));
+          const autoDescription = validItems.map(i =>
+            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, 'TRY')})`
+          ).join('; ');
+          const finalDescription = `${workCategoryLabel}${projectPrefix}${row.description.trim() || autoDescription}`;
+
           const data = {
             hakedisNo,
             hakedisType: 'ara_hakedis' as HakedisRecordType,
@@ -243,8 +278,9 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             currency: 'TRY' as Currency,
             vatRate: row.vatRate !== '' && Number(row.vatRate) > 0 ? Number(row.vatRate) : null,
             date: row.date,
-            description: `${workCategoryLabel}${projectPrefix}${row.description.trim()}`,
+            description: finalDescription,
             paymentAmount: totalAmount,
+            extraItems: itemsAsExtra.length > 0 ? itemsAsExtra : undefined,
             totalAmount,
             createdBy: currentUser.id,
             approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
@@ -534,21 +570,96 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label className="text-xs">Açıklama {row.rowMode === 'small' && <span className="text-destructive">*</span>}</Label>
+                      <Label className="text-xs">Genel Açıklama (opsiyonel)</Label>
                       <Textarea rows={2} value={row.description}
                         onChange={e => updateRow(row.id, { description: e.target.value })}
                         placeholder="Hakediş açıklaması" />
                     </div>
 
-                    {/* Amount input for small or götürü/alelhesap */}
-                    {(row.rowMode === 'small' ||
-                      (row.rowMode === 'contract' && contract &&
-                        (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel'))) && (
+                    {/* Amount input for contract götürü/alelhesap */}
+                    {row.rowMode === 'contract' && contract &&
+                      (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') && (
                       <div className="space-y-2">
                         <Label className="text-xs">Tutar ({currency})</Label>
                         <Input type="number" placeholder="0.00" value={row.amount}
                           onChange={e => updateRow(row.id, { amount: e.target.value })}
                           min="0" step="0.01" />
+                      </div>
+                    )}
+
+                    {/* Small mode item table */}
+                    {row.rowMode === 'small' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">İş Kalemleri</Label>
+                          <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                            onClick={() => updateRow(row.id, { smallItems: [...row.smallItems, makeSmallItem()] })}>
+                            <Plus className="h-3 w-3" /> Kalem Ekle
+                          </Button>
+                        </div>
+                        <div className="rounded border overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left p-2">Açıklama</th>
+                                <th className="text-left p-2 w-20">Birim</th>
+                                <th className="text-right p-2 w-24">Birim Fiyat</th>
+                                <th className="text-right p-2 w-20">Miktar</th>
+                                <th className="text-right p-2 w-28">Tutar</th>
+                                <th className="w-8"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.smallItems.map((item, sIdx) => {
+                                const updateItem = (patch: Partial<SmallItem>) => {
+                                  const updated = { ...item, ...patch };
+                                  updated.amount = (updated.quantity || 0) * (updated.unitPrice || 0);
+                                  updateRow(row.id, {
+                                    smallItems: row.smallItems.map((it, i) => i === sIdx ? updated : it),
+                                  });
+                                };
+                                return (
+                                  <tr key={item.id} className="border-t">
+                                    <td className="p-1.5">
+                                      <Input value={item.description} placeholder="İş açıklaması"
+                                        className="h-7 text-xs"
+                                        onChange={e => updateItem({ description: e.target.value })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input value={item.unit} placeholder="adet"
+                                        className="h-7 text-xs"
+                                        onChange={e => updateItem({ unit: e.target.value })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input type="number" value={item.unitPrice || ''} min="0" step="0.01"
+                                        className="h-7 text-xs text-right"
+                                        onChange={e => updateItem({ unitPrice: parseFloat(e.target.value) || 0 })} />
+                                    </td>
+                                    <td className="p-1.5">
+                                      <Input type="number" value={item.quantity || ''} min="0" step="0.01"
+                                        className="h-7 text-xs text-right"
+                                        onChange={e => updateItem({ quantity: parseFloat(e.target.value) || 0 })} />
+                                    </td>
+                                    <td className="p-1.5 text-right font-medium">
+                                      {formatCurrencyWithType(item.amount, currency)}
+                                    </td>
+                                    <td className="p-1.5">
+                                      {row.smallItems.length > 1 && (
+                                        <Button type="button" variant="ghost" size="sm"
+                                          className="h-6 w-6 p-0 text-destructive"
+                                          onClick={() => updateRow(row.id, {
+                                            smallItems: row.smallItems.filter((_, i) => i !== sIdx),
+                                          })}>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 
