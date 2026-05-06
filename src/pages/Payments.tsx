@@ -405,6 +405,30 @@ export default function Payments() {
     }
   };
 
+  const handleDeleteHakedis = async () => {
+    if (!hakedisToDelete) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === hakedisToDelete);
+    try {
+      await deleteSubcontractorHakedis(hakedisToDelete);
+      if (hakedis) {
+        await addActivityLog(
+          'hakedis_deleted',
+          `${hakedis.hakedisNo} hakedişi silindi`,
+          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
+          hakedisToDelete,
+          'hakedis'
+        );
+      }
+      toast.success('Hakediş silindi');
+    } catch (error) {
+      console.error('Error deleting hakedis:', error);
+      toast.error('Silme işlemi başarısız');
+    } finally {
+      setDeleteDialogOpen(false);
+      setHakedisToDelete(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6">
