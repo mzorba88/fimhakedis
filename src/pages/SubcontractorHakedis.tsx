@@ -315,7 +315,7 @@ export default function SubcontractorHakedis() {
   const handleEditHakedis = (hakedis: HakedisType) => {
     // Only allow editing for pending approval or revision required hakedis
     if (hakedis.approvalStatus !== 'onay_bekliyor' && hakedis.approvalStatus !== 'revize') {
-      toast.error('Sadece onay bekleyen veya revize gerekli hakedişler düzenlenebilir');
+      toast.error('Sadece onay bekleyen veya revize gerekli hakedişler düzenlenebilir. Önce ödemeler ekranından "Onay İptali" ile düzenlenebilir hale getirin.');
       return;
     }
 
