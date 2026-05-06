@@ -210,8 +210,8 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
         const { base } = computeRowTotal(r);
         if (base <= 0) continue;
       } else {
-        const amt = parseFloat(r.amount) || 0;
-        if (amt <= 0 || !r.description.trim()) continue;
+        const validItems = r.smallItems.filter(i => i.amount > 0 && i.description.trim());
+        if (validItems.length === 0) continue;
       }
       validRows.push(r);
     }
