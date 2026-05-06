@@ -1065,6 +1065,22 @@ export default function Payments() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Hakediş Kaydını Sil</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground py-2">
+              Bu hakediş kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setHakedisToDelete(null); }}>İptal</Button>
+              <Button variant="destructive" onClick={handleDeleteHakedis}>Sil</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
