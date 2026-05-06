@@ -2295,39 +2295,11 @@ export default function SubcontractorHakedis() {
 
         {/* Small Contractless Hakediş Dialog */}
         <Dialog open={isSmallHakedisDialogOpen} onOpenChange={(open) => { if (!open) { resetSmallForm(); } setIsSmallHakedisDialogOpen(open); }}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Sözleşmesiz Küçük Hakediş</DialogTitle>
+              <DialogTitle>{isEditMode ? 'Sözleşmesiz Küçük Hakediş Düzenle' : 'Sözleşmesiz Küçük Hakediş'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              {/* Project */}
-              <div className="space-y-2">
-                <Label>Proje</Label>
-                <Select value={smallProjectMode} onValueChange={(v: 'existing' | 'custom') => { setSmallProjectMode(v); setSmallProjectId(''); setSmallProjectName(''); }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="existing">Mevcut Proje</SelectItem>
-                    <SelectItem value="custom">Küçük İş (Serbest Giriş)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {smallProjectMode === 'existing' ? (
-                  <Select value={smallProjectId} onValueChange={setSmallProjectId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Proje seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input placeholder="Proje / iş adını yazın" value={smallProjectName} onChange={e => setSmallProjectName(e.target.value)} />
-                )}
-              </div>
-
               {/* Subcontractor */}
               <div className="space-y-2">
                 <Label>Altyüklenici</Label>
@@ -2354,7 +2326,6 @@ export default function SubcontractorHakedis() {
                 ) : (
                   <Input placeholder="Altyüklenici adını yazın" value={smallCustomSubcontractor} onChange={e => setSmallCustomSubcontractor(e.target.value)} />
                 )}
-                {/* Show work category of selected subcontractor */}
                 {smallSubcontractorMode === 'existing' && smallSubcontractor && (() => {
                   const sub = subcontractors.find(s => s.name === smallSubcontractor);
                   return sub?.workCategory ? (
@@ -2365,23 +2336,11 @@ export default function SubcontractorHakedis() {
                 })()}
               </div>
 
-              {/* Date */}
-              <div className="space-y-2">
-                <Label>Tarih</Label>
-                <Input type="date" value={smallDate} onChange={e => setSmallDate(e.target.value)} />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label>Açıklama</Label>
-                <Textarea placeholder="Hakediş açıklaması" value={smallDescription} onChange={e => setSmallDescription(e.target.value)} rows={3} />
-              </div>
-
-              {/* Amount + Currency */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2 space-y-2">
-                  <Label>Tutar</Label>
-                  <Input type="number" placeholder="0.00" value={smallAmount} onChange={e => setSmallAmount(e.target.value)} min="0" step="0.01" />
+              {/* Date + Currency */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Tarih</Label>
+                  <Input type="date" value={smallDate} onChange={e => setSmallDate(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Para Birimi</Label>
@@ -2399,54 +2358,108 @@ export default function SubcontractorHakedis() {
                 </div>
               </div>
 
-              {/* VAT Rate + Inclusive */}
-              <div className="space-y-2">
-                <Label>KDV Oranı (%)</Label>
-                <div className="flex items-center gap-3">
-                  <Input type="number" className="w-24" value={smallVatRate} onChange={e => setSmallVatRate(e.target.value)} min="0" step="1" />
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="small-vat-inclusive" checked={smallVatInclusive} onCheckedChange={(checked) => setSmallVatInclusive(checked === true)} />
-                    <Label htmlFor="small-vat-inclusive" className="text-sm cursor-pointer">Dahil</Label>
-                  </div>
+              {/* Project rows */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Proje Satırları {!isEditMode && <span className="text-xs text-muted-foreground font-normal">(Aynı altyüklenici için birden fazla projede hakediş girebilirsiniz)</span>}</Label>
+                  {!isEditMode && (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSmallRows(prev => [...prev, makeEmptyRow()])} className="gap-1">
+                      <Plus className="h-3.5 w-3.5" /> Satır Ekle
+                    </Button>
+                  )}
                 </div>
+
+                {smallRows.map((row, idx) => {
+                  const rawAmt = parseFloat(row.amount) || 0;
+                  const vr = row.vatRate !== '' ? Number(row.vatRate) : 0;
+                  let baseAmount = rawAmt;
+                  if (row.vatInclusive && vr > 0) baseAmount = rawAmt / (1 + vr / 100);
+                  const vatAmount = vr > 0 ? baseAmount * (vr / 100) : 0;
+                  const totalWithVat = baseAmount + vatAmount;
+
+                  const updateRow = (patch: Partial<SmallRow>) => {
+                    setSmallRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
+                  };
+
+                  return (
+                    <div key={idx} className="rounded-lg border p-3 space-y-3 bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground">Satır {idx + 1}</span>
+                        {smallRows.length > 1 && !isEditMode && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setSmallRows(prev => prev.filter((_, i) => i !== idx))} className="h-7 px-2 text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Project */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Proje</Label>
+                        <Select value={row.projectMode} onValueChange={(v: 'existing' | 'custom') => updateRow({ projectMode: v, projectId: '', projectName: '' })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="existing">Mevcut Proje</SelectItem>
+                            <SelectItem value="custom">Küçük İş (Serbest Giriş)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {row.projectMode === 'existing' ? (
+                          <Select value={row.projectId} onValueChange={(v) => updateRow({ projectId: v })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Proje seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {projects.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input placeholder="Proje / iş adını yazın" value={row.projectName} onChange={e => updateRow({ projectName: e.target.value })} />
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Açıklama</Label>
+                        <Textarea placeholder="Hakediş açıklaması" value={row.description} onChange={e => updateRow({ description: e.target.value })} rows={2} />
+                      </div>
+
+                      {/* Amount + VAT */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Tutar</Label>
+                          <Input type="number" placeholder="0.00" value={row.amount} onChange={e => updateRow({ amount: e.target.value })} min="0" step="0.01" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">KDV Oranı (%)</Label>
+                          <div className="flex items-center gap-2">
+                            <Input type="number" className="w-20" value={row.vatRate} onChange={e => updateRow({ vatRate: e.target.value })} min="0" step="1" />
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox id={`small-vat-inclusive-${idx}`} checked={row.vatInclusive} onCheckedChange={(checked) => updateRow({ vatInclusive: checked === true })} />
+                              <Label htmlFor={`small-vat-inclusive-${idx}`} className="text-xs cursor-pointer">Dahil</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {rawAmt > 0 && (
+                        <div className="rounded border bg-background p-2.5 space-y-1 text-xs">
+                          {row.vatInclusive && vr > 0 && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">Girilen (KDV Dahil)</span><span>{formatCurrencyWithType(rawAmt, smallCurrency)}</span></div>
+                          )}
+                          <div className="flex justify-between"><span className="text-muted-foreground">KDV Hariç</span><span>{formatCurrencyWithType(baseAmount, smallCurrency)}</span></div>
+                          {vr > 0 && (
+                            <div className="flex justify-between"><span className="text-muted-foreground">KDV (%{vr})</span><span>{formatCurrencyWithType(vatAmount, smallCurrency)}</span></div>
+                          )}
+                          <div className="flex justify-between font-semibold border-t pt-1"><span>KDV Dahil Toplam</span><span className="text-primary">{formatCurrencyWithType(totalWithVat, smallCurrency)}</span></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-
-              {/* Calculated totals */}
-              {(() => {
-                const rawAmt = parseFloat(smallAmount) || 0;
-                const vr = smallVatRate !== '' ? Number(smallVatRate) : 0;
-                let baseAmount = rawAmt;
-                if (smallVatInclusive && vr > 0) {
-                  baseAmount = rawAmt / (1 + vr / 100);
-                }
-                const vatAmount = vr > 0 ? baseAmount * (vr / 100) : 0;
-                const totalWithVat = baseAmount + vatAmount;
-
-                return rawAmt > 0 ? (
-                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                    {smallVatInclusive && vr > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Girilen Tutar (KDV Dahil)</span>
-                        <span>{formatCurrencyWithType(rawAmt, smallCurrency)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">KDV Hariç Tutar</span>
-                      <span>{formatCurrencyWithType(baseAmount, smallCurrency)}</span>
-                    </div>
-                    {vr > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">KDV (%{vr})</span>
-                        <span>{formatCurrencyWithType(vatAmount, smallCurrency)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-semibold border-t pt-2">
-                      <span>KDV Dahil Toplam</span>
-                      <span className="text-primary">{formatCurrencyWithType(totalWithVat, smallCurrency)}</span>
-                    </div>
-                  </div>
-                ) : null;
-              })()}
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => { resetSmallForm(); setIsSmallHakedisDialogOpen(false); }}>İptal</Button>
