@@ -731,13 +731,34 @@ export default function Payments() {
                                               Onay İptali
                                             </Button>
                                           )}
+                                          {!isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => navigate(`/altyuklenici-hakedis?edit=${hakedis.id}`)}
+                                              className="gap-1.5"
+                                              title="Düzenle"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                              Düzenle
+                                            </Button>
+                                          )}
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => generatePaymentPdf(hakedis)}
+                                            onClick={async () => {
+                                              try {
+                                                const project = projects.find(p => p.id === hakedis.projectId);
+                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                                                toast.success('PDF rapor indirildi');
+                                              } catch (error) {
+                                                toast.error('PDF oluşturulamadı');
+                                              }
+                                            }}
                                             className="gap-1.5"
                                           >
-                                            <FileDown className="h-4 w-4" />
+                                            <FileText className="h-4 w-4" />
                                             PDF
                                           </Button>
                                           <Button
@@ -746,13 +767,28 @@ export default function Payments() {
                                             onClick={() => {
                                               const project = projects.find(p => p.id === hakedis.projectId);
                                               const contract = workEntries.find(c => c.id === hakedis.contractId);
-                                              exportSinglePaymentToExcel(hakedis, project, contract);
+                                              exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
                                             }}
                                             className="gap-1.5"
                                           >
                                             <FileSpreadsheet className="h-4 w-4" />
                                             Excel
                                           </Button>
+                                          {!isPaid && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setHakedisToDelete(hakedis.id);
+                                                setDeleteDialogOpen(true);
+                                              }}
+                                              className="gap-1.5 text-destructive hover:text-destructive"
+                                              title="Sil"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                              Sil
+                                            </Button>
+                                          )}
                                         </div>
                                       </td>
                                     )}
