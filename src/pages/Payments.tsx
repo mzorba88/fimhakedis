@@ -703,7 +703,7 @@ export default function Payments() {
                                     </td>
                                     {canManagePayments && (
                                       <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                                        <div className="flex items-center justify-end gap-1.5">
                                           {!isPaid && (
                                             <>
                                               <Button
@@ -725,98 +725,97 @@ export default function Payments() {
                                                 className="gap-1.5"
                                               >
                                                 <CreditCard className="h-4 w-4" />
-                                                Kısmi Ödeme
+                                                Kısmi
                                               </Button>
                                             </>
                                           )}
-                                          {canCancelApproval && !isPaid && (
-                                            <Button
-                                              size="sm"
-                                              variant="destructive"
-                                              onClick={() => handleCancelApproval(hakedis.id)}
-                                              className="gap-1.5"
-                                              title="Onay İptal Et — düzenleme için"
-                                            >
-                                              <XCircle className="h-4 w-4" />
-                                              Onay İptali
-                                            </Button>
-                                          )}
-                                          {!isPaid && (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => navigate(`/altyuklenici-hakedis?edit=${hakedis.id}`)}
-                                              className="gap-1.5"
-                                              title="Düzenle"
-                                            >
-                                              <Pencil className="h-4 w-4" />
-                                              Düzenle
-                                            </Button>
-                                          )}
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={async () => {
-                                              try {
-                                                const project = projects.find(p => p.id === hakedis.projectId);
-                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
-                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
-                                                toast.success('PDF rapor indirildi');
-                                              } catch (error) {
-                                                toast.error('PDF oluşturulamadı');
-                                              }
-                                            }}
-                                            className="gap-1.5"
-                                          >
-                                            <FileText className="h-4 w-4" />
-                                            PDF
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={async () => {
-                                              try {
-                                                const project = projects.find(p => p.id === hakedis.projectId);
-                                                const contract = workEntries.find(e => e.id === hakedis.contractId);
-                                                await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler, { autoPrint: true });
-                                              } catch (error) {
-                                                toast.error('Yazdırma için PDF oluşturulamadı');
-                                              }
-                                            }}
-                                            className="gap-1.5"
-                                            title="Yazdır"
-                                          >
-                                            <Printer className="h-4 w-4" />
-                                            Yazdır
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => {
-                                              const project = projects.find(p => p.id === hakedis.projectId);
-                                              const contract = workEntries.find(c => c.id === hakedis.contractId);
-                                              exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
-                                            }}
-                                            className="gap-1.5"
-                                          >
-                                            <FileSpreadsheet className="h-4 w-4" />
-                                            Excel
-                                          </Button>
-                                          {!isPaid && (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => {
-                                                setHakedisToDelete(hakedis.id);
-                                                setDeleteDialogOpen(true);
-                                              }}
-                                              className="gap-1.5 text-destructive hover:text-destructive"
-                                              title="Sil"
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                              Sil
-                                            </Button>
-                                          )}
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="gap-1.5"
+                                                title="Diğer işlemler"
+                                              >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                İşlemler
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48 bg-popover">
+                                              {!isPaid && (
+                                                <DropdownMenuItem
+                                                  onClick={() => navigate(`/altyuklenici-hakedis?edit=${hakedis.id}`)}
+                                                >
+                                                  <Pencil className="h-4 w-4 mr-2" />
+                                                  Düzenle
+                                                </DropdownMenuItem>
+                                              )}
+                                              {canCancelApproval && !isPaid && (
+                                                <DropdownMenuItem
+                                                  onClick={() => handleCancelApproval(hakedis.id)}
+                                                  className="text-destructive focus:text-destructive"
+                                                >
+                                                  <XCircle className="h-4 w-4 mr-2" />
+                                                  Onay İptali
+                                                </DropdownMenuItem>
+                                              )}
+                                              {!isPaid && <DropdownMenuSeparator />}
+                                              <DropdownMenuItem
+                                                onClick={async () => {
+                                                  try {
+                                                    const project = projects.find(p => p.id === hakedis.projectId);
+                                                    const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                    await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler);
+                                                    toast.success('PDF rapor indirildi');
+                                                  } catch (error) {
+                                                    toast.error('PDF oluşturulamadı');
+                                                  }
+                                                }}
+                                              >
+                                                <FileText className="h-4 w-4 mr-2" />
+                                                PDF İndir
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={async () => {
+                                                  try {
+                                                    const project = projects.find(p => p.id === hakedis.projectId);
+                                                    const contract = workEntries.find(e => e.id === hakedis.contractId);
+                                                    await generateHakedisPDF(hakedis, project, contract, subcontractorHakedisler, { autoPrint: true });
+                                                  } catch (error) {
+                                                    toast.error('Yazdırma için PDF oluşturulamadı');
+                                                  }
+                                                }}
+                                              >
+                                                <Printer className="h-4 w-4 mr-2" />
+                                                Yazdır
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  const project = projects.find(p => p.id === hakedis.projectId);
+                                                  const contract = workEntries.find(c => c.id === hakedis.contractId);
+                                                  exportSingleHakedisToExcel(hakedis, project, contract, subcontractorHakedisler);
+                                                }}
+                                              >
+                                                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                                Excel İndir
+                                              </DropdownMenuItem>
+                                              {!isPaid && (
+                                                <>
+                                                  <DropdownMenuSeparator />
+                                                  <DropdownMenuItem
+                                                    onClick={() => {
+                                                      setHakedisToDelete(hakedis.id);
+                                                      setDeleteDialogOpen(true);
+                                                    }}
+                                                    className="text-destructive focus:text-destructive"
+                                                  >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Sil
+                                                  </DropdownMenuItem>
+                                                </>
+                                              )}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
                                         </div>
                                       </td>
                                     )}
