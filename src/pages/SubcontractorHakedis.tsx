@@ -70,6 +70,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { MultiProjectHakedisDialog } from '@/components/MultiProjectHakedisDialog';
 
 export default function SubcontractorHakedis() {
   const { 
@@ -93,6 +94,7 @@ export default function SubcontractorHakedis() {
   const [filterPayment, setFilterPayment] = useState<string>('all');
   const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'desc' });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isMultiDialogOpen, setIsMultiDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -742,11 +744,7 @@ export default function SubcontractorHakedis() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={() => setIsSmallHakedisDialogOpen(true)} variant="outline" className="gap-2 w-full sm:w-auto touch-target">
-              <Receipt className="h-4 w-4" />
-              Sözleşmesiz Küçük Hakediş
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
+            <Button onClick={() => setIsMultiDialogOpen(true)} className="gap-2 w-full sm:w-auto touch-target">
               <Plus className="h-4 w-4" />
               Yeni Hakediş
             </Button>
@@ -2483,6 +2481,12 @@ export default function SubcontractorHakedis() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Multi-Project Hakediş Dialog (new) */}
+        <MultiProjectHakedisDialog
+          open={isMultiDialogOpen}
+          onOpenChange={setIsMultiDialogOpen}
+        />
       </div>
     </MainLayout>
   );
