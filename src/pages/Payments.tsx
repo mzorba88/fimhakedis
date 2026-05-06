@@ -446,6 +446,18 @@ export default function Payments() {
                 <span className="sm:hidden">Güncelle</span>
               </Button>
             </div>
+
+            {/* Per-currency breakdown */}
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-3 border-t border-border/60">
+              {(['TRY', 'USD', 'EUR', 'GBP'] as Currency[]).map((cur) => (
+                <div key={cur} className="rounded-lg bg-muted/40 px-3 py-2">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Bekleyen {cur}</p>
+                  <p className="text-sm sm:text-base font-semibold text-foreground">
+                    {formatCurrencyWithType(unpaidByCurrency[cur] || 0, cur)}
+                  </p>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
 
