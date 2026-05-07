@@ -590,12 +590,16 @@ export default function Payments() {
                   const colSpan = canManagePayments ? 9 : 8;
 
                   return subEntries.map(([subName, projMap]) => {
-                    // Compute subcontractor totals per currency (remaining)
-                    const subTotals: Record<string, number> = {};
+                    // Compute subcontractor totals per currency (remaining) — both KDV hariç & KDV dahil
+                    const subTotals: Record<string, { excl: number; incl: number }> = {};
                     let subHakedisCount = 0;
                     projMap.forEach(arr => arr.forEach(h => {
                       const remaining = h.totalAmount - (h.paidAmount || 0);
-                      subTotals[h.currency] = (subTotals[h.currency] || 0) + remaining;
+                      const vr = h.vatRate && h.vatRate > 0 ? h.vatRate : 0;
+                      const remainingIncl = remaining * (1 + vr / 100);
+                      if (!subTotals[h.currency]) subTotals[h.currency] = { excl: 0, incl: 0 };
+                      subTotals[h.currency].excl += remaining;
+                      subTotals[h.currency].incl += remainingIncl;
                       subHakedisCount++;
                     }));
 
