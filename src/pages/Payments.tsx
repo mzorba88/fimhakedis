@@ -252,7 +252,7 @@ export default function Payments() {
       await updateSubcontractorHakedis(selectedHakedisForPartial, {
         paidAmount: newPaidAmount,
         paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
-        paidDate: isFullyPaid ? new Date().toISOString() : hakedis.paidDate,
+        paidDate: new Date().toISOString(),
       });
 
       await addActivityLog(
@@ -590,12 +590,16 @@ export default function Payments() {
                   const colSpan = canManagePayments ? 9 : 8;
 
                   return subEntries.map(([subName, projMap]) => {
-                    // Compute subcontractor totals per currency (remaining)
-                    const subTotals: Record<string, number> = {};
+                    // Compute subcontractor totals per currency (remaining) — both KDV hariç & KDV dahil
+                    const subTotals: Record<string, { excl: number; incl: number }> = {};
                     let subHakedisCount = 0;
                     projMap.forEach(arr => arr.forEach(h => {
                       const remaining = h.totalAmount - (h.paidAmount || 0);
-                      subTotals[h.currency] = (subTotals[h.currency] || 0) + remaining;
+                      const vr = h.vatRate && h.vatRate > 0 ? h.vatRate : 0;
+                      const remainingIncl = remaining * (1 + vr / 100);
+                      if (!subTotals[h.currency]) subTotals[h.currency] = { excl: 0, incl: 0 };
+                      subTotals[h.currency].excl += remaining;
+                      subTotals[h.currency].incl += remainingIncl;
                       subHakedisCount++;
                     }));
 
@@ -681,7 +685,7 @@ export default function Payments() {
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                       <StatusBadge status={hakedis.paymentStatus} />
-                                      {isPaid && hakedis.paidDate && (
+                                      {hakedis.paidDate && (hakedis.paymentStatus === 'odendi' || hakedis.paymentStatus === 'kismen_odendi') && (
                                         <p className="text-xs text-muted-foreground mt-1">
                                           {formatDate(hakedis.paidDate)}
                                         </p>
@@ -834,13 +838,19 @@ export default function Payments() {
                                 <strong>{subName}</strong> — Bekleyen Ödeme Toplamı:
                               </span>
                               {Object.entries(subTotals)
-                                .filter(([, v]) => v > 0)
+                                .filter(([, v]) => v.excl > 0)
                                 .map(([cur, v]) => (
-                                  <span key={cur} className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                                    {formatCurrencyWithType(v, cur as Currency)}
-                                  </span>
+                                  <div key={cur} className="text-right leading-tight">
+                                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                                      {formatCurrencyWithType(v.incl, cur as Currency)}
+                                      <span className="ml-1 text-[11px] font-normal text-muted-foreground">(KDV Dahil)</span>
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      KDV Hariç: {formatCurrencyWithType(v.excl, cur as Currency)}
+                                    </p>
+                                  </div>
                                 ))}
-                              {Object.values(subTotals).every(v => v <= 0) && (
+                              {Object.values(subTotals).every(v => v.excl <= 0) && (
                                 <span className="text-sm font-semibold text-green-600">Tamamı ödendi</span>
                               )}
                             </div>
