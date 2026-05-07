@@ -252,7 +252,7 @@ export default function Payments() {
       await updateSubcontractorHakedis(selectedHakedisForPartial, {
         paidAmount: newPaidAmount,
         paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
-        paidDate: isFullyPaid ? new Date().toISOString() : hakedis.paidDate,
+        paidDate: new Date().toISOString(),
       });
 
       await addActivityLog(
