@@ -685,7 +685,7 @@ export default function Payments() {
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                       <StatusBadge status={hakedis.paymentStatus} />
-                                      {isPaid && hakedis.paidDate && (
+                                      {hakedis.paidDate && (hakedis.paymentStatus === 'odendi' || hakedis.paymentStatus === 'kismen_odendi') && (
                                         <p className="text-xs text-muted-foreground mt-1">
                                           {formatDate(hakedis.paidDate)}
                                         </p>
