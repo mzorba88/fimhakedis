@@ -14,7 +14,7 @@ import { useHakedisStore } from '@/store/hakedisStore';
 import {
   Currency, HakedisRecordType, ApprovalStatus, PaymentStatus,
   HakedisItem, ExtraWorkItem,
-  formatCurrencyWithType, contractTypeLabels, hakedisTypeLabels, roleLabels,
+  formatCurrencyWithType, contractTypeLabels, hakedisTypeLabels, roleLabels, currencySymbols,
 } from '@/types/hakedis';
 
 interface Props {
@@ -41,6 +41,7 @@ interface ProjectRow {
   rowMode: RowMode;
   contractId: string;
   hakedisType: HakedisRecordType;
+  currency: Currency;
   date: string;
   description: string;
   // götürü bedel / alelhesap (contract mode)
@@ -71,6 +72,7 @@ const makeRow = (): ProjectRow => ({
   rowMode: 'contract',
   contractId: '',
   hakedisType: 'ara_hakedis',
+  currency: 'TRY',
   date: new Date().toISOString().split('T')[0],
   description: '',
   amount: '',
@@ -151,6 +153,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
     }
     updateRow(rowId, {
       contractId,
+      currency: (contract?.currency as Currency) || 'TRY',
       hakedisItems,
       extraItems: [],
       amount: '',
@@ -171,7 +174,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
 
   const computeRowTotal = (row: ProjectRow): { base: number; total: number; currency: Currency } => {
     const contract = workEntries.find(e => e.id === row.contractId);
-    const currency: Currency = (contract?.currency as Currency) || 'TRY';
+    const currency: Currency = (row.currency as Currency) || (contract?.currency as Currency) || 'TRY';
     let base = 0;
     if (row.rowMode === 'small') {
       const itemsTotal = row.smallItems.reduce((s, i) => s + i.amount, 0);
