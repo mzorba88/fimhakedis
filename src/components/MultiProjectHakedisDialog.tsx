@@ -256,6 +256,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           const hakedisNo = `KH-S${String(nextSmallNum).padStart(3, '0')}`;
           nextSmallNum++;
 
+          const rowCurrency = row.currency || 'TRY';
           const validItems = row.smallItems.filter(i => i.amount > 0 && i.description.trim());
           const itemsAsExtra: ExtraWorkItem[] = validItems.map(i => ({
             id: i.id,
@@ -266,7 +267,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             amount: i.amount,
           }));
           const autoDescription = validItems.map(i =>
-            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, 'TRY')})`
+            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, rowCurrency)})`
           ).join('; ');
           const finalDescription = `${workCategoryLabel}${projectPrefix}${row.description.trim() || autoDescription}`;
 
@@ -278,7 +279,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             contractId: null as any,
             contractNo: null as any,
             contractType: 'goturu_bedel' as const,
-            currency: 'TRY' as Currency,
+            currency: rowCurrency,
             vatRate: row.vatRate !== '' && Number(row.vatRate) > 0 ? Number(row.vatRate) : null,
             date: row.date,
             description: finalDescription,
@@ -296,7 +297,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           await addActivityLog(
             'hakedis_created',
             `${newH.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
-            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, 'TRY')}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, rowCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
             newH.id,
             'hakedis'
           );
@@ -334,7 +335,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             contractId: row.contractId,
             contractNo: contract.contractNo,
             contractType: contract.contractType,
-            currency: contract.currency,
+            currency: row.currency,
             vatRate: row.vatRate !== '' ? Number(row.vatRate) : undefined,
             date: row.date,
             description: row.description || undefined,
@@ -356,7 +357,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           await addActivityLog(
             'hakedis_created',
             `${newH.hakedisNo} ${hakedisTypeLabels[row.hakedisType]} oluşturuldu`,
-            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
+            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, row.currency)}`,
             newH.id,
             'hakedis'
           );
