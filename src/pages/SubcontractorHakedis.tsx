@@ -1291,19 +1291,19 @@ export default function SubcontractorHakedis() {
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
                         <p className="font-semibold">
-                          {formatCurrencyWithType(selectedContract?.totalAmount || 0, selectedContract?.currency || 'TRY')}
+                          {formatCurrencyWithType(selectedContract?.totalAmount || 0, hakedisCurrency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Önceki Ödemeler</p>
                         <p className="font-semibold text-primary">
-                          {formatCurrencyWithType(previousPaymentsTotal, selectedContract?.currency || 'TRY')}
+                          {formatCurrencyWithType(previousPaymentsTotal, hakedisCurrency)}
                         </p>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Alelhesap Tutarı ({currencySymbols[selectedContract?.currency || 'TRY']})</Label>
+                    <Label>Alelhesap Tutarı ({currencySymbols[hakedisCurrency]})</Label>
                     <Input
                       type="number"
                       placeholder="0.00"
@@ -1315,7 +1315,7 @@ export default function SubcontractorHakedis() {
                         {(() => {
                           const entered = parseFloat(paymentAmount) || 0;
                           const vr = vatRate !== '' ? Number(vatRate) : 0;
-                          const cur = selectedContract?.currency || 'TRY';
+                          const cur = hakedisCurrency;
                           if (vatInclusive && vr > 0) {
                             const base = entered / (1 + vr / 100);
                             const vatAmt = entered - base;
@@ -1349,13 +1349,13 @@ export default function SubcontractorHakedis() {
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
                         <p className="font-semibold">
-                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
+                          {formatCurrencyWithType(selectedContract.totalAmount, hakedisCurrency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Önceki Ödemeler Toplamı</p>
                         <p className="font-semibold text-primary">
-                          {formatCurrencyWithType(previousPaymentsTotal, selectedContract.currency)}
+                          {formatCurrencyWithType(previousPaymentsTotal, hakedisCurrency)}
                         </p>
                       </div>
                     </div>
@@ -1370,7 +1370,7 @@ export default function SubcontractorHakedis() {
                             <p className="font-medium text-sm">{item.workCategory}</p>
                             <p className="text-xs text-muted-foreground">{item.description}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, selectedContract.currency)} / {item.unit}
+                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, hakedisCurrency)} / {item.unit}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1386,7 +1386,7 @@ export default function SubcontractorHakedis() {
                         </div>
                         {item.quantity > 0 && (
                           <div className="mt-2 text-right text-sm font-medium">
-                            Tutar: {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                            Tutar: {formatCurrencyWithType(item.amount, hakedisCurrency)}
                           </div>
                         )}
                       </div>
@@ -1403,12 +1403,12 @@ export default function SubcontractorHakedis() {
                             <div className="flex-1">
                               <p className="font-medium text-sm">{item.description}</p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, hakedisCurrency)}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">
-                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                                {formatCurrencyWithType(item.amount, hakedisCurrency)}
                               </span>
                               <Button
                                 type="button"
@@ -1459,7 +1459,7 @@ export default function SubcontractorHakedis() {
                             <Input placeholder="m², adet, kg..." value={newExtraItem.unit || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unit: e.target.value }))} />
                           </div>
                           <div className="space-y-2 col-span-2 sm:col-span-1">
-                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[hakedisCurrency]})</Label>
                             <Input type="number" placeholder="0.00" value={newExtraItem.unitPrice || ''} onChange={(e) => setNewExtraItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))} />
                           </div>
                         </div>
@@ -1467,7 +1467,7 @@ export default function SubcontractorHakedis() {
                           <div className="rounded-lg bg-amber-100 p-3 text-sm">
                             <div className="flex justify-between items-center">
                               <span className="text-amber-700">Toplam Tutar:</span>
-                              <span className="font-bold text-amber-900">{formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}</span>
+                              <span className="font-bold text-amber-900">{formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), hakedisCurrency)}</span>
                             </div>
                           </div>
                         )}
@@ -1487,22 +1487,22 @@ export default function SubcontractorHakedis() {
                     <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 text-sm space-y-2">
                       <div className="flex justify-between">
                         <span>Kesin Hesap Tutarı</span>
-                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, selectedContract.currency)}</span>
+                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, hakedisCurrency)}</span>
                       </div>
                       {vatRate !== '' && Number(vatRate) > 0 && (
                         <div className="flex justify-between text-muted-foreground">
                           <span>KDV (%{vatRate})</span>
-                          <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, selectedContract.currency)}</span>
+                          <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, hakedisCurrency)}</span>
                         </div>
                       )}
                       <div className="border-t pt-2 flex justify-between">
                         <span className="font-medium">Önceki Ödemeler</span>
-                        <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaymentsTotal, selectedContract.currency)}</span>
+                        <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaymentsTotal, hakedisCurrency)}</span>
                       </div>
                       <div className="border-t pt-2 flex justify-between text-lg">
                         <span className="font-bold">Net Ödenecek Tutar</span>
                         <span className={`font-bold ${(birimFiyatTotal - previousPaymentsTotal) >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                          {formatCurrencyWithType(birimFiyatTotal - previousPaymentsTotal, selectedContract.currency)}
+                          {formatCurrencyWithType(birimFiyatTotal - previousPaymentsTotal, hakedisCurrency)}
                         </span>
                       </div>
                     </div>
@@ -1518,26 +1518,26 @@ export default function SubcontractorHakedis() {
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
                         <p className="font-semibold">
-                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
+                          {formatCurrencyWithType(selectedContract.totalAmount, hakedisCurrency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Ödenen Toplam</p>
                         <p className="font-semibold text-status-paid">
-                          {formatCurrencyWithType(paidAmountForContract, selectedContract.currency)}
+                          {formatCurrencyWithType(paidAmountForContract, hakedisCurrency)}
                         </p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Kalan Tutar</p>
                         <p className="text-lg font-bold text-primary">
-                          {formatCurrencyWithType(remainingAmount, selectedContract.currency)}
+                          {formatCurrencyWithType(remainingAmount, hakedisCurrency)}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Ödenecek Tutar ({currencySymbols[selectedContract.currency]})</Label>
+                    <Label>Ödenecek Tutar ({currencySymbols[hakedisCurrency]})</Label>
                     <Input
                       type="number"
                       placeholder="0.00"
@@ -1549,18 +1549,18 @@ export default function SubcontractorHakedis() {
                       <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
                         <div className="flex justify-between">
                           <span>Ara Toplam</span>
-                          <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
+                          <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, hakedisCurrency)}</span>
                         </div>
                         {vatRate !== '' && Number(vatRate) > 0 && (
                           <>
                             <div className="flex justify-between text-muted-foreground">
                               <span>KDV (%{vatRate})</span>
-                              <span>{formatCurrencyWithType((parseFloat(paymentAmount) || 0) * Number(vatRate) / 100, selectedContract.currency)}</span>
+                              <span>{formatCurrencyWithType((parseFloat(paymentAmount) || 0) * Number(vatRate) / 100, hakedisCurrency)}</span>
                             </div>
                             <div className="border-t pt-2 flex justify-between">
                               <span className="font-medium">KDV Dahil Toplam</span>
                               <span className="font-semibold text-primary">
-                                {formatCurrencyWithType((parseFloat(paymentAmount) || 0) * (1 + Number(vatRate) / 100), selectedContract.currency)}
+                                {formatCurrencyWithType((parseFloat(paymentAmount) || 0) * (1 + Number(vatRate) / 100), hakedisCurrency)}
                               </span>
                             </div>
                           </>
@@ -1568,7 +1568,7 @@ export default function SubcontractorHakedis() {
                         {(vatRate === '' || Number(vatRate) === 0) && (
                           <div className="flex justify-between font-semibold">
                             <span>Toplam</span>
-                            <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, selectedContract.currency)}</span>
+                            <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, hakedisCurrency)}</span>
                           </div>
                         )}
                       </div>
@@ -1585,12 +1585,12 @@ export default function SubcontractorHakedis() {
                             <div className="flex-1">
                               <p className="font-medium text-sm">{item.description}</p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, hakedisCurrency)}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">
-                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                                {formatCurrencyWithType(item.amount, hakedisCurrency)}
                               </span>
                               <Button
                                 type="button"
@@ -1668,7 +1668,7 @@ export default function SubcontractorHakedis() {
                             />
                           </div>
                           <div className="space-y-2 col-span-2 sm:col-span-1">
-                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[hakedisCurrency]})</Label>
                             <Input
                               type="number"
                               placeholder="0.00"
@@ -1684,7 +1684,7 @@ export default function SubcontractorHakedis() {
                             <div className="flex justify-between items-center">
                               <span className="text-amber-700">Toplam Tutar:</span>
                               <span className="font-bold text-amber-900">
-                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}
+                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), hakedisCurrency)}
                               </span>
                             </div>
                           </div>
@@ -1725,7 +1725,7 @@ export default function SubcontractorHakedis() {
                         const extraTotal = extraItems.reduce((sum, i) => sum + i.amount, 0);
                         const entered = payBase + extraTotal;
                         const vr = vatRate !== '' ? Number(vatRate) : 0;
-                        const cur = selectedContract.currency;
+                        const cur = hakedisCurrency;
                         return (<>
                           <div className="flex justify-between"><span>Sözleşme Ödemesi</span><span className="font-medium">{formatCurrencyWithType(payBase, cur)}</span></div>
                           <div className="flex justify-between text-amber-600"><span>Ek İşler Toplamı</span><span className="font-medium">{formatCurrencyWithType(extraTotal, cur)}</span></div>
@@ -1756,19 +1756,19 @@ export default function SubcontractorHakedis() {
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
                         <p className="font-semibold">
-                          {formatCurrencyWithType(selectedContract.totalAmount, selectedContract.currency)}
+                          {formatCurrencyWithType(selectedContract.totalAmount, hakedisCurrency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Toplam Hakediş</p>
                         <p className="font-semibold text-green-600">
-                          {formatCurrencyWithType(paidAmountForContract, selectedContract.currency)}
+                          {formatCurrencyWithType(paidAmountForContract, hakedisCurrency)}
                         </p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Kalan Bakiye</p>
                         <p className={`text-lg font-bold ${remainingAmount > 0 ? 'text-amber-600' : remainingAmount < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                          {formatCurrencyWithType(remainingAmount, selectedContract.currency)}
+                          {formatCurrencyWithType(remainingAmount, hakedisCurrency)}
                         </p>
                       </div>
                     </div>
@@ -1783,7 +1783,7 @@ export default function SubcontractorHakedis() {
                             <p className="font-medium text-sm">{item.workCategory}</p>
                             <p className="text-xs text-muted-foreground">{item.description}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, selectedContract.currency)} / {item.unit}
+                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, hakedisCurrency)} / {item.unit}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1799,7 +1799,7 @@ export default function SubcontractorHakedis() {
                         </div>
                         {item.quantity > 0 && (
                           <div className="mt-2 text-right text-sm font-medium">
-                            Tutar: {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                            Tutar: {formatCurrencyWithType(item.amount, hakedisCurrency)}
                           </div>
                         )}
                       </div>
@@ -1816,12 +1816,12 @@ export default function SubcontractorHakedis() {
                             <div className="flex-1">
                               <p className="font-medium text-sm">{item.description}</p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, selectedContract.currency)}
+                                {item.quantity} {item.unit} × {formatCurrencyWithType(item.unitPrice, hakedisCurrency)}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">
-                                {formatCurrencyWithType(item.amount, selectedContract.currency)}
+                                {formatCurrencyWithType(item.amount, hakedisCurrency)}
                               </span>
                               <Button
                                 type="button"
@@ -1899,7 +1899,7 @@ export default function SubcontractorHakedis() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm">Birim Fiyat ({currencySymbols[selectedContract.currency]})</Label>
+                            <Label className="text-sm">Birim Fiyat ({currencySymbols[hakedisCurrency]})</Label>
                             <Input
                               type="number"
                               placeholder="0.00"
@@ -1915,7 +1915,7 @@ export default function SubcontractorHakedis() {
                             <div className="flex justify-between items-center">
                               <span className="text-amber-700">Toplam Tutar:</span>
                               <span className="font-bold text-amber-900">
-                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), selectedContract.currency)}
+                                {formatCurrencyWithType((newExtraItem.quantity || 0) * (newExtraItem.unitPrice || 0), hakedisCurrency)}
                               </span>
                             </div>
                           </div>
@@ -1953,7 +1953,7 @@ export default function SubcontractorHakedis() {
                       {(() => {
                         const entered = birimFiyatTotal;
                         const vr = vatRate !== '' ? Number(vatRate) : 0;
-                        const cur = selectedContract.currency;
+                        const cur = hakedisCurrency;
                         if (vatInclusive && vr > 0) {
                           const base = entered / (1 + vr / 100);
                           const vatAmt = entered - base;
