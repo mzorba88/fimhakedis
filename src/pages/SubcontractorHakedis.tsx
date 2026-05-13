@@ -274,6 +274,7 @@ export default function SubcontractorHakedis() {
     setDescription('');
     setHakedisType('ara_hakedis');
     setVatInclusive(false);
+    setHakedisCurrency('TRY');
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
