@@ -355,6 +355,7 @@ export default function SubcontractorHakedis() {
     setVatRate(hakedis.vatRate !== undefined ? String(hakedis.vatRate) : '10');
     setDescription(hakedis.description || '');
     setHakedisType(hakedis.hakedisType || 'ara_hakedis');
+    setHakedisCurrency((hakedis.currency as Currency) || (contract.currency as Currency) || 'TRY');
     
     if (contract.contractType === 'goturu_bedel') {
       // For götürü bedel, set payment amount (subtract extra items if any)
