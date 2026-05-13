@@ -14,7 +14,7 @@ import { useHakedisStore } from '@/store/hakedisStore';
 import {
   Currency, HakedisRecordType, ApprovalStatus, PaymentStatus,
   HakedisItem, ExtraWorkItem,
-  formatCurrencyWithType, contractTypeLabels, hakedisTypeLabels, roleLabels,
+  formatCurrencyWithType, contractTypeLabels, hakedisTypeLabels, roleLabels, currencySymbols,
 } from '@/types/hakedis';
 
 interface Props {
@@ -41,6 +41,7 @@ interface ProjectRow {
   rowMode: RowMode;
   contractId: string;
   hakedisType: HakedisRecordType;
+  currency: Currency;
   date: string;
   description: string;
   // götürü bedel / alelhesap (contract mode)
@@ -71,6 +72,7 @@ const makeRow = (): ProjectRow => ({
   rowMode: 'contract',
   contractId: '',
   hakedisType: 'ara_hakedis',
+  currency: 'TRY',
   date: new Date().toISOString().split('T')[0],
   description: '',
   amount: '',
@@ -151,6 +153,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
     }
     updateRow(rowId, {
       contractId,
+      currency: (contract?.currency as Currency) || 'TRY',
       hakedisItems,
       extraItems: [],
       amount: '',
@@ -171,7 +174,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
 
   const computeRowTotal = (row: ProjectRow): { base: number; total: number; currency: Currency } => {
     const contract = workEntries.find(e => e.id === row.contractId);
-    const currency: Currency = (contract?.currency as Currency) || 'TRY';
+    const currency: Currency = (row.currency as Currency) || (contract?.currency as Currency) || 'TRY';
     let base = 0;
     if (row.rowMode === 'small') {
       const itemsTotal = row.smallItems.reduce((s, i) => s + i.amount, 0);
@@ -253,6 +256,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           const hakedisNo = `KH-S${String(nextSmallNum).padStart(3, '0')}`;
           nextSmallNum++;
 
+          const rowCurrency = row.currency || 'TRY';
           const validItems = row.smallItems.filter(i => i.amount > 0 && i.description.trim());
           const itemsAsExtra: ExtraWorkItem[] = validItems.map(i => ({
             id: i.id,
@@ -263,7 +267,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             amount: i.amount,
           }));
           const autoDescription = validItems.map(i =>
-            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, 'TRY')})`
+            `${i.description.trim()} (${i.quantity} ${i.unit} × ${formatCurrencyWithType(i.unitPrice, rowCurrency)})`
           ).join('; ');
           const finalDescription = `${workCategoryLabel}${projectPrefix}${row.description.trim() || autoDescription}`;
 
@@ -275,7 +279,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             contractId: null as any,
             contractNo: null as any,
             contractType: 'goturu_bedel' as const,
-            currency: 'TRY' as Currency,
+            currency: rowCurrency,
             vatRate: row.vatRate !== '' && Number(row.vatRate) > 0 ? Number(row.vatRate) : null,
             date: row.date,
             description: finalDescription,
@@ -293,7 +297,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           await addActivityLog(
             'hakedis_created',
             `${newH.hakedisNo} Sözleşmesiz Küçük Hakediş oluşturuldu`,
-            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, 'TRY')}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
+            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, rowCurrency)}${projectLabel ? ` - Proje: ${projectLabel}` : ''}`,
             newH.id,
             'hakedis'
           );
@@ -319,7 +323,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           let contractExceededNote: string | undefined;
           if (newTotal > contract.totalAmount) {
             const exceeded = newTotal - contract.totalAmount;
-            contractExceededNote = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contract.totalAmount, contract.currency)}, Toplam Hakediş: ${formatCurrencyWithType(newTotal, contract.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceeded, contract.currency)}`;
+            contractExceededNote = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contract.totalAmount, row.currency)}, Toplam Hakediş: ${formatCurrencyWithType(newTotal, row.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceeded, row.currency)}`;
             toast.warning('⚠️ SÖZLEŞME TUTARI MİKTARI AŞILDI');
           }
 
@@ -331,7 +335,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             contractId: row.contractId,
             contractNo: contract.contractNo,
             contractType: contract.contractType,
-            currency: contract.currency,
+            currency: row.currency,
             vatRate: row.vatRate !== '' ? Number(row.vatRate) : undefined,
             date: row.date,
             description: row.description || undefined,
@@ -353,7 +357,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           await addActivityLog(
             'hakedis_created',
             `${newH.hakedisNo} ${hakedisTypeLabels[row.hakedisType]} oluşturuldu`,
-            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
+            `Altyüklenici: ${effectiveSub} - Tutar: ${formatCurrencyWithType(totalAmount, row.currency)}`,
             newH.id,
             'hakedis'
           );
@@ -546,12 +550,24 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                       </div>
                     )}
 
-                    {/* Date */}
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Date + Currency + VAT */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-2">
                         <Label className="text-xs">Tarih</Label>
                         <Input type="date" value={row.date}
                           onChange={e => updateRow(row.id, { date: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Para Birimi</Label>
+                        <Select value={row.currency} onValueChange={(v: Currency) => updateRow(row.id, { currency: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TRY">{currencySymbols.TRY} TRY</SelectItem>
+                            <SelectItem value="USD">{currencySymbols.USD} USD</SelectItem>
+                            <SelectItem value="EUR">{currencySymbols.EUR} EUR</SelectItem>
+                            <SelectItem value="GBP">{currencySymbols.GBP} GBP</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">KDV Oranı (%)</Label>
