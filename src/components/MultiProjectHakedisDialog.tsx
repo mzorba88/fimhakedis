@@ -550,12 +550,24 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                       </div>
                     )}
 
-                    {/* Date */}
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Date + Currency + VAT */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-2">
                         <Label className="text-xs">Tarih</Label>
                         <Input type="date" value={row.date}
                           onChange={e => updateRow(row.id, { date: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Para Birimi</Label>
+                        <Select value={row.currency} onValueChange={(v: Currency) => updateRow(row.id, { currency: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TRY">{currencySymbols.TRY} TRY</SelectItem>
+                            <SelectItem value="USD">{currencySymbols.USD} USD</SelectItem>
+                            <SelectItem value="EUR">{currencySymbols.EUR} EUR</SelectItem>
+                            <SelectItem value="GBP">{currencySymbols.GBP} GBP</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label className="text-xs">KDV Oranı (%)</Label>
