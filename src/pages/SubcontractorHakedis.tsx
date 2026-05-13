@@ -1234,7 +1234,7 @@ export default function SubcontractorHakedis() {
               {/* Date and VAT Rate */}
               {selectedContractId && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Tarih</Label>
                       <Input
@@ -1242,6 +1242,20 @@ export default function SubcontractorHakedis() {
                         value={hakedisDate}
                         onChange={(e) => setHakedisDate(e.target.value)}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Para Birimi</Label>
+                      <Select value={hakedisCurrency} onValueChange={(v) => setHakedisCurrency(v as Currency)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="TRY">₺ TRY</SelectItem>
+                          <SelectItem value="USD">$ USD</SelectItem>
+                          <SelectItem value="EUR">€ EUR</SelectItem>
+                          <SelectItem value="GBP">£ GBP</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label>KDV Oranı (%)</Label>
