@@ -143,6 +143,7 @@ export default function SubcontractorHakedis() {
   const [description, setDescription] = useState<string>('');
   const [hakedisType, setHakedisType] = useState<HakedisRecordType>('ara_hakedis');
   const [vatInclusive, setVatInclusive] = useState(false);
+  const [hakedisCurrency, setHakedisCurrency] = useState<Currency>('TRY');
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
 
