@@ -519,6 +519,7 @@ export default function SubcontractorHakedis() {
         
         await updateSubcontractorHakedis(editingHakedisId, {
           hakedisType,
+          currency: hakedisCurrency,
           vatRate: vatRate !== '' ? Number(vatRate) : undefined,
           date: hakedisDate,
           description: description || undefined,
@@ -535,7 +536,7 @@ export default function SubcontractorHakedis() {
         await addActivityLog(
           'hakedis_updated',
           `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
-          `Tutar: ${formatCurrencyWithType(totalAmount, contract.currency)}`,
+          `Tutar: ${formatCurrencyWithType(totalAmount, hakedisCurrency)}`,
           editingHakedisId,
           'hakedis'
         );
