@@ -323,7 +323,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           let contractExceededNote: string | undefined;
           if (newTotal > contract.totalAmount) {
             const exceeded = newTotal - contract.totalAmount;
-            contractExceededNote = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contract.totalAmount, contract.currency)}, Toplam Hakediş: ${formatCurrencyWithType(newTotal, contract.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceeded, contract.currency)}`;
+            contractExceededNote = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contract.totalAmount, row.currency)}, Toplam Hakediş: ${formatCurrencyWithType(newTotal, row.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceeded, row.currency)}`;
             toast.warning('⚠️ SÖZLEŞME TUTARI MİKTARI AŞILDI');
           }
 
