@@ -282,6 +282,7 @@ export default function SubcontractorHakedis() {
   const handleContractSelect = (contractId: string) => {
     setSelectedContractId(contractId);
     const contract = workEntries.find(e => e.id === contractId);
+    if (contract) setHakedisCurrency((contract.currency as Currency) || 'TRY');
     if (contract && contract.contractType === 'birim_fiyat' && contract.workItemEntries) {
       // Initialize hakediş items from contract work items
       const items: HakedisItem[] = contract.workItemEntries.map(item => ({
