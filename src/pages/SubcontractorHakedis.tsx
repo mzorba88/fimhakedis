@@ -561,7 +561,7 @@ export default function SubcontractorHakedis() {
           contractId: selectedContractId,
           contractNo: contract.contractNo,
           contractType: contract.contractType,
-          currency: contract.currency,
+          currency: hakedisCurrency,
           vatRate: vatRate !== '' ? Number(vatRate) : undefined,
           date: hakedisDate,
           description: description || undefined,
