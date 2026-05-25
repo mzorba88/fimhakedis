@@ -239,14 +239,6 @@ export default function Approvals() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-xs text-muted-foreground">{hakedis.hakedisNo}</p>
-                              {hakedis.contractExceededNote && (
-                                <div className="group relative">
-                                  <AlertTriangle className="h-4 w-4 text-destructive animate-pulse" />
-                                  <div className="absolute left-0 top-full z-50 mt-1 hidden w-64 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
-                                    Sözleşme tutarı aşıldı
-                                  </div>
-                                </div>
-                              )}
                             </div>
                             <h3 className="font-medium text-foreground">
                               {hakedis.subcontractor}
@@ -402,16 +394,6 @@ export default function Approvals() {
                               </div>
                             )}
 
-                            {/* Contract exceeded warning */}
-                            {hakedis.contractExceededNote && (
-                              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
-                                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-xs font-medium text-destructive">Sözleşme Tutarı Aşıldı</p>
-                                  <p className="text-xs text-destructive/80 mt-0.5">{hakedis.contractExceededNote}</p>
-                                </div>
-                              </div>
-                            )}
 
                             {/* Total Summary */}
                             <div className="rounded-lg bg-muted/50 p-4">

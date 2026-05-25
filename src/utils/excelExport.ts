@@ -156,9 +156,6 @@ export async function exportSingleHakedisToExcel(
     ['Ödeme Gerçekleşince Kalan Bakiye (KDV Dahil)', contractTotalWithVat - totalPaidOnContract - (hakedisTotalWithVat - (hakedis.paidAmount || 0))],
   );
 
-  if (hakedis.contractExceededNote) {
-    data.push([], ['UYARI', hakedis.contractExceededNote]);
-  }
 
   if (hakedis.hakedisItems && hakedis.hakedisItems.length > 0) {
     data.push([], ['İŞ KALEMLERİ']);
