@@ -8,6 +8,7 @@ import {
   Wallet,
   FileText,
   History,
+  Users,
   Menu,
   X
 } from 'lucide-react';
@@ -34,6 +35,7 @@ export function TopNavbar() {
     { name: 'Projeler', href: '/projeler', icon: FolderKanban },
     { name: 'Sözleşmeler', href: '/yapilanisler', icon: ClipboardList },
     { name: 'Hakedişler', href: '/hakedisler', icon: FileText },
+    { name: 'Altyükleniciler', href: '/altyukleniciler', icon: Users },
     { name: 'Onaylar', href: '/onaylar', icon: CheckCircle2, badge: pendingApprovalsCount },
     { name: 'Ödemeler', href: '/odemeler', icon: Wallet, badge: unpaidPaymentsCount },
     { name: 'Raporlar', href: '/raporlar', icon: FileText },

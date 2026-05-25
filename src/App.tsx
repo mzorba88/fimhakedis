@@ -14,6 +14,7 @@ const Approvals = lazy(() => import("./pages/Approvals"));
 const Payments = lazy(() => import("./pages/Payments"));
 const Reports = lazy(() => import("./pages/Reports"));
 const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
+const Subcontractors = lazy(() => import("./pages/Subcontractors"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/yapilanisler" element={<WorkEntries />} />
             <Route path="/hakedisler" element={<SubcontractorHakedis />} />
             <Route path="/altyuklenici-hakedis" element={<SubcontractorHakedis />} />
+            <Route path="/altyukleniciler" element={<Subcontractors />} />
             <Route path="/onaylar" element={<Approvals />} />
             <Route path="/odemeler" element={<Payments />} />
             <Route path="/raporlar" element={<Reports />} />
