@@ -315,18 +315,6 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           const nextNum = existingNos.length > 0 ? Math.max(...existingNos) + 1 : 1;
           const hakedisNo = `${contract.contractNo}-${prefix}${String(nextNum).padStart(2, '0')}`;
 
-          // contract exceeded check
-          const existingTotal = subcontractorHakedisler
-            .filter(h => h.contractId === row.contractId)
-            .reduce((s, h) => s + h.totalAmount, 0);
-          const newTotal = existingTotal + totalAmount;
-          let contractExceededNote: string | undefined;
-          if (newTotal > contract.totalAmount) {
-            const exceeded = newTotal - contract.totalAmount;
-            contractExceededNote = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contract.totalAmount, row.currency)}, Toplam Hakediş: ${formatCurrencyWithType(newTotal, row.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceeded, row.currency)}`;
-            toast.warning('⚠️ SÖZLEŞME TUTARI MİKTARI AŞILDI');
-          }
-
           const data = {
             hakedisNo,
             hakedisType: row.hakedisType,
@@ -345,7 +333,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
               ? row.hakedisItems.filter(i => i.quantity > 0) : undefined,
             extraItems: row.extraItems.length > 0 ? row.extraItems : undefined,
             totalAmount,
-            contractExceededNote,
+
             createdBy: currentUser.id,
             approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
             approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,

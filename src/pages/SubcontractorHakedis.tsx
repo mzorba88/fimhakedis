@@ -429,27 +429,6 @@ export default function SubcontractorHakedis() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subcontractorHakedisler]);
 
-  // Check if contract amount is exceeded
-  const checkContractExceeded = (newTotalAmount: number, contractId: string, editingId?: string | null) => {
-    const contract = workEntries.find(e => e.id === contractId);
-    if (!contract) return { exceeded: false, note: undefined };
-
-    // Calculate total hakedis amount for this contract (excluding current if editing)
-    const existingHakedisTotal = subcontractorHakedisler
-      .filter(h => h.contractId === contractId && h.id !== editingId)
-      .reduce((sum, h) => sum + h.totalAmount, 0);
-
-    const totalHakedisAmount = existingHakedisTotal + newTotalAmount;
-    const contractAmount = contract.totalAmount;
-
-    if (totalHakedisAmount > contractAmount) {
-      const exceededAmount = totalHakedisAmount - contractAmount;
-      const note = `SÖZLEŞME TUTARI MİKTARI AŞILDI - Sözleşme Tutarı: ${formatCurrencyWithType(contractAmount, contract.currency)}, Toplam Hakediş: ${formatCurrencyWithType(totalHakedisAmount, contract.currency)}, Aşım Miktarı: ${formatCurrencyWithType(exceededAmount, contract.currency)}`;
-      return { exceeded: true, note };
-    }
-
-    return { exceeded: false, note: undefined };
-  };
 
   const handleSubmit = async () => {
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
@@ -514,19 +493,6 @@ export default function SubcontractorHakedis() {
       totalAmount = totalAmount / (1 + Number(vatRate) / 100);
     }
 
-    // Check if contract amount is exceeded
-    const { exceeded, note: contractExceededNote } = checkContractExceeded(
-      totalAmount, 
-      selectedContractId, 
-      isEditMode ? editingHakedisId : null
-    );
-
-    // Show warning if exceeded (but don't block)
-    if (exceeded && contractExceededNote) {
-      toast.warning('⚠️ SÖZLEŞME TUTARI MİKTARI AŞILDI - Bu bilgi rapora not olarak eklenecektir.', {
-        duration: 5000,
-      });
-    }
 
     try {
       if (isEditMode && editingHakedisId) {
@@ -543,7 +509,8 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
-          contractExceededNote: exceeded ? contractExceededNote : undefined,
+          contractExceededNote: undefined,
+
           ...(shouldResetToOnayBekliyor && {
             approvalStatus: 'onay_bekliyor' as const,
             rejectionReason: undefined,
@@ -551,7 +518,7 @@ export default function SubcontractorHakedis() {
         });
         await addActivityLog(
           'hakedis_updated',
-          `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
+          `Hakediş güncellendi${shouldResetToOnayBekliyor ? ' ve onaya sunuldu' : ''}`,
           `Tutar: ${formatCurrencyWithType(totalAmount, hakedisCurrency)}`,
           editingHakedisId,
           'hakedis'
@@ -585,7 +552,7 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
-          contractExceededNote: exceeded ? contractExceededNote : undefined,
+          
           createdBy: currentUser.id,
           approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
           approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
@@ -596,7 +563,7 @@ export default function SubcontractorHakedis() {
 
         await addActivityLog(
           'hakedis_created',
-          `${newHakedis.hakedisNo} ${hakedisTypeLabels[hakedisType]} oluşturuldu${exceeded ? ' (Sözleşme tutarı aşıldı)' : ''}`,
+          `${newHakedis.hakedisNo} ${hakedisTypeLabels[hakedisType]} oluşturuldu`,
           `Altyüklenici: ${newHakedis.subcontractor} - Tutar: ${formatCurrencyWithType(newHakedis.totalAmount, newHakedis.currency)}`,
           newHakedis.id,
           'hakedis'
@@ -844,7 +811,7 @@ export default function SubcontractorHakedis() {
                       <StatusBadge status={hakedis.paymentStatus} size="sm" />
                     </div>
                   }
-                  icon={hakedis.contractExceededNote ? <AlertTriangle className="h-4 w-4 text-destructive" /> : undefined}
+                  
                 />
                 <div className="space-y-0.5">
                   <MobileCardRow label="İş Kalemi" value={workCategory} />
@@ -988,14 +955,6 @@ export default function SubcontractorHakedis() {
                                 {project?.projectName || '-'}
                               </p>
                             </div>
-                            {hakedis.contractExceededNote && (
-                              <div className="group relative">
-                                <AlertTriangle className="h-5 w-5 text-destructive animate-pulse" />
-                                <div className="absolute left-0 top-full z-50 mt-1 hidden w-64 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
-                                  Sözleşme tutarı aşıldı
-                                </div>
-                              </div>
-                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
@@ -2101,16 +2060,6 @@ export default function SubcontractorHakedis() {
                   </div>
                 )}
 
-                {/* Contract Exceeded Warning */}
-                {selectedHakedis.contractExceededNote && (
-                  <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                      <p className="font-semibold text-destructive">UYARI</p>
-                    </div>
-                    <p className="text-sm text-foreground">{selectedHakedis.contractExceededNote}</p>
-                  </div>
-                )}
 
                 {/* Payment Amount for Götürü Bedel */}
                 {selectedHakedis.contractType === 'goturu_bedel' && selectedHakedis.paymentAmount && (

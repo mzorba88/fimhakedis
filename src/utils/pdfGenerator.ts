@@ -258,16 +258,6 @@ export const generateHakedisPDF = async (
   });
   y = (doc as any).lastAutoTable.finalY + 4;
 
-  // Contract exceeded warning
-  if (hakedis.contractExceededNote) {
-    doc.setFillColor(254, 242, 242);
-    doc.setDrawColor(...COLORS.red);
-    doc.roundedRect(14, y, doc.internal.pageSize.getWidth() - 28, 10, 2, 2, 'FD');
-    doc.setFontSize(8);
-    doc.setTextColor(...COLORS.red);
-    doc.text(`UYARI: ${hakedis.contractExceededNote}`, 18, y + 6);
-    y += 14;
-  }
 
   // Contract summary
   if (contract) {
