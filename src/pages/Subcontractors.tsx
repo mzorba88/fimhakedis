@@ -13,10 +13,11 @@ import {
   paymentStatusLabels,
   workCategories,
 } from '@/types/hakedis';
-import { generateContractPDF, generateHakedisPDF } from '@/utils/pdfGenerator';
+import { generateContractPDF, generateHakedisPDF, generateSubcontractorPDF } from '@/utils/pdfGenerator';
 import {
   exportSingleContractToExcel,
   exportSingleHakedisToExcel,
+  exportSubcontractorReportToExcel,
 } from '@/utils/excelExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
