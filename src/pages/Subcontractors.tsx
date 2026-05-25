@@ -435,8 +435,20 @@ export default function Subcontractors() {
             ) : (
               <>
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3 space-y-0">
                     <CardTitle className="text-lg">{selected}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleSubcontractorPdf}
+                        title="Filtrelenmiş kayıtları PDF olarak indir">
+                        <FileText className="h-4 w-4 mr-1.5" />
+                        PDF Rapor
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleSubcontractorExcel}
+                        title="Filtrelenmiş kayıtları Excel olarak indir">
+                        <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+                        Excel Rapor
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Filters */}
