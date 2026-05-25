@@ -277,6 +277,47 @@ export default function Subcontractors() {
     exportSingleHakedisToExcel(h, project, contract, subcontractorHakedisler);
   };
 
+  // Aggregated subcontractor report (uses current filters)
+  const buildReportFilters = () => ({
+    projectName: projectFilter === 'all' ? 'all' : (projects.find(p => p.id === projectFilter)?.projectName || projectFilter),
+    workCategory: categoryFilter,
+    paymentStatus: paymentFilter === 'all' ? 'all' : paymentStatusLabels[paymentFilter as PaymentStatus],
+    search: itemSearch || undefined,
+  });
+
+  const handleSubcontractorPdf = async () => {
+    if (!selected) return;
+    try {
+      await generateSubcontractorPDF(
+        selected,
+        subContracts.map(s => s.c),
+        subHakedisler,
+        projects,
+        buildReportFilters()
+      );
+      toast.success('Altyüklenici PDF raporu indirildi');
+    } catch (e) {
+      console.error(e);
+      toast.error('PDF oluşturulamadı');
+    }
+  };
+
+  const handleSubcontractorExcel = async () => {
+    if (!selected) return;
+    try {
+      await exportSubcontractorReportToExcel(
+        selected,
+        subContracts.map(s => s.c),
+        subHakedisler,
+        projects,
+        buildReportFilters()
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error('Excel oluşturulamadı');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
