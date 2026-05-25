@@ -317,6 +317,27 @@ export default function WorkEntries() {
     setIsDialogOpen(true);
   };
 
+  // Deep-link handling: ?edit=<id> opens edit; ?view=<id> opens detail
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    const viewId = searchParams.get('view');
+    const id = editId || viewId;
+    if (!id) return;
+    const entry = workEntries.find(e => e.id === id);
+    if (entry) {
+      if (editId) {
+        handleEditEntry(entry);
+      } else {
+        setSelectedEntry(entry);
+        setIsDetailDialogOpen(true);
+      }
+    }
+    searchParams.delete('edit');
+    searchParams.delete('view');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workEntries]);
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setIsEditMode(false);
