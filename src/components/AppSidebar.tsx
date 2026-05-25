@@ -6,7 +6,8 @@ import {
   CheckCircle2, 
   Wallet,
   FileText,
-  History
+  History,
+  Users
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import formanLogo from '@/assets/forman-logo.png';
@@ -43,6 +44,7 @@ export function AppSidebar() {
     { name: 'Projeler', href: '/projeler', icon: FolderKanban },
     { name: 'Altyüklenici Sözleşmeleri', href: '/yapilanisler', icon: ClipboardList },
     { name: 'Altyüklenici Hakedişleri', href: '/hakedisler', icon: FileText },
+    { name: 'Altyükleniciler', href: '/altyukleniciler', icon: Users },
     { name: 'Onay Bekleyenler', href: '/onaylar', icon: CheckCircle2, badge: pendingApprovalsCount },
     { name: 'Ödemeler', href: '/odemeler', icon: Wallet, badge: unpaidPaymentsCount },
     { name: 'Hakediş Raporları', href: '/raporlar', icon: FileText },
