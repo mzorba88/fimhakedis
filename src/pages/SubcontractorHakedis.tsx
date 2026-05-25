@@ -408,16 +408,23 @@ export default function SubcontractorHakedis() {
     setIsDialogOpen(true);
   };
 
-  // Auto-open edit dialog when navigated with ?edit=<id>
+  // Auto-open edit/view dialog when navigated with ?edit=<id> or ?view=<id>
   useEffect(() => {
     const editId = searchParams.get('edit');
-    if (!editId) return;
-    const hakedis = subcontractorHakedisler.find(h => h.id === editId);
+    const viewId = searchParams.get('view');
+    const id = editId || viewId;
+    if (!id) return;
+    const hakedis = subcontractorHakedisler.find(h => h.id === id);
     if (hakedis) {
-      handleEditHakedis(hakedis);
+      if (editId) {
+        handleEditHakedis(hakedis);
+      } else {
+        setSelectedHakedis(hakedis);
+        setIsDetailDialogOpen(true);
+      }
     }
-    // Clear param after handling
     searchParams.delete('edit');
+    searchParams.delete('view');
     setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subcontractorHakedisler]);

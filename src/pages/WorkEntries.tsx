@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
@@ -88,6 +89,7 @@ export default function WorkEntries() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<WorkEntry | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Form state
   const [newEntry, setNewEntry] = useState({
@@ -314,6 +316,27 @@ export default function WorkEntries() {
     setIsDetailDialogOpen(false);
     setIsDialogOpen(true);
   };
+
+  // Deep-link handling: ?edit=<id> opens edit; ?view=<id> opens detail
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    const viewId = searchParams.get('view');
+    const id = editId || viewId;
+    if (!id) return;
+    const entry = workEntries.find(e => e.id === id);
+    if (entry) {
+      if (editId) {
+        handleEditEntry(entry);
+      } else {
+        setSelectedEntry(entry);
+        setIsDetailDialogOpen(true);
+      }
+    }
+    searchParams.delete('edit');
+    searchParams.delete('view');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workEntries]);
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);

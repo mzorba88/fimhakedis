@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
@@ -8,9 +9,17 @@ import {
   contractTypeLabels,
   Currency,
   PaymentStatus,
+  ApprovalStatus,
   paymentStatusLabels,
   workCategories,
 } from '@/types/hakedis';
+import { generateContractPDF, generateHakedisPDF } from '@/utils/pdfGenerator';
+import {
+  exportSingleContractToExcel,
+  exportSingleHakedisToExcel,
+} from '@/utils/excelExport';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -34,11 +43,45 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Users, FileText, Wallet, ClipboardList } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Search,
+  Users,
+  FileText,
+  Wallet,
+  ClipboardList,
+  Eye,
+  Pencil,
+  FileSpreadsheet,
+  Trash2,
+} from 'lucide-react';
+
+type DeleteTarget =
+  | { kind: 'contract'; id: string; label: string }
+  | { kind: 'hakedis'; id: string; label: string }
+  | null;
 
 export default function Subcontractors() {
-  const { subcontractors, workEntries, subcontractorHakedisler, projects } =
-    useHakedisStore();
+  const {
+    subcontractors,
+    workEntries,
+    subcontractorHakedisler,
+    projects,
+    currentUser,
+    deleteWorkEntry,
+    deleteSubcontractorHakedis,
+    addActivityLog,
+  } = useHakedisStore();
+  const navigate = useNavigate();
 
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -46,41 +89,24 @@ export default function Subcontractors() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [itemSearch, setItemSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
-  // Compute subcontractor list with stats (only those that have records)
+  const canDelete = currentUser.role === 'direktor';
+
+  // Build subcontractor list from records
   const subcontractorStats = useMemo(() => {
     const map = new Map<
       string,
-      {
-        name: string;
-        contracts: number;
-        hakedisler: number;
-        categories: Set<string>;
-      }
+      { name: string; contracts: number; hakedisler: number }
     >();
-
     const ensure = (name: string) => {
       if (!map.has(name)) {
-        map.set(name, {
-          name,
-          contracts: 0,
-          hakedisler: 0,
-          categories: new Set(),
-        });
+        map.set(name, { name, contracts: 0, hakedisler: 0 });
       }
       return map.get(name)!;
     };
-
-    workEntries.forEach((c) => {
-      const s = ensure(c.subcontractor);
-      s.contracts += 1;
-      if (c.workCategory) s.categories.add(c.workCategory);
-    });
-    subcontractorHakedisler.forEach((h) => {
-      const s = ensure(h.subcontractor);
-      s.hakedisler += 1;
-    });
-
+    workEntries.forEach((c) => ensure(c.subcontractor).contracts++);
+    subcontractorHakedisler.forEach((h) => ensure(h.subcontractor).hakedisler++);
     return Array.from(map.values()).sort((a, b) =>
       a.name.localeCompare(b.name, 'tr')
     );
@@ -97,18 +123,43 @@ export default function Subcontractors() {
   const projectName = (id?: string) =>
     projects.find((p) => p.id === id)?.projectName || '-';
 
+  // Derive contract approval/payment status from associated hakedisler (source of truth)
+  const deriveContractStatus = (contractId: string, contractTotal: number) => {
+    const related = subcontractorHakedisler.filter(
+      (h) => h.contractId === contractId
+    );
+    const hakedisTotal = related.reduce((s, h) => s + (h.totalAmount || 0), 0);
+    const paid = related.reduce((s, h) => s + (h.paidAmount || 0), 0);
+
+    let approvalStatus: ApprovalStatus = 'onay_bekliyor';
+    if (related.length > 0 && related.every((h) => h.approvalStatus === 'onaylandi')) {
+      approvalStatus = 'onaylandi';
+    } else if (related.some((h) => h.approvalStatus === 'revize')) {
+      approvalStatus = 'revize';
+    }
+
+    let paymentStatus: PaymentStatus = 'odenmedi';
+    if (paid > 0 && paid >= (contractTotal || hakedisTotal) && contractTotal > 0) {
+      paymentStatus = 'odendi';
+    } else if (paid > 0) {
+      paymentStatus = 'kismen_odendi';
+    }
+
+    return { approvalStatus, paymentStatus, hakedisTotal, paid };
+  };
+
   const subContracts = useMemo(() => {
     if (!selected) return [];
     return workEntries
       .filter((c) => c.subcontractor === selected)
       .filter((c) => projectFilter === 'all' || c.projectId === projectFilter)
+      .filter((c) => categoryFilter === 'all' || c.workCategory === categoryFilter)
+      .map((c) => ({ c, derived: deriveContractStatus(c.id, c.totalAmount || 0) }))
       .filter(
-        (c) => categoryFilter === 'all' || c.workCategory === categoryFilter
+        ({ derived }) =>
+          paymentFilter === 'all' || derived.paymentStatus === paymentFilter
       )
-      .filter(
-        (c) => paymentFilter === 'all' || c.paymentStatus === paymentFilter
-      )
-      .filter((c) => {
+      .filter(({ c }) => {
         const term = itemSearch.trim().toLocaleLowerCase('tr');
         if (!term) return true;
         return (
@@ -117,10 +168,11 @@ export default function Subcontractors() {
           (c.workCategory || '').toLocaleLowerCase('tr').includes(term)
         );
       })
-      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      .sort((a, b) => (b.c.date || '').localeCompare(a.c.date || ''));
   }, [
     selected,
     workEntries,
+    subcontractorHakedisler,
     projectFilter,
     categoryFilter,
     paymentFilter,
@@ -137,9 +189,7 @@ export default function Subcontractors() {
         const c = workEntries.find((w) => w.id === h.contractId);
         return c?.workCategory === categoryFilter;
       })
-      .filter(
-        (h) => paymentFilter === 'all' || h.paymentStatus === paymentFilter
-      )
+      .filter((h) => paymentFilter === 'all' || h.paymentStatus === paymentFilter)
       .filter((h) => {
         const term = itemSearch.trim().toLocaleLowerCase('tr');
         if (!term) return true;
@@ -160,12 +210,12 @@ export default function Subcontractors() {
     itemSearch,
   ]);
 
-  // Totals by currency for the selected subcontractor (after filters)
+  // Totals by currency
   const totals = useMemo(() => {
     const contractByCur: Record<string, number> = {};
     const hakedisByCur: Record<string, number> = {};
     const paidByCur: Record<string, number> = {};
-    subContracts.forEach((c) => {
+    subContracts.forEach(({ c }) => {
       contractByCur[c.currency] =
         (contractByCur[c.currency] || 0) + (c.totalAmount || 0);
     });
@@ -183,6 +233,79 @@ export default function Subcontractors() {
     setCategoryFilter('all');
     setPaymentFilter('all');
     setItemSearch('');
+  };
+
+  // ----- Action handlers -----
+  const handleContractPdf = async (contractId: string) => {
+    const entry = workEntries.find((w) => w.id === contractId);
+    if (!entry) return;
+    try {
+      const project = projects.find((p) => p.id === entry.projectId);
+      await generateContractPDF(entry, project, subcontractorHakedisler);
+      toast.success('PDF rapor indirildi');
+    } catch {
+      toast.error('PDF oluşturulamadı');
+    }
+  };
+
+  const handleContractExcel = (contractId: string) => {
+    const entry = workEntries.find((w) => w.id === contractId);
+    if (!entry) return;
+    const project = projects.find((p) => p.id === entry.projectId);
+    exportSingleContractToExcel(entry, project, subcontractorHakedisler);
+  };
+
+  const handleHakedisPdf = async (hakedisId: string) => {
+    const h = subcontractorHakedisler.find((x) => x.id === hakedisId);
+    if (!h) return;
+    try {
+      const project = projects.find((p) => p.id === h.projectId);
+      const contract = workEntries.find((c) => c.id === h.contractId);
+      await generateHakedisPDF(h, project, contract, subcontractorHakedisler);
+      toast.success('PDF rapor indirildi');
+    } catch {
+      toast.error('PDF oluşturulamadı');
+    }
+  };
+
+  const handleHakedisExcel = (hakedisId: string) => {
+    const h = subcontractorHakedisler.find((x) => x.id === hakedisId);
+    if (!h) return;
+    const project = projects.find((p) => p.id === h.projectId);
+    const contract = workEntries.find((c) => c.id === h.contractId);
+    exportSingleHakedisToExcel(h, project, contract, subcontractorHakedisler);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      if (deleteTarget.kind === 'contract') {
+        await deleteWorkEntry(deleteTarget.id);
+        await addActivityLog(
+          'contract_deleted',
+          `${deleteTarget.label} sözleşmesi silindi`,
+          undefined,
+          deleteTarget.id,
+          'contract'
+        );
+        toast.success('Sözleşme silindi');
+      } else {
+        await deleteSubcontractorHakedis(deleteTarget.id);
+        await addActivityLog(
+          'hakedis_deleted',
+          `${deleteTarget.label} hakedişi silindi`,
+          undefined,
+          deleteTarget.id,
+          'hakedis'
+        );
+        toast.success('Hakediş silindi');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Silme işlemi başarısız');
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   return (
@@ -357,7 +480,7 @@ export default function Subcontractors() {
 
                   <TabsContent value="contracts">
                     <Card>
-                      <CardContent className="p-0">
+                      <CardContent className="p-0 overflow-x-auto">
                         {subContracts.length === 0 ? (
                           <div className="py-12 text-center text-muted-foreground text-sm">
                             Sözleşme bulunamadı
@@ -371,13 +494,15 @@ export default function Subcontractors() {
                                 <TableHead>Proje</TableHead>
                                 <TableHead>İş Kalemi</TableHead>
                                 <TableHead>Tür</TableHead>
-                                <TableHead className="text-right">Tutar</TableHead>
+                                <TableHead className="text-right">Sözleşme Tutarı</TableHead>
+                                <TableHead className="text-right">Hakediş / Ödenen</TableHead>
                                 <TableHead>Onay</TableHead>
                                 <TableHead>Ödeme</TableHead>
+                                <TableHead className="text-center">İşlem</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {subContracts.map((c) => (
+                              {subContracts.map(({ c, derived }) => (
                                 <TableRow key={c.id}>
                                   <TableCell className="font-medium">{c.contractNo}</TableCell>
                                   <TableCell>{formatDate(c.date)}</TableCell>
@@ -387,8 +512,41 @@ export default function Subcontractors() {
                                   <TableCell className="text-right tabular-nums">
                                     {formatCurrencyWithType(c.totalAmount || 0, c.currency as Currency)}
                                   </TableCell>
-                                  <TableCell><StatusBadge status={c.approvalStatus} size="sm" /></TableCell>
-                                  <TableCell><StatusBadge status={c.paymentStatus} size="sm" /></TableCell>
+                                  <TableCell className="text-right tabular-nums text-xs">
+                                    <div>{formatCurrencyWithType(derived.hakedisTotal, c.currency as Currency)}</div>
+                                    <div className="text-muted-foreground">{formatCurrencyWithType(derived.paid, c.currency as Currency)}</div>
+                                  </TableCell>
+                                  <TableCell><StatusBadge status={derived.approvalStatus} size="sm" /></TableCell>
+                                  <TableCell><StatusBadge status={derived.paymentStatus} size="sm" /></TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center justify-center gap-0.5">
+                                      <Button variant="ghost" size="sm" title="Detay"
+                                        onClick={() => navigate(`/yapilanisler?view=${c.id}`)}>
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                      {(currentUser.role === 'direktor' || currentUser.role === 'muhasebe') && (
+                                        <Button variant="ghost" size="sm" title="Düzenle"
+                                          onClick={() => navigate(`/yapilanisler?edit=${c.id}`)}>
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      <Button variant="ghost" size="sm" title="PDF"
+                                        onClick={() => handleContractPdf(c.id)}>
+                                        <FileText className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" title="Excel"
+                                        onClick={() => handleContractExcel(c.id)}>
+                                        <FileSpreadsheet className="h-4 w-4" />
+                                      </Button>
+                                      {canDelete && (
+                                        <Button variant="ghost" size="sm" title="Sil"
+                                          className="text-destructive hover:text-destructive"
+                                          onClick={() => setDeleteTarget({ kind: 'contract', id: c.id, label: c.contractNo })}>
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -400,7 +558,7 @@ export default function Subcontractors() {
 
                   <TabsContent value="hakedisler">
                     <Card>
-                      <CardContent className="p-0">
+                      <CardContent className="p-0 overflow-x-auto">
                         {subHakedisler.length === 0 ? (
                           <div className="py-12 text-center text-muted-foreground text-sm">
                             Hakediş bulunamadı
@@ -417,25 +575,61 @@ export default function Subcontractors() {
                                 <TableHead className="text-right">Ödenen</TableHead>
                                 <TableHead>Onay</TableHead>
                                 <TableHead>Ödeme</TableHead>
+                                <TableHead className="text-center">İşlem</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {subHakedisler.map((h) => (
-                                <TableRow key={h.id}>
-                                  <TableCell className="font-medium">{h.hakedisNo}</TableCell>
-                                  <TableCell>{formatDate(h.date)}</TableCell>
-                                  <TableCell>{projectName(h.projectId)}</TableCell>
-                                  <TableCell>{h.contractNo || '-'}</TableCell>
-                                  <TableCell className="text-right tabular-nums">
-                                    {formatCurrencyWithType(h.totalAmount || 0, h.currency as Currency)}
-                                  </TableCell>
-                                  <TableCell className="text-right tabular-nums">
-                                    {formatCurrencyWithType(h.paidAmount || 0, h.currency as Currency)}
-                                  </TableCell>
-                                  <TableCell><StatusBadge status={h.approvalStatus} size="sm" /></TableCell>
-                                  <TableCell><StatusBadge status={h.paymentStatus} size="sm" /></TableCell>
-                                </TableRow>
-                              ))}
+                              {subHakedisler.map((h) => {
+                                const editable =
+                                  currentUser.role === 'direktor' ||
+                                  h.approvalStatus === 'onay_bekliyor' ||
+                                  h.approvalStatus === 'revize';
+                                return (
+                                  <TableRow key={h.id}>
+                                    <TableCell className="font-medium">{h.hakedisNo}</TableCell>
+                                    <TableCell>{formatDate(h.date)}</TableCell>
+                                    <TableCell>{projectName(h.projectId)}</TableCell>
+                                    <TableCell>{h.contractNo || '-'}</TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatCurrencyWithType(h.totalAmount || 0, h.currency as Currency)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatCurrencyWithType(h.paidAmount || 0, h.currency as Currency)}
+                                    </TableCell>
+                                    <TableCell><StatusBadge status={h.approvalStatus} size="sm" /></TableCell>
+                                    <TableCell><StatusBadge status={h.paymentStatus} size="sm" /></TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center justify-center gap-0.5">
+                                        <Button variant="ghost" size="sm" title="Detay"
+                                          onClick={() => navigate(`/hakedisler?view=${h.id}`)}>
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {editable && (
+                                          <Button variant="ghost" size="sm" title="Düzenle"
+                                            onClick={() => navigate(`/hakedisler?edit=${h.id}`)}>
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <Button variant="ghost" size="sm" title="PDF"
+                                          onClick={() => handleHakedisPdf(h.id)}>
+                                          <FileText className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" title="Excel"
+                                          onClick={() => handleHakedisExcel(h.id)}>
+                                          <FileSpreadsheet className="h-4 w-4" />
+                                        </Button>
+                                        {canDelete && (
+                                          <Button variant="ghost" size="sm" title="Sil"
+                                            className="text-destructive hover:text-destructive"
+                                            onClick={() => setDeleteTarget({ kind: 'hakedis', id: h.id, label: h.hakedisNo })}>
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                             </TableBody>
                           </Table>
                         )}
@@ -448,6 +642,25 @@ export default function Subcontractors() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Silmek istediğinize emin misiniz?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.kind === 'contract'
+                ? `"${deleteTarget?.label}" numaralı sözleşme silinecek. Bu işlem geri alınamaz.`
+                : `"${deleteTarget?.label}" numaralı hakediş silinecek. Bu işlem geri alınamaz.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
