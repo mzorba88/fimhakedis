@@ -89,6 +89,7 @@ export default function WorkEntries() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<WorkEntry | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Form state
   const [newEntry, setNewEntry] = useState({
