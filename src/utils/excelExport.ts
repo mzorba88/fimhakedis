@@ -220,3 +220,133 @@ export async function exportSinglePaymentToExcel(
   XLSX.writeFile(wb, `odeme-${hakedis.hakedisNo}-${dateStr()}.xlsx`);
   toast.success('Ödeme Excel raporu indirildi');
 }
+
+/** Export aggregated subcontractor report to Excel */
+export async function exportSubcontractorReportToExcel(
+  subcontractorName: string,
+  contracts: WorkEntry[],
+  hakedisler: SubcontractorHakedis[],
+  projects: Project[],
+  filters?: { projectName?: string; workCategory?: string; paymentStatus?: string; search?: string }
+) {
+  const XLSX = await loadXLSX();
+  const wb = XLSX.utils.book_new();
+
+  const projectNameOf = (id?: string) => {
+    const p = projects.find(x => x.id === id);
+    return p ? `${p.projectCode} - ${p.projectName}` : '-';
+  };
+
+  // ---- Özet sheet ----
+  const sumByCur = (arr: number[], curs: string[]) => {
+    const map: Record<string, number> = {};
+    arr.forEach((v, i) => { map[curs[i]] = (map[curs[i]] || 0) + v; });
+    return map;
+  };
+  const contractTotals = sumByCur(
+    contracts.map(c => c.totalAmount + (c.vatRate ? c.totalAmount * (c.vatRate / 100) : 0)),
+    contracts.map(c => c.currency)
+  );
+  const hakedisTotals = sumByCur(
+    hakedisler.map(h => h.totalAmount + (h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0)),
+    hakedisler.map(h => h.currency)
+  );
+  const paidTotals = sumByCur(
+    hakedisler.map(h => h.paidAmount || 0),
+    hakedisler.map(h => h.currency)
+  );
+  const currencies = Array.from(new Set([
+    ...Object.keys(contractTotals),
+    ...Object.keys(hakedisTotals),
+    ...Object.keys(paidTotals),
+  ]));
+
+  const summary: any[][] = [
+    ['ALTYÜKLENİCİ RAPORU'],
+    [`Rapor Tarihi: ${formatDate(new Date().toISOString())}`],
+    [],
+    ['BİLGİLER'],
+    ['Altyüklenici', subcontractorName],
+    ['Sözleşme Sayısı', contracts.length],
+    ['Hakediş Sayısı', hakedisler.length],
+  ];
+  if (filters?.projectName && filters.projectName !== 'all') summary.push(['Proje Filtresi', filters.projectName]);
+  if (filters?.workCategory && filters.workCategory !== 'all') summary.push(['İş Kalemi Filtresi', filters.workCategory]);
+  if (filters?.paymentStatus && filters.paymentStatus !== 'all') summary.push(['Ödeme Durumu Filtresi', filters.paymentStatus]);
+  if (filters?.search) summary.push(['Arama', filters.search]);
+
+  summary.push([], ['FİNANSAL ÖZET (KDV DAHİL)']);
+  summary.push(['Para Birimi', 'Sözleşme Toplamı', 'Hakediş Toplamı', 'Ödenen', 'Kalan Bakiye']);
+  if (currencies.length === 0) {
+    summary.push(['-', 0, 0, 0, 0]);
+  } else {
+    currencies.forEach(cur => {
+      const ct = contractTotals[cur] || 0;
+      const ht = hakedisTotals[cur] || 0;
+      const pt = paidTotals[cur] || 0;
+      summary.push([cur, ct, ht, pt, ct - pt]);
+    });
+  }
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summary);
+  wsSummary['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Özet');
+
+  // ---- Sözleşmeler sheet ----
+  const contractsData: any[][] = [
+    ['#', 'Sözleşme No', 'Tarih', 'Proje', 'İş Kalemi', 'Tip', 'Para Birimi', 'Tutar (KDV Hariç)', 'KDV', 'Tutar (KDV Dahil)', 'Onay', 'Ödeme'],
+  ];
+  contracts.forEach((c, idx) => {
+    const vat = c.vatRate ? c.totalAmount * (c.vatRate / 100) : 0;
+    contractsData.push([
+      idx + 1,
+      c.contractNo,
+      formatDate(c.date),
+      projectNameOf(c.projectId),
+      c.workCategory,
+      contractTypeLabels[c.contractType],
+      c.currency,
+      c.totalAmount,
+      vat,
+      c.totalAmount + vat,
+      approvalStatusLabels[c.approvalStatus],
+      paymentStatusLabels[c.paymentStatus],
+    ]);
+  });
+  const wsContracts = XLSX.utils.aoa_to_sheet(contractsData);
+  wsContracts['!cols'] = [{ wch: 5 }, { wch: 18 }, { wch: 12 }, { wch: 28 }, { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsContracts, 'Sözleşmeler');
+
+  // ---- Hakedişler sheet ----
+  const hakedislerData: any[][] = [
+    ['#', 'Hakediş No', 'Tarih', 'Proje', 'Sözleşme No', 'Tip', 'Para Birimi', 'Tutar (KDV Hariç)', 'KDV', 'Tutar (KDV Dahil)', 'Ödenen', 'Kalan', 'Onay', 'Ödeme'],
+  ];
+  hakedisler.forEach((h, idx) => {
+    const vat = h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0;
+    const totalWithVat = h.totalAmount + vat;
+    hakedislerData.push([
+      idx + 1,
+      h.hakedisNo,
+      formatDate(h.date),
+      projectNameOf(h.projectId),
+      h.contractNo || '-',
+      hakedisTypeLabels[h.hakedisType],
+      h.currency,
+      h.totalAmount,
+      vat,
+      totalWithVat,
+      h.paidAmount || 0,
+      totalWithVat - (h.paidAmount || 0),
+      approvalStatusLabels[h.approvalStatus],
+      paymentStatusLabels[h.paymentStatus],
+    ]);
+  });
+  const wsHakedisler = XLSX.utils.aoa_to_sheet(hakedislerData);
+  wsHakedisler['!cols'] = [{ wch: 5 }, { wch: 18 }, { wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsHakedisler, 'Hakedişler');
+
+  const safeName = subcontractorName.replace(/[^\w\-]+/g, '_');
+  XLSX.writeFile(wb, `altyuklenici-raporu-${safeName}-${dateStr()}.xlsx`);
+  toast.success('Altyüklenici Excel raporu indirildi');
+}
+
