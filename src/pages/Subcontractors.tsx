@@ -13,10 +13,11 @@ import {
   paymentStatusLabels,
   workCategories,
 } from '@/types/hakedis';
-import { generateContractPDF, generateHakedisPDF } from '@/utils/pdfGenerator';
+import { generateContractPDF, generateHakedisPDF, generateSubcontractorPDF } from '@/utils/pdfGenerator';
 import {
   exportSingleContractToExcel,
   exportSingleHakedisToExcel,
+  exportSubcontractorReportToExcel,
 } from '@/utils/excelExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -276,6 +277,47 @@ export default function Subcontractors() {
     exportSingleHakedisToExcel(h, project, contract, subcontractorHakedisler);
   };
 
+  // Aggregated subcontractor report (uses current filters)
+  const buildReportFilters = () => ({
+    projectName: projectFilter === 'all' ? 'all' : (projects.find(p => p.id === projectFilter)?.projectName || projectFilter),
+    workCategory: categoryFilter,
+    paymentStatus: paymentFilter === 'all' ? 'all' : paymentStatusLabels[paymentFilter as PaymentStatus],
+    search: itemSearch || undefined,
+  });
+
+  const handleSubcontractorPdf = async () => {
+    if (!selected) return;
+    try {
+      await generateSubcontractorPDF(
+        selected,
+        subContracts.map(s => s.c),
+        subHakedisler,
+        projects,
+        buildReportFilters()
+      );
+      toast.success('Altyüklenici PDF raporu indirildi');
+    } catch (e) {
+      console.error(e);
+      toast.error('PDF oluşturulamadı');
+    }
+  };
+
+  const handleSubcontractorExcel = async () => {
+    if (!selected) return;
+    try {
+      await exportSubcontractorReportToExcel(
+        selected,
+        subContracts.map(s => s.c),
+        subHakedisler,
+        projects,
+        buildReportFilters()
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error('Excel oluşturulamadı');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -393,8 +435,20 @@ export default function Subcontractors() {
             ) : (
               <>
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between gap-3 space-y-0">
                     <CardTitle className="text-lg">{selected}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleSubcontractorPdf}
+                        title="Filtrelenmiş kayıtları PDF olarak indir">
+                        <FileText className="h-4 w-4 mr-1.5" />
+                        PDF Rapor
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleSubcontractorExcel}
+                        title="Filtrelenmiş kayıtları Excel olarak indir">
+                        <FileSpreadsheet className="h-4 w-4 mr-1.5" />
+                        Excel Rapor
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Filters */}
