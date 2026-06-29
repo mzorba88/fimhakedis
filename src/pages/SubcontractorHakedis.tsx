@@ -199,6 +199,50 @@ export default function SubcontractorHakedis() {
       .reduce((sum, h) => sum + h.totalAmount, 0);
   }, [subcontractorHakedisler, selectedContractId, editingHakedisId]);
 
+  // Cumulative quantities per workItemEntryId from previous hakedişler (excluding current)
+  const cumulativeQuantities = useMemo(() => {
+    if (!selectedContractId) return new Map<string, number>();
+    return getCumulativeWorkItemQuantities(
+      selectedContractId,
+      subcontractorHakedisler,
+      editingHakedisId || undefined
+    );
+  }, [selectedContractId, subcontractorHakedisler, editingHakedisId]);
+
+  // Aggregated contract account summary
+  const contractAccount = useMemo(() => {
+    if (!selectedContract) return null;
+    return getContractAccount(
+      selectedContract,
+      subcontractorHakedisler,
+      editingHakedisId || undefined
+    );
+  }, [selectedContract, subcontractorHakedisler, editingHakedisId]);
+
+  // Helper: fill "remaining" quantity for one row or all rows
+  const fillRemainingQuantity = (itemId: string) => {
+    setHakedisItems(items => items.map(item => {
+      if (item.id !== itemId) return item;
+      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.contractQuantity
+        ?? selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
+      const used = cumulativeQuantities.get(item.workItemEntryId) || 0;
+      const remaining = Math.max(0, contractQty - used);
+      return { ...item, quantity: remaining, amount: remaining * item.unitPrice };
+    }));
+  };
+
+  const fillAllRemainingQuantities = () => {
+    setHakedisItems(items => items.map(item => {
+      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.contractQuantity
+        ?? selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
+      const used = cumulativeQuantities.get(item.workItemEntryId) || 0;
+      const remaining = Math.max(0, contractQty - used);
+      return { ...item, quantity: remaining, amount: remaining * item.unitPrice };
+    }));
+    toast.success('Tüm kalemler için kalan miktarlar dolduruldu');
+  };
+
+
   // Filtered hakedisler
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
