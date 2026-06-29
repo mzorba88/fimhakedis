@@ -223,8 +223,7 @@ export default function SubcontractorHakedis() {
   const fillRemainingQuantity = (itemId: string) => {
     setHakedisItems(items => items.map(item => {
       if (item.id !== itemId) return item;
-      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.contractQuantity
-        ?? selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
+      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
       const used = cumulativeQuantities.get(item.workItemEntryId) || 0;
       const remaining = Math.max(0, contractQty - used);
       return { ...item, quantity: remaining, amount: remaining * item.unitPrice };
@@ -233,14 +232,14 @@ export default function SubcontractorHakedis() {
 
   const fillAllRemainingQuantities = () => {
     setHakedisItems(items => items.map(item => {
-      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.contractQuantity
-        ?? selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
+      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
       const used = cumulativeQuantities.get(item.workItemEntryId) || 0;
       const remaining = Math.max(0, contractQty - used);
       return { ...item, quantity: remaining, amount: remaining * item.unitPrice };
     }));
     toast.success('Tüm kalemler için kalan miktarlar dolduruldu');
   };
+
 
 
   // Filtered hakedisler
