@@ -232,6 +232,18 @@ export default function Subcontractors() {
     return { contractByCur, hakedisByCur, paidByCur };
   }, [subContracts, subHakedisler]);
 
+  // Proje bazlı cari hesap (her proje + para birimi için ayrı kart)
+  const projectAccounts: SubcontractorProjectAccount[] = useMemo(() => {
+    if (!selected) return [];
+    return getSubcontractorProjectAccounts(
+      selected,
+      workEntries,
+      subcontractorHakedisler,
+      (id?: string) => projects.find((p) => p.id === id)?.projectName || 'Proje belirtilmemiş'
+    );
+  }, [selected, workEntries, subcontractorHakedisler, projects]);
+
+
   const resetFilters = () => {
     setProjectFilter('all');
     setCategoryFilter('all');
