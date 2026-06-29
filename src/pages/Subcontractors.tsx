@@ -19,6 +19,7 @@ import {
   exportSingleHakedisToExcel,
   exportSubcontractorReportToExcel,
 } from '@/utils/excelExport';
+import { getSubcontractorProjectAccounts, type SubcontractorProjectAccount } from '@/utils/contractAccounting';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,8 @@ import {
   Pencil,
   FileSpreadsheet,
   Trash2,
+  AlertTriangle,
+  FolderKanban,
 } from 'lucide-react';
 
 type DeleteTarget =
@@ -228,6 +231,18 @@ export default function Subcontractors() {
     });
     return { contractByCur, hakedisByCur, paidByCur };
   }, [subContracts, subHakedisler]);
+
+  // Proje bazlı cari hesap (her proje + para birimi için ayrı kart)
+  const projectAccounts: SubcontractorProjectAccount[] = useMemo(() => {
+    if (!selected) return [];
+    return getSubcontractorProjectAccounts(
+      selected,
+      workEntries,
+      subcontractorHakedisler,
+      (id?: string) => projects.find((p) => p.id === id)?.projectName || 'Proje belirtilmemiş'
+    );
+  }, [selected, workEntries, subcontractorHakedisler, projects]);
+
 
   const resetFilters = () => {
     setProjectFilter('all');
@@ -519,8 +534,36 @@ export default function Subcontractors() {
                         amounts={totals.paidByCur}
                       />
                     </div>
+
+                    {/* Proje Bazlı Cari Hesap */}
+                    {projectAccounts.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                          <FolderKanban className="h-4 w-4 text-primary" />
+                          Proje Bazlı Cari Hesap
+                          <span className="text-xs font-normal text-muted-foreground">
+                            (her proje + para birimi için)
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                          {projectAccounts.map((acc) => (
+                            <ProjectAccountCard
+                              key={`${acc.projectId}-${acc.currency}`}
+                              account={acc}
+                              active={projectFilter === acc.projectId}
+                              onClick={() =>
+                                setProjectFilter(
+                                  projectFilter === acc.projectId ? 'all' : acc.projectId
+                                )
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+
 
                 <Tabs defaultValue="contracts">
                   <TabsList>
@@ -749,3 +792,105 @@ function SummaryBox({
     </div>
   );
 }
+
+function ProjectAccountCard({
+  account,
+  active,
+  onClick,
+}: {
+  account: SubcontractorProjectAccount;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const {
+    projectName,
+    currency,
+    contractCount,
+    contractTotal,
+    hakedisTotal,
+    approvedTotal,
+    paidTotal,
+    remainingApproved,
+    remainingContract,
+    isOverPaid,
+  } = account;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left rounded-lg border p-3 transition-colors ${
+        active
+          ? 'border-primary bg-primary/5'
+          : 'bg-card hover:border-primary/40 hover:bg-muted/40'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-foreground truncate">
+            {projectName}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {contractCount} sözleşme · {currency}
+          </div>
+        </div>
+        {isOverPaid && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive text-[10px] font-medium px-1.5 py-0.5 shrink-0">
+            <AlertTriangle className="h-3 w-3" />
+            Sözleşme Aşıldı
+          </span>
+        )}
+      </div>
+
+      <div className="mt-2 space-y-1 text-xs tabular-nums">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Sözleşme</span>
+          <span className="font-medium">
+            {formatCurrencyWithType(contractTotal, currency)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Hakediş (toplam)</span>
+          <span>{formatCurrencyWithType(hakedisTotal, currency)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Onaylanan</span>
+          <span className="text-emerald-600">
+            {formatCurrencyWithType(approvedTotal, currency)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Ödenen</span>
+          <span className="text-primary">
+            {formatCurrencyWithType(paidTotal, currency)}
+          </span>
+        </div>
+        <div className="flex justify-between border-t pt-1 mt-1">
+          <span className="text-muted-foreground">Ödenecek</span>
+          <span
+            className={`font-semibold ${
+              remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'
+            }`}
+          >
+            {formatCurrencyWithType(remainingApproved, currency)}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Sözleşmeye kalan</span>
+          <span
+            className={`font-semibold ${
+              remainingContract < 0
+                ? 'text-destructive'
+                : remainingContract === 0
+                ? 'text-emerald-600'
+                : 'text-foreground'
+            }`}
+          >
+            {formatCurrencyWithType(remainingContract, currency)}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
