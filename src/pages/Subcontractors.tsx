@@ -65,6 +65,8 @@ import {
   Pencil,
   FileSpreadsheet,
   Trash2,
+  AlertTriangle,
+  FolderKanban,
 } from 'lucide-react';
 
 type DeleteTarget =
