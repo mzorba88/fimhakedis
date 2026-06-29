@@ -1848,37 +1848,73 @@ export default function SubcontractorHakedis() {
                     </div>
                   </div>
 
-                  <Label>İş Kalemleri ve Miktarlar</Label>
-                  <div className="space-y-3">
-                    {hakedisItems.map((item) => (
-                      <div key={item.id} className="rounded-lg border p-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.workCategory}</p>
-                            <p className="text-xs text-muted-foreground">{item.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Birim Fiyat: {formatCurrencyWithType(item.unitPrice, hakedisCurrency)} / {item.unit}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              placeholder="Miktar"
-                              className="w-24"
-                              value={item.quantity || ''}
-                              onChange={(e) => updateHakedisItemQuantity(item.id, parseFloat(e.target.value) || 0)}
-                            />
-                            <span className="text-sm text-muted-foreground w-12">{item.unit}</span>
-                          </div>
-                        </div>
-                        {item.quantity > 0 && (
-                          <div className="mt-2 text-right text-sm font-medium">
-                            Tutar: {formatCurrencyWithType(item.amount, hakedisCurrency)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <Label>İş Kalemleri ve Miktarlar</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={fillAllRemainingQuantities}
+                      title="Her kalem için sözleşme metrajından önceki hakedişler düşülerek kalan otomatik doldurulur"
+                    >
+                      Tüm kalemler için kalanı getir
+                    </Button>
                   </div>
+                  <div className="space-y-3">
+                    {hakedisItems.map((item) => {
+                      const contractQty = selectedContract?.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity ?? 0;
+                      const used = cumulativeQuantities.get(item.workItemEntryId) || 0;
+                      const remaining = Math.max(0, contractQty - used);
+                      const over = item.quantity > remaining;
+                      return (
+                        <div key={item.id} className="rounded-lg border p-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{item.workCategory}</p>
+                              <p className="text-xs text-muted-foreground">{item.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Birim Fiyat: {formatCurrencyWithType(item.unitPrice, hakedisCurrency)} / {item.unit}
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground tabular-nums">
+                                <span>Sözleşme: <span className="font-medium text-foreground">{contractQty} {item.unit}</span></span>
+                                <span>Şimdiye kadar: <span className="font-medium text-foreground">{used} {item.unit}</span></span>
+                                <span>Kalan: <span className={`font-medium ${remaining > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{remaining} {item.unit}</span></span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  placeholder="Miktar"
+                                  className={`w-24 ${over ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                  value={item.quantity || ''}
+                                  onChange={(e) => updateHakedisItemQuantity(item.id, parseFloat(e.target.value) || 0)}
+                                />
+                                <span className="text-sm text-muted-foreground w-12">{item.unit}</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => fillRemainingQuantity(item.id)}
+                                disabled={remaining <= 0}
+                              >
+                                Kalanı getir
+                              </Button>
+                            </div>
+                          </div>
+                          {item.quantity > 0 && (
+                            <div className={`mt-2 text-right text-sm font-medium ${over ? 'text-destructive' : ''}`}>
+                              {over && <span className="text-[11px] mr-2">Kalan miktarı aşıyor</span>}
+                              Tutar: {formatCurrencyWithType(item.amount, hakedisCurrency)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
 
                   {/* Extra Work Items */}
                   {extraItems.length > 0 && (
