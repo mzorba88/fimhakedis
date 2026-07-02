@@ -1182,7 +1182,7 @@ export default function SubcontractorHakedis() {
                         <SelectValue placeholder="Altyüklenici seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        {contractSubcontractors.map((sub) => (
+                        {sortNatural(contractSubcontractors, (s) => s).map((sub) => (
                           <SelectItem key={sub} value={sub}>
                             {sub}
                           </SelectItem>
