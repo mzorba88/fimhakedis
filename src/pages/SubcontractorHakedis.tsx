@@ -1175,7 +1175,7 @@ export default function SubcontractorHakedis() {
                         setSelectedSubcontractor(value);
                         setSelectedContractId('');
                       }}
-                      disabled={isEditMode || contractSubcontractors.length === 0}
+                      disabled={(isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')) || contractSubcontractors.length === 0}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Altyüklenici seçin" />
