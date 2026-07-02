@@ -363,14 +363,15 @@ export default function SubcontractorHakedis() {
   };
 
   const handleEditHakedis = (hakedis: HakedisType) => {
-    // Approved hakedis can only be edited by Direktor
-    if (hakedis.approvalStatus === 'onaylandi' && currentUser.role !== 'direktor') {
-      toast.error('Onaylanmış hakedişleri yalnızca Direktör düzenleyebilir.');
+    const canEditAny = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
+    // Approved hakedis can only be edited by Direktor or Muhasebe
+    if (hakedis.approvalStatus === 'onaylandi' && !canEditAny) {
+      toast.error('Onaylanmış hakedişleri yalnızca Direktör veya Muhasebe düzenleyebilir.');
       return;
     }
-    // For other statuses, only allow editing for pending approval or revision required hakedis (non-direktor)
+    // For other statuses, only allow editing for pending approval or revision required hakedis (non-privileged)
     if (
-      currentUser.role !== 'direktor' &&
+      !canEditAny &&
       hakedis.approvalStatus !== 'onay_bekliyor' &&
       hakedis.approvalStatus !== 'revize'
     ) {
