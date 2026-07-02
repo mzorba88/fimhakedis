@@ -294,7 +294,7 @@ export default function SubcontractorHakedis() {
       project?.projectCode,
       contract?.workCategory,
       ...(hakedis.hakedisItems?.map(i => i.description) || []),
-      ...(hakedis.extraWorkItems?.map(i => i.description) || []),
+      ...(hakedis.extraItems?.map(i => i.description) || []),
     ]
       .filter(Boolean)
       .join(' ')
