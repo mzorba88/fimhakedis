@@ -885,7 +885,7 @@ export default function SubcontractorHakedis() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize') && (
+                  {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize' || currentUser.role === 'direktor' || currentUser.role === 'muhasebe') && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1039,7 +1039,7 @@ export default function SubcontractorHakedis() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize') && (
+                            {(hakedis.approvalStatus === 'onay_bekliyor' || hakedis.approvalStatus === 'revize' || currentUser.role === 'direktor' || currentUser.role === 'muhasebe') && (
                               <Button
                                 variant="ghost"
                                 size="sm"
