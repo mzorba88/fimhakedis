@@ -1202,7 +1202,7 @@ export default function SubcontractorHakedis() {
               {selectedSubcontractor && (
                 <div className="space-y-2">
                   <Label>Sözleşme No</Label>
-                  <Select value={selectedContractId} onValueChange={handleContractSelect} disabled={isEditMode}>
+                  <Select value={selectedContractId} onValueChange={handleContractSelect} disabled={isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sözleşme seçin" />
                     </SelectTrigger>
