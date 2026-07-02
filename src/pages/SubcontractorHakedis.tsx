@@ -102,6 +102,42 @@ export default function SubcontractorHakedis() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingHakedisId, setEditingHakedisId] = useState<string | null>(null);
   const [selectedHakedis, setSelectedHakedis] = useState<HakedisType | null>(null);
+  const [isChangeProjectOpen, setIsChangeProjectOpen] = useState(false);
+  const [changeProjectHakedis, setChangeProjectHakedis] = useState<HakedisType | null>(null);
+  const [changeProjectNewId, setChangeProjectNewId] = useState<string>('');
+
+  const canChangeProject = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
+
+  const openChangeProject = (hakedis: HakedisType) => {
+    setChangeProjectHakedis(hakedis);
+    setChangeProjectNewId(hakedis.projectId || '');
+    setIsChangeProjectOpen(true);
+  };
+
+  const handleChangeProjectSave = async () => {
+    if (!changeProjectHakedis || !changeProjectNewId) return;
+    if (changeProjectNewId === changeProjectHakedis.projectId) {
+      setIsChangeProjectOpen(false);
+      return;
+    }
+    try {
+      await updateSubcontractorHakedis(changeProjectHakedis.id, { projectId: changeProjectNewId });
+      const oldProj = projects.find(p => p.id === changeProjectHakedis.projectId);
+      const newProj = projects.find(p => p.id === changeProjectNewId);
+      await addActivityLog(
+        'hakedis_updated',
+        `Hakediş projesi değiştirildi: ${changeProjectHakedis.hakedisNo}`,
+        `${oldProj?.projectCode || '-'} → ${newProj?.projectCode || '-'}`,
+        changeProjectHakedis.id,
+        'hakedis'
+      );
+      toast.success('Proje güncellendi');
+      setIsChangeProjectOpen(false);
+      setChangeProjectHakedis(null);
+    } catch (e) {
+      toast.error('Proje güncellenemedi');
+    }
+  };
 
   // Small contractless hakediş dialog state
   const [isSmallHakedisDialogOpen, setIsSmallHakedisDialogOpen] = useState(false);
