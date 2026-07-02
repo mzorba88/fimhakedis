@@ -744,7 +744,7 @@ export default function WorkEntries() {
                         <SelectValue placeholder="Altyüklenici seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredSubs.map((sub) => (
+                        {sortNatural(filteredSubs, (s) => s.name).map((sub) => (
                           <SelectItem key={sub.name} value={sub.name}>
                             {sub.name}
                           </SelectItem>
