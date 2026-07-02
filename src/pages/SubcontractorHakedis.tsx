@@ -935,6 +935,19 @@ export default function SubcontractorHakedis() {
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
+                  {canChangeProject && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openChangeProject(hakedis);
+                      }}
+                      className="touch-target"
+                    >
+                      <FolderInput className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
