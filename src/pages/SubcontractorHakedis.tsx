@@ -1138,7 +1138,7 @@ export default function SubcontractorHakedis() {
                     <SelectValue placeholder="Proje seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.filter(p => p.status === 'aktif').map((project) => (
+                    {sortNatural(projects.filter(p => p.status === 'aktif'), (p) => p.projectCode).map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.projectCode} - {project.projectName}
                       </SelectItem>
