@@ -845,19 +845,13 @@ export default function SubcontractorHakedis() {
               className="pl-9"
             />
           </div>
-          <Select value={filterProject} onValueChange={setFilterProject}>
-            <SelectTrigger className="w-full sm:w-44">
-              <SelectValue placeholder="Proje Seç" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Projeler</SelectItem>
-              {sortNatural(projects, (p) => p.projectCode).map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.projectCode} - {project.projectName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProjectCombobox
+            projects={projects}
+            value={filterProject}
+            onChange={setFilterProject}
+            includeAll
+            className="w-full sm:w-56"
+          />
           <Select value={filterApproval} onValueChange={setFilterApproval}>
             <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Onay Durumu" />
