@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
+import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { AmountCell } from '@/components/AmountCell';
@@ -800,7 +801,7 @@ export default function SubcontractorHakedis() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm Projeler</SelectItem>
-              {projects.map((project) => (
+              {sortNatural(projects, (p) => p.projectCode).map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectCode} - {project.projectName}
                 </SelectItem>
@@ -1137,7 +1138,7 @@ export default function SubcontractorHakedis() {
                     <SelectValue placeholder="Proje seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.filter(p => p.status === 'aktif').map((project) => (
+                    {sortNatural(projects.filter(p => p.status === 'aktif'), (p) => p.projectCode).map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.projectCode} - {project.projectName}
                       </SelectItem>
@@ -1162,7 +1163,7 @@ export default function SubcontractorHakedis() {
                       className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Altyüklenici seçin</option>
-                      {contractSubcontractors.map((sub) => (
+                      {sortNatural(contractSubcontractors, (s) => s).map((sub) => (
                         <option key={sub} value={sub}>
                           {sub}
                         </option>
@@ -1181,7 +1182,7 @@ export default function SubcontractorHakedis() {
                         <SelectValue placeholder="Altyüklenici seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        {contractSubcontractors.map((sub) => (
+                        {sortNatural(contractSubcontractors, (s) => s).map((sub) => (
                           <SelectItem key={sub} value={sub}>
                             {sub}
                           </SelectItem>
@@ -1207,7 +1208,7 @@ export default function SubcontractorHakedis() {
                       <SelectValue placeholder="Sözleşme seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableContracts.map((contract) => (
+                      {sortNatural(availableContracts, (c) => c.contractNo).map((contract) => (
                         <SelectItem key={contract.id} value={contract.id}>
                           {contract.contractNo} - {contract.workCategory} ({contractTypeLabels[contract.contractType]})
                         </SelectItem>
@@ -2432,7 +2433,7 @@ export default function SubcontractorHakedis() {
                       <SelectValue placeholder="Altyüklenici seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allSubcontractorNames.map(name => (
+                      {sortNatural(allSubcontractorNames, (n) => n).map(name => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -2524,7 +2525,7 @@ export default function SubcontractorHakedis() {
                               <SelectValue placeholder="Proje seçin" />
                             </SelectTrigger>
                             <SelectContent>
-                              {projects.map(p => (
+                              {sortNatural(projects, (p) => p.projectCode).map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</SelectItem>
                               ))}
                             </SelectContent>

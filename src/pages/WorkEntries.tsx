@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
+import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
@@ -394,7 +395,7 @@ export default function WorkEntries() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm Projeler</SelectItem>
-              {projects.map((project) => (
+              {sortNatural(projects, (p) => p.projectCode).map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectCode}
                 </SelectItem>
@@ -674,7 +675,7 @@ export default function WorkEntries() {
                   <SelectValue placeholder="Proje seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeProjects.map((project) => (
+                  {sortNatural(activeProjects, (p) => p.projectCode).map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.projectCode} - {project.projectName}
                     </SelectItem>
@@ -694,7 +695,7 @@ export default function WorkEntries() {
                   <SelectValue placeholder="İş kalemi seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workCategories.map((category) => (
+                  {sortNatural([...workCategories], (c) => c).map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -743,7 +744,7 @@ export default function WorkEntries() {
                         <SelectValue placeholder="Altyüklenici seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredSubs.map((sub) => (
+                        {sortNatural(filteredSubs, (s) => s.name).map((sub) => (
                           <SelectItem key={sub.name} value={sub.name}>
                             {sub.name}
                           </SelectItem>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
+import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
 import {
@@ -483,7 +484,7 @@ export default function Subcontractors() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Tüm Projeler</SelectItem>
-                          {projects.map((p) => (
+                          {sortNatural(projects, (p) => p.projectName).map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.projectName}
                             </SelectItem>
@@ -496,7 +497,7 @@ export default function Subcontractors() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Tüm İş Kalemleri</SelectItem>
-                          {workCategories.map((c) => (
+                          {sortNatural([...workCategories], (c) => c).map((c) => (
                             <SelectItem key={c} value={c}>
                               {c}
                             </SelectItem>

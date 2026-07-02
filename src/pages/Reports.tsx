@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
+import { sortNatural } from '@/lib/utils';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrency, formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
 import { 
@@ -422,7 +423,7 @@ export default function Reports() {
                   <SelectValue placeholder="Proje seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((project) => (
+                  {sortNatural(projects, (p) => p.projectCode).map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.projectCode} - {project.projectName}
                     </SelectItem>

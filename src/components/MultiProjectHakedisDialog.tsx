@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { sortNatural } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -388,7 +389,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
               <Select value={subcontractor} onValueChange={(v) => { setSubcontractor(v); setRows([makeRow()]); }}>
                 <SelectTrigger><SelectValue placeholder="Altyüklenici seçin" /></SelectTrigger>
                 <SelectContent>
-                  {allSubcontractorNames.map(n => (
+                  {sortNatural(allSubcontractorNames, (n) => n).map(n => (
                     <SelectItem key={n} value={n}>{n}</SelectItem>
                   ))}
                 </SelectContent>
@@ -466,7 +467,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                           }}>
                             <SelectTrigger><SelectValue placeholder="Proje seçin" /></SelectTrigger>
                             <SelectContent>
-                              {projectsForSub.map(p => (
+                              {sortNatural(projectsForSub, (p) => p.projectCode).map(p => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.projectCode} - {p.projectName}
                                 </SelectItem>
@@ -502,7 +503,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                             >
                               <SelectTrigger><SelectValue placeholder="Sözleşme seçin" /></SelectTrigger>
                               <SelectContent>
-                                {availableContracts.map(c => (
+                                {sortNatural(availableContracts, (c) => c.contractNo).map(c => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.contractNo} - {c.workCategory} ({contractTypeLabels[c.contractType]})
                                   </SelectItem>
