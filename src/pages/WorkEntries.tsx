@@ -695,7 +695,7 @@ export default function WorkEntries() {
                   <SelectValue placeholder="İş kalemi seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {workCategories.map((category) => (
+                  {sortNatural([...workCategories], (c) => c).map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
