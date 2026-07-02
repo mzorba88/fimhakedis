@@ -532,7 +532,7 @@ export default function Payments() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm Projeler</SelectItem>
-              {projects.map((project) => (
+              {sortNatural(projects, (p) => p.projectCode).map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectCode}
                 </SelectItem>
