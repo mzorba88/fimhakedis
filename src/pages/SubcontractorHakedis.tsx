@@ -1208,7 +1208,7 @@ export default function SubcontractorHakedis() {
                       <SelectValue placeholder="Sözleşme seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableContracts.map((contract) => (
+                      {sortNatural(availableContracts, (c) => c.contractNo).map((contract) => (
                         <SelectItem key={contract.id} value={contract.id}>
                           {contract.contractNo} - {contract.workCategory} ({contractTypeLabels[contract.contractType]})
                         </SelectItem>
