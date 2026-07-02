@@ -389,7 +389,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
               <Select value={subcontractor} onValueChange={(v) => { setSubcontractor(v); setRows([makeRow()]); }}>
                 <SelectTrigger><SelectValue placeholder="Altyüklenici seçin" /></SelectTrigger>
                 <SelectContent>
-                  {allSubcontractorNames.map(n => (
+                  {sortNatural(allSubcontractorNames, (n) => n).map(n => (
                     <SelectItem key={n} value={n}>{n}</SelectItem>
                   ))}
                 </SelectContent>
