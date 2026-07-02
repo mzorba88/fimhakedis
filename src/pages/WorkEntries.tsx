@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
+import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
