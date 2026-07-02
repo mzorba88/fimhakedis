@@ -503,7 +503,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                             >
                               <SelectTrigger><SelectValue placeholder="Sözleşme seçin" /></SelectTrigger>
                               <SelectContent>
-                                {availableContracts.map(c => (
+                                {sortNatural(availableContracts, (c) => c.contractNo).map(c => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.contractNo} - {c.workCategory} ({contractTypeLabels[c.contractType]})
                                   </SelectItem>
