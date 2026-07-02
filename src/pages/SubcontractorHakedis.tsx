@@ -1131,7 +1131,7 @@ export default function SubcontractorHakedis() {
                     setSelectedSubcontractor('');
                     setSelectedContractId('');
                   }}
-                  disabled={isEditMode}
+                  disabled={isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Proje seçin" />
