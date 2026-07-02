@@ -467,7 +467,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                           }}>
                             <SelectTrigger><SelectValue placeholder="Proje seçin" /></SelectTrigger>
                             <SelectContent>
-                              {projectsForSub.map(p => (
+                              {sortNatural(projectsForSub, (p) => p.projectCode).map(p => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.projectCode} - {p.projectName}
                                 </SelectItem>
