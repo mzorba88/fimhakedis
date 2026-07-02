@@ -2469,6 +2469,47 @@ export default function SubcontractorHakedis() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Change Project Dialog */}
+        <Dialog open={isChangeProjectOpen} onOpenChange={setIsChangeProjectOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Projeyi Değiştir</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {changeProjectHakedis && (
+                <div className="text-sm text-muted-foreground">
+                  <div><span className="font-medium text-foreground">Hakediş:</span> {changeProjectHakedis.hakedisNo}</div>
+                  <div><span className="font-medium text-foreground">Altyüklenici:</span> {changeProjectHakedis.subcontractor}</div>
+                  <div>
+                    <span className="font-medium text-foreground">Mevcut proje:</span>{' '}
+                    {projects.find(p => p.id === changeProjectHakedis.projectId)?.projectCode || '-'}
+                  </div>
+                </div>
+              )}
+              <div>
+                <Label>Yeni Proje</Label>
+                <Select value={changeProjectNewId} onValueChange={setChangeProjectNewId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Proje seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortNatural(projects, (p) => p.projectCode).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.projectCode} - {p.projectName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsChangeProjectOpen(false)}>İptal</Button>
+              <Button onClick={handleChangeProjectSave} disabled={!changeProjectNewId}>Kaydet</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
         {/* Small Contractless Hakediş Dialog */}
         <Dialog open={isSmallHakedisDialogOpen} onOpenChange={(open) => { if (!open) { resetSmallForm(); } setIsSmallHakedisDialogOpen(open); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
