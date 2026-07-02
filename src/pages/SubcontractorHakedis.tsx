@@ -36,6 +36,7 @@ import {
   Pencil,
   PlusCircle,
   AlertTriangle,
+  FolderInput,
   FileSpreadsheet
 } from 'lucide-react';
 import { exportSingleHakedisToExcel } from '@/utils/excelExport';
@@ -102,6 +103,42 @@ export default function SubcontractorHakedis() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingHakedisId, setEditingHakedisId] = useState<string | null>(null);
   const [selectedHakedis, setSelectedHakedis] = useState<HakedisType | null>(null);
+  const [isChangeProjectOpen, setIsChangeProjectOpen] = useState(false);
+  const [changeProjectHakedis, setChangeProjectHakedis] = useState<HakedisType | null>(null);
+  const [changeProjectNewId, setChangeProjectNewId] = useState<string>('');
+
+  const canChangeProject = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
+
+  const openChangeProject = (hakedis: HakedisType) => {
+    setChangeProjectHakedis(hakedis);
+    setChangeProjectNewId(hakedis.projectId || '');
+    setIsChangeProjectOpen(true);
+  };
+
+  const handleChangeProjectSave = async () => {
+    if (!changeProjectHakedis || !changeProjectNewId) return;
+    if (changeProjectNewId === changeProjectHakedis.projectId) {
+      setIsChangeProjectOpen(false);
+      return;
+    }
+    try {
+      await updateSubcontractorHakedis(changeProjectHakedis.id, { projectId: changeProjectNewId });
+      const oldProj = projects.find(p => p.id === changeProjectHakedis.projectId);
+      const newProj = projects.find(p => p.id === changeProjectNewId);
+      await addActivityLog(
+        'hakedis_updated',
+        `Hakediş projesi değiştirildi: ${changeProjectHakedis.hakedisNo}`,
+        `${oldProj?.projectCode || '-'} → ${newProj?.projectCode || '-'}`,
+        changeProjectHakedis.id,
+        'hakedis'
+      );
+      toast.success('Proje güncellendi');
+      setIsChangeProjectOpen(false);
+      setChangeProjectHakedis(null);
+    } catch (e) {
+      toast.error('Proje güncellenemedi');
+    }
+  };
 
   // Small contractless hakediş dialog state
   const [isSmallHakedisDialogOpen, setIsSmallHakedisDialogOpen] = useState(false);
@@ -898,6 +935,19 @@ export default function SubcontractorHakedis() {
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
+                  {canChangeProject && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openChangeProject(hakedis);
+                      }}
+                      className="touch-target"
+                    >
+                      <FolderInput className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1047,6 +1097,16 @@ export default function SubcontractorHakedis() {
                                 title="Düzenle"
                               >
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canChangeProject && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openChangeProject(hakedis)}
+                                title="Projeyi Değiştir"
+                              >
+                                <FolderInput className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
@@ -2408,6 +2468,47 @@ export default function SubcontractorHakedis() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Change Project Dialog */}
+        <Dialog open={isChangeProjectOpen} onOpenChange={setIsChangeProjectOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Projeyi Değiştir</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {changeProjectHakedis && (
+                <div className="text-sm text-muted-foreground">
+                  <div><span className="font-medium text-foreground">Hakediş:</span> {changeProjectHakedis.hakedisNo}</div>
+                  <div><span className="font-medium text-foreground">Altyüklenici:</span> {changeProjectHakedis.subcontractor}</div>
+                  <div>
+                    <span className="font-medium text-foreground">Mevcut proje:</span>{' '}
+                    {projects.find(p => p.id === changeProjectHakedis.projectId)?.projectCode || '-'}
+                  </div>
+                </div>
+              )}
+              <div>
+                <Label>Yeni Proje</Label>
+                <Select value={changeProjectNewId} onValueChange={setChangeProjectNewId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Proje seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortNatural(projects, (p) => p.projectCode).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.projectCode} - {p.projectName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsChangeProjectOpen(false)}>İptal</Button>
+              <Button onClick={handleChangeProjectSave} disabled={!changeProjectNewId}>Kaydet</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
         {/* Small Contractless Hakediş Dialog */}
         <Dialog open={isSmallHakedisDialogOpen} onOpenChange={(open) => { if (!open) { resetSmallForm(); } setIsSmallHakedisDialogOpen(open); }}>
