@@ -675,7 +675,7 @@ export default function WorkEntries() {
                   <SelectValue placeholder="Proje seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeProjects.map((project) => (
+                  {sortNatural(activeProjects, (p) => p.projectCode).map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.projectCode} - {project.projectName}
                     </SelectItem>
