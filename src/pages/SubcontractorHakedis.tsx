@@ -283,12 +283,23 @@ export default function SubcontractorHakedis() {
   // Filtered hakedisler
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = !query ||
-      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
-      (hakedis.contractNo || '').toLowerCase().includes(query) ||
-      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
-      (project?.projectName || '').toLowerCase().includes(query);
+    const contract = workEntries.find(e => e.id === hakedis.contractId);
+    const query = searchQuery.toLowerCase().trim();
+    const haystack = [
+      hakedis.subcontractor,
+      hakedis.contractNo,
+      hakedis.hakedisNo,
+      hakedis.description,
+      project?.projectName,
+      project?.projectCode,
+      contract?.workCategory,
+      ...(hakedis.hakedisItems?.map(i => i.description) || []),
+      ...(hakedis.extraWorkItems?.map(i => i.description) || []),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const matchesSearch = !query || haystack.includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     const matchesApproval = filterApproval === 'all' || hakedis.approvalStatus === filterApproval;
     const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
