@@ -1131,7 +1131,7 @@ export default function SubcontractorHakedis() {
                     setSelectedSubcontractor('');
                     setSelectedContractId('');
                   }}
-                  disabled={isEditMode}
+                  disabled={isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Proje seçin" />
@@ -1158,7 +1158,7 @@ export default function SubcontractorHakedis() {
                         setSelectedSubcontractor(e.target.value);
                         setSelectedContractId('');
                       }}
-                      disabled={isEditMode || contractSubcontractors.length === 0}
+                      disabled={(isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')) || contractSubcontractors.length === 0}
                       className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Altyüklenici seçin</option>
@@ -1175,7 +1175,7 @@ export default function SubcontractorHakedis() {
                         setSelectedSubcontractor(value);
                         setSelectedContractId('');
                       }}
-                      disabled={isEditMode || contractSubcontractors.length === 0}
+                      disabled={(isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')) || contractSubcontractors.length === 0}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Altyüklenici seçin" />
@@ -1202,7 +1202,7 @@ export default function SubcontractorHakedis() {
               {selectedSubcontractor && (
                 <div className="space-y-2">
                   <Label>Sözleşme No</Label>
-                  <Select value={selectedContractId} onValueChange={handleContractSelect} disabled={isEditMode}>
+                  <Select value={selectedContractId} onValueChange={handleContractSelect} disabled={isEditMode && !(currentUser.role === 'direktor' || currentUser.role === 'muhasebe')}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sözleşme seçin" />
                     </SelectTrigger>
