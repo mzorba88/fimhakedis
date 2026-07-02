@@ -2494,18 +2494,14 @@ export default function SubcontractorHakedis() {
               )}
               <div>
                 <Label>Yeni Proje</Label>
-                <Select value={changeProjectNewId} onValueChange={setChangeProjectNewId}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Proje seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortNatural(projects, (p) => p.projectCode).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.projectCode} - {p.projectName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1">
+                  <ProjectCombobox
+                    projects={projects}
+                    value={changeProjectNewId}
+                    onChange={setChangeProjectNewId}
+                    placeholder="Proje seçin"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
