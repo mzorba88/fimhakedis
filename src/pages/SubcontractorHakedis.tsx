@@ -1086,6 +1086,16 @@ export default function SubcontractorHakedis() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
+                            {canChangeProject && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openChangeProject(hakedis)}
+                                title="Projeyi Değiştir"
+                              >
+                                <FolderInput className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
