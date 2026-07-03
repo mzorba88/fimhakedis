@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
+import { useWorkCategories } from '@/hooks/useWorkCategories';
 import { 
   formatCurrencyWithType, 
   formatDate, 
