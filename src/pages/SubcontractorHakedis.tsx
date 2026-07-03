@@ -1366,8 +1366,25 @@ export default function SubcontractorHakedis() {
                             Dahil
                           </Label>
                         </div>
-                      </div>
-                    </div>
+                       </div>
+                       {(() => {
+                         const contractVr = selectedContract?.vatRate ?? null;
+                         const currentVr = vatRate !== '' ? Number(vatRate) : null;
+                         if (
+                           selectedContract &&
+                           contractVr !== null &&
+                           currentVr !== null &&
+                           contractVr !== currentVr
+                         ) {
+                           return (
+                             <p className="text-xs text-amber-600 dark:text-amber-500">
+                               ⚠ Uyarı: Sözleşmedeki KDV oranı %{contractVr}, hakedişte %{currentVr} olarak ayarlandı.
+                             </p>
+                           );
+                         }
+                         return null;
+                       })()}
+                     </div>
                   </div>
 
                   {/* Description/Notes */}
