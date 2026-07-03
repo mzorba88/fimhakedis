@@ -263,6 +263,7 @@ export const workCategories = [
   'Alçı Saten Sıva',
   'Alçıpan',
   'Altyapı',
+  'Asansör İşleri',
   'Aluminyum ve Cam',
   'Aplikasyon',
   'Beton Döküm',
