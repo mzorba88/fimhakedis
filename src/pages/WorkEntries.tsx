@@ -173,21 +173,23 @@ export default function WorkEntries() {
   }, [filteredEntries, sortConfig, projects]);
 
   const calculateTotals = () => {
-    let totalAmount = 0;
+    let rawEntered = 0;
 
     if (newEntry.contractType === 'goturu_bedel') {
-      totalAmount = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
+      rawEntered = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
     } else {
-      totalAmount = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
+      rawEntered = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
     }
 
+    let totalAmount = rawEntered;
     // If vatInclusive is checked, back-calculate the base amount (KDV hariç)
     if (vatInclusive && newEntry.vatRate !== '' && Number(newEntry.vatRate) > 0) {
-      totalAmount = totalAmount / (1 + Number(newEntry.vatRate) / 100);
+      totalAmount = rawEntered / (1 + Number(newEntry.vatRate) / 100);
     }
 
-    return { totalAmount };
+    return { totalAmount, rawEntered };
   };
+
 
   const addPaymentInstallment = () => {
     setPaymentPlan([
