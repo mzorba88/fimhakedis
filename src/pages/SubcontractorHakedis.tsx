@@ -1627,28 +1627,54 @@ export default function SubcontractorHakedis() {
                   {/* Kesin Hesap Summary */}
                   {birimFiyatTotal > 0 && (
                     <div className="rounded-lg border-2 border-primary bg-primary/5 p-4 text-sm space-y-2">
-                      <div className="flex justify-between">
-                        <span>Kesin Hesap Tutarı</span>
-                        <span className="font-medium">{formatCurrencyWithType(birimFiyatTotal, hakedisCurrency)}</span>
-                      </div>
-                      {vatRate !== '' && Number(vatRate) > 0 && (
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>KDV (%{vatRate})</span>
-                          <span>{formatCurrencyWithType(birimFiyatTotal * Number(vatRate) / 100, hakedisCurrency)}</span>
-                        </div>
-                      )}
-                      <div className="border-t pt-2 flex justify-between">
-                        <span className="font-medium">Önceki Ödemeler</span>
-                        <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaymentsTotal, hakedisCurrency)}</span>
-                      </div>
-                      <div className="border-t pt-2 flex justify-between text-lg">
-                        <span className="font-bold">Net Ödenecek Tutar</span>
-                        <span className={`font-bold ${(birimFiyatTotal - previousPaymentsTotal) >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                          {formatCurrencyWithType(birimFiyatTotal - previousPaymentsTotal, hakedisCurrency)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const entered = birimFiyatTotal;
+                        const vr = vatRate !== '' ? Number(vatRate) : 0;
+                        const cur = hakedisCurrency;
+                        const inclusive = vatInclusive && vr > 0;
+                        const base = inclusive ? entered / (1 + vr / 100) : entered;
+                        const vatAmt = inclusive ? entered - base : entered * vr / 100;
+                        const totalWithVat = inclusive ? entered : entered + vatAmt;
+                        return (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Kesin Hesap Tutarı {inclusive ? '(KDV Dahil)' : '(KDV Hariç)'}</span>
+                              <span className="font-medium">{formatCurrencyWithType(entered, cur)}</span>
+                            </div>
+                            {inclusive && (
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>KDV Hariç Tutar</span>
+                                <span>{formatCurrencyWithType(base, cur)}</span>
+                              </div>
+                            )}
+                            {vr > 0 && (
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>KDV (%{vr})</span>
+                                <span>{formatCurrencyWithType(vatAmt, cur)}</span>
+                              </div>
+                            )}
+                            {vr > 0 && (
+                              <div className="flex justify-between">
+                                <span className="font-medium">KDV Dahil Toplam</span>
+                                <span className="font-semibold">{formatCurrencyWithType(totalWithVat, cur)}</span>
+                              </div>
+                            )}
+                            <div className="border-t pt-2 flex justify-between">
+                              <span className="font-medium">Önceki Ödemeler</span>
+                              <span className="font-medium text-destructive">- {formatCurrencyWithType(previousPaymentsTotal, cur)}</span>
+                            </div>
+                            <div className="border-t pt-2 flex justify-between text-lg">
+                              <span className="font-bold">Net Ödenecek Tutar</span>
+                              <span className={`font-bold ${(base - previousPaymentsTotal) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                                {formatCurrencyWithType(base - previousPaymentsTotal, cur)}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
+
                 </div>
               )}
 
@@ -1689,32 +1715,32 @@ export default function SubcontractorHakedis() {
                     />
                     {paymentAmount && (
                       <div className="rounded-lg border bg-accent/50 p-3 text-sm space-y-2">
-                        <div className="flex justify-between">
-                          <span>Ara Toplam</span>
-                          <span className="font-medium">{formatCurrencyWithType(parseFloat(paymentAmount) || 0, hakedisCurrency)}</span>
-                        </div>
-                        {vatRate !== '' && Number(vatRate) > 0 && (
-                          <>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>KDV (%{vatRate})</span>
-                              <span>{formatCurrencyWithType((parseFloat(paymentAmount) || 0) * Number(vatRate) / 100, hakedisCurrency)}</span>
-                            </div>
-                            <div className="border-t pt-2 flex justify-between">
-                              <span className="font-medium">KDV Dahil Toplam</span>
-                              <span className="font-semibold text-primary">
-                                {formatCurrencyWithType((parseFloat(paymentAmount) || 0) * (1 + Number(vatRate) / 100), hakedisCurrency)}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {(vatRate === '' || Number(vatRate) === 0) && (
-                          <div className="flex justify-between font-semibold">
-                            <span>Toplam</span>
-                            <span>{formatCurrencyWithType(parseFloat(paymentAmount) || 0, hakedisCurrency)}</span>
-                          </div>
-                        )}
+                        {(() => {
+                          const entered = parseFloat(paymentAmount) || 0;
+                          const vr = vatRate !== '' ? Number(vatRate) : 0;
+                          const cur = hakedisCurrency;
+                          if (vatInclusive && vr > 0) {
+                            const base = entered / (1 + vr / 100);
+                            const vatAmt = entered - base;
+                            return (<>
+                              <div className="flex justify-between"><span>Girilen Tutar (KDV Dahil)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV Hariç Tutar</span><span>{formatCurrencyWithType(base, cur)}</span></div>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(vatAmt, cur)}</span></div>
+                              <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered, cur)}</span></div>
+                            </>);
+                          }
+                          return (<>
+                            <div className="flex justify-between"><span>Ara Toplam (KDV Hariç)</span><span className="font-medium">{formatCurrencyWithType(entered, cur)}</span></div>
+                            {vr > 0 && (<>
+                              <div className="flex justify-between text-muted-foreground"><span>KDV (%{vr})</span><span>{formatCurrencyWithType(entered * vr / 100, cur)}</span></div>
+                              <div className="border-t pt-2 flex justify-between"><span className="font-medium">KDV Dahil Toplam</span><span className="font-semibold text-primary">{formatCurrencyWithType(entered * (1 + vr / 100), cur)}</span></div>
+                            </>)}
+                            {vr === 0 && (<div className="flex justify-between font-semibold"><span>Toplam</span><span>{formatCurrencyWithType(entered, cur)}</span></div>)}
+                          </>);
+                        })()}
                       </div>
                     )}
+
                   </div>
 
                   {/* Extra Work Items for Götürü Bedel */}

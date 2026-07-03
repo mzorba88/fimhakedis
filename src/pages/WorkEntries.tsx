@@ -173,21 +173,23 @@ export default function WorkEntries() {
   }, [filteredEntries, sortConfig, projects]);
 
   const calculateTotals = () => {
-    let totalAmount = 0;
+    let rawEntered = 0;
 
     if (newEntry.contractType === 'goturu_bedel') {
-      totalAmount = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
+      rawEntered = paymentPlan.reduce((sum, p) => sum + p.amount, 0);
     } else {
-      totalAmount = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
+      rawEntered = workItemEntries.reduce((sum, w) => sum + (w.quantity * w.unitPrice), 0);
     }
 
+    let totalAmount = rawEntered;
     // If vatInclusive is checked, back-calculate the base amount (KDV hariç)
     if (vatInclusive && newEntry.vatRate !== '' && Number(newEntry.vatRate) > 0) {
-      totalAmount = totalAmount / (1 + Number(newEntry.vatRate) / 100);
+      totalAmount = rawEntered / (1 + Number(newEntry.vatRate) / 100);
     }
 
-    return { totalAmount };
+    return { totalAmount, rawEntered };
   };
+
 
   const addPaymentInstallment = () => {
     setPaymentPlan([
@@ -990,13 +992,14 @@ export default function WorkEntries() {
             {amounts.totalAmount > 0 && (
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 {(() => {
-                  const enteredTotal = amounts.totalAmount;
+                  const enteredTotal = vatInclusive ? amounts.rawEntered : amounts.totalAmount;
                   const vr = newEntry.vatRate !== '' ? Number(newEntry.vatRate) : 0;
                   
                   if (vatInclusive && vr > 0) {
                     // Entered amounts are VAT-inclusive
-                    const baseAmount = enteredTotal / (1 + vr / 100);
+                    const baseAmount = amounts.totalAmount;
                     const vatAmount = enteredTotal - baseAmount;
+
                     return (
                       <>
                         <div className="flex justify-between text-sm">
