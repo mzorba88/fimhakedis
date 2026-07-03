@@ -12,8 +12,8 @@ import {
   PaymentStatus,
   ApprovalStatus,
   paymentStatusLabels,
-  workCategories,
 } from '@/types/hakedis';
+import { useWorkCategories } from '@/hooks/useWorkCategories';
 import { generateContractPDF, generateHakedisPDF, generateSubcontractorPDF } from '@/utils/pdfGenerator';
 import {
   exportSingleContractToExcel,
@@ -86,6 +86,7 @@ export default function Subcontractors() {
     deleteSubcontractorHakedis,
     addActivityLog,
   } = useHakedisStore();
+  const { categories: workCategories } = useWorkCategories();
   const navigate = useNavigate();
 
   const [selected, setSelected] = useState<string | null>(null);

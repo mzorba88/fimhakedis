@@ -6,13 +6,14 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
+import { useWorkCategories } from '@/hooks/useWorkCategories';
 import { 
   formatCurrencyWithType, 
   formatDate, 
   WorkEntry,
   PaymentInstallment,
   WorkItemEntry,
-  workCategories,
+  
   Currency,
   ContractType,
   currencySymbols,
@@ -80,6 +81,8 @@ export default function WorkEntries() {
     subcontractorHakedisler,
     currentUser 
   } = useHakedisStore();
+  const { categories: workCategories, addCategory: addWorkCategory } = useWorkCategories();
+  
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -689,17 +692,31 @@ export default function WorkEntries() {
               <Label>İş Kalemi *</Label>
               <Select
                 value={newEntry.workCategory}
-                onValueChange={(value) => setNewEntry({ ...newEntry, workCategory: value, subcontractor: '', newSubcontractor: '' })}
+                onValueChange={(value) => {
+                  if (value === '__add_new__') {
+                    const name = window.prompt('Yeni iş kalemi adı:');
+                    if (!name) return;
+                    const added = addWorkCategory(name);
+                    if (added) {
+                      setNewEntry({ ...newEntry, workCategory: added, subcontractor: '', newSubcontractor: '' });
+                    }
+                    return;
+                  }
+                  setNewEntry({ ...newEntry, workCategory: value, subcontractor: '', newSubcontractor: '' });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="İş kalemi seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortNatural([...workCategories], (c) => c).map((category) => (
+                  {workCategories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
                   ))}
+                  <SelectItem value="__add_new__" className="text-primary font-medium">
+                    + Yeni İş Kalemi Ekle...
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
