@@ -12,8 +12,8 @@ import {
   PaymentStatus,
   ApprovalStatus,
   paymentStatusLabels,
-  workCategories,
 } from '@/types/hakedis';
+import { useWorkCategories } from '@/hooks/useWorkCategories';
 import { generateContractPDF, generateHakedisPDF, generateSubcontractorPDF } from '@/utils/pdfGenerator';
 import {
   exportSingleContractToExcel,
