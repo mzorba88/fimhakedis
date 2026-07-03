@@ -86,6 +86,7 @@ export default function Subcontractors() {
     deleteSubcontractorHakedis,
     addActivityLog,
   } = useHakedisStore();
+  const { categories: workCategories } = useWorkCategories();
   const navigate = useNavigate();
 
   const [selected, setSelected] = useState<string | null>(null);
