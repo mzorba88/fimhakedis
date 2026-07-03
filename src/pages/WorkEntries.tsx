@@ -12,7 +12,7 @@ import {
   WorkEntry,
   PaymentInstallment,
   WorkItemEntry,
-  workCategories,
+  
   Currency,
   ContractType,
   currencySymbols,
