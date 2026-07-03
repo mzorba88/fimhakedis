@@ -81,6 +81,8 @@ export default function WorkEntries() {
     subcontractorHakedisler,
     currentUser 
   } = useHakedisStore();
+  const { categories: workCategories, addCategory: addWorkCategory } = useWorkCategories();
+  
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
