@@ -992,13 +992,14 @@ export default function WorkEntries() {
             {amounts.totalAmount > 0 && (
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 {(() => {
-                  const enteredTotal = amounts.totalAmount;
+                  const enteredTotal = vatInclusive ? amounts.rawEntered : amounts.totalAmount;
                   const vr = newEntry.vatRate !== '' ? Number(newEntry.vatRate) : 0;
                   
                   if (vatInclusive && vr > 0) {
                     // Entered amounts are VAT-inclusive
-                    const baseAmount = enteredTotal / (1 + vr / 100);
+                    const baseAmount = amounts.totalAmount;
                     const vatAmount = enteredTotal - baseAmount;
+
                     return (
                       <>
                         <div className="flex justify-between text-sm">
