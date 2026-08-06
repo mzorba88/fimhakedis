@@ -789,10 +789,12 @@ function SummaryBox({
   icon,
   title,
   amounts,
+  amountsIncl,
 }: {
   icon: React.ReactNode;
   title: string;
   amounts: Record<string, number>;
+  amountsIncl?: Record<string, number>;
 }) {
   const entries = Object.entries(amounts).filter(([, v]) => v > 0);
   return (
@@ -801,13 +803,21 @@ function SummaryBox({
         {icon}
         <span>{title}</span>
       </div>
-      <div className="mt-1.5 space-y-0.5">
+      <div className="mt-1.5 space-y-1.5">
         {entries.length === 0 ? (
           <div className="text-sm text-muted-foreground">—</div>
         ) : (
           entries.map(([cur, val]) => (
-            <div key={cur} className="text-sm font-semibold tabular-nums">
-              {formatCurrencyWithType(val, cur as Currency)}
+            <div key={cur} className="tabular-nums">
+              <div className="text-sm font-semibold">
+                {formatCurrencyWithType(amountsIncl?.[cur] ?? val, cur as Currency)}
+                <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                  (KDV Dahil)
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground leading-tight">
+                KDV Hariç: {formatCurrencyWithType(val, cur as Currency)}
+              </div>
             </div>
           ))
         )}
