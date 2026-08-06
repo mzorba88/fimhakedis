@@ -485,9 +485,9 @@ export default function Subcontractors() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Tüm Projeler</SelectItem>
-                          {sortNatural(projects, (p) => p.projectName).map((p) => (
+                          {sortNatural(projects, (p) => p.projectCode).map((p) => (
                             <SelectItem key={p.id} value={p.id}>
-                              {p.projectName}
+                              {p.projectCode} - {p.projectName}
                             </SelectItem>
                           ))}
                         </SelectContent>
