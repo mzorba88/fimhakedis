@@ -877,8 +877,40 @@ function ProjectAccountCard({
     paidTotal,
     remainingApproved,
     remainingContract,
+    contractTotalIncl,
+    hakedisTotalIncl,
+    approvedTotalIncl,
+    paidTotalIncl,
+    remainingApprovedIncl,
+    remainingContractIncl,
     isOverPaid,
   } = account;
+
+  const Row = ({
+    label,
+    excl,
+    incl,
+    valueClass = 'text-foreground',
+    bordered = false,
+  }: {
+    label: string;
+    excl: number;
+    incl: number;
+    valueClass?: string;
+    bordered?: boolean;
+  }) => (
+    <div className={`flex justify-between gap-2 ${bordered ? 'border-t pt-1 mt-1' : ''}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right">
+        <span className={`block font-medium ${valueClass}`}>
+          {formatCurrencyWithType(incl, currency)}
+        </span>
+        <span className="block text-[10px] text-muted-foreground leading-tight">
+          Hariç: {formatCurrencyWithType(excl, currency)}
+        </span>
+      </span>
+    </div>
+  );
 
   return (
     <button
@@ -896,7 +928,7 @@ function ProjectAccountCard({
             {projectName}
           </div>
           <div className="text-xs text-muted-foreground">
-            {contractCount} sözleşme · {currency}
+            {contractCount} sözleşme · {currency} · tutarlar KDV dahil
           </div>
         </div>
         {isOverPaid && (
@@ -908,52 +940,34 @@ function ProjectAccountCard({
       </div>
 
       <div className="mt-2 space-y-1 text-xs tabular-nums">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Sözleşme</span>
-          <span className="font-medium">
-            {formatCurrencyWithType(contractTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Hakediş (toplam)</span>
-          <span>{formatCurrencyWithType(hakedisTotal, currency)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Onaylanan</span>
-          <span className="text-emerald-600">
-            {formatCurrencyWithType(approvedTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Ödenen</span>
-          <span className="text-primary">
-            {formatCurrencyWithType(paidTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between border-t pt-1 mt-1">
-          <span className="text-muted-foreground">Ödenecek</span>
-          <span
-            className={`font-semibold ${
-              remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'
-            }`}
-          >
-            {formatCurrencyWithType(remainingApproved, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Sözleşmeye kalan</span>
-          <span
-            className={`font-semibold ${
-              remainingContract < 0
-                ? 'text-destructive'
-                : remainingContract === 0
-                ? 'text-emerald-600'
-                : 'text-foreground'
-            }`}
-          >
-            {formatCurrencyWithType(remainingContract, currency)}
-          </span>
-        </div>
+        <Row label="Sözleşme" excl={contractTotal} incl={contractTotalIncl} />
+        <Row label="Hakediş (toplam)" excl={hakedisTotal} incl={hakedisTotalIncl} />
+        <Row
+          label="Onaylanan"
+          excl={approvedTotal}
+          incl={approvedTotalIncl}
+          valueClass="text-emerald-600"
+        />
+        <Row label="Ödenen" excl={paidTotal} incl={paidTotalIncl} valueClass="text-primary" />
+        <Row
+          label="Ödenecek"
+          excl={remainingApproved}
+          incl={remainingApprovedIncl}
+          valueClass={remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
+          bordered
+        />
+        <Row
+          label="Sözleşmeye kalan"
+          excl={remainingContract}
+          incl={remainingContractIncl}
+          valueClass={
+            remainingContract < 0
+              ? 'text-destructive'
+              : remainingContract === 0
+              ? 'text-emerald-600'
+              : 'text-foreground'
+          }
+        />
       </div>
     </button>
   );
