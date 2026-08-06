@@ -629,12 +629,33 @@ export default function Subcontractors() {
                                   <TableCell>{projectName(c.projectId)}</TableCell>
                                   <TableCell>{c.workCategory}</TableCell>
                                   <TableCell>{contractTypeLabels[c.contractType]}</TableCell>
-                                  <TableCell className="text-right tabular-nums">
-                                    {formatCurrencyWithType(c.totalAmount || 0, c.currency as Currency)}
+                                  <TableCell className="text-right">
+                                    <AmountCell
+                                      className="text-right"
+                                      totalAmount={c.totalAmount || 0}
+                                      vatRate={c.vatRate}
+                                      currency={c.currency as Currency}
+                                    />
                                   </TableCell>
-                                  <TableCell className="text-right tabular-nums text-xs">
-                                    <div>{formatCurrencyWithType(derived.hakedisTotal, c.currency as Currency)}</div>
-                                    <div className="text-muted-foreground">{formatCurrencyWithType(derived.paid, c.currency as Currency)}</div>
+                                  <TableCell className="text-right tabular-nums text-xs space-y-1">
+                                    <div>
+                                      <div className="font-medium">
+                                        {formatCurrencyWithType(derived.hakedisTotal * (1 + (c.vatRate || 0) / 100), c.currency as Currency)}
+                                        <span className="ml-1 text-[10px] text-muted-foreground">(KDV Dahil)</span>
+                                      </div>
+                                      <div className="text-[11px] text-muted-foreground">
+                                        KDV Hariç: {formatCurrencyWithType(derived.hakedisTotal, c.currency as Currency)}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-primary">
+                                        {formatCurrencyWithType(derived.paid * (1 + (c.vatRate || 0) / 100), c.currency as Currency)}
+                                        <span className="ml-1 text-[10px] text-muted-foreground">(Ödenen, KDV Dahil)</span>
+                                      </div>
+                                      <div className="text-[11px] text-muted-foreground">
+                                        KDV Hariç: {formatCurrencyWithType(derived.paid, c.currency as Currency)}
+                                      </div>
+                                    </div>
                                   </TableCell>
                                   <TableCell><StatusBadge status={derived.approvalStatus} size="sm" /></TableCell>
                                   <TableCell><StatusBadge status={derived.paymentStatus} size="sm" /></TableCell>
