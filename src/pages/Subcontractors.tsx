@@ -542,16 +542,19 @@ export default function Subcontractors() {
                         icon={<ClipboardList className="h-4 w-4" />}
                         title="Sözleşme Toplamı"
                         amounts={totals.contractByCur}
+                        amountsIncl={totals.contractByCurIncl}
                       />
                       <SummaryBox
                         icon={<FileText className="h-4 w-4" />}
                         title="Hakediş Toplamı"
                         amounts={totals.hakedisByCur}
+                        amountsIncl={totals.hakedisByCurIncl}
                       />
                       <SummaryBox
                         icon={<Wallet className="h-4 w-4" />}
                         title="Ödenen"
                         amounts={totals.paidByCur}
+                        amountsIncl={totals.paidByCurIncl}
                       />
                     </div>
 
