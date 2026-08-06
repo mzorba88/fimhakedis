@@ -732,11 +732,21 @@ export default function Subcontractors() {
                                     <TableCell>{formatDate(h.date)}</TableCell>
                                     <TableCell>{projectName(h.projectId)}</TableCell>
                                     <TableCell>{h.contractNo || '-'}</TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrencyWithType(h.totalAmount || 0, h.currency as Currency)}
+                                    <TableCell className="text-right">
+                                      <AmountCell
+                                        className="text-right"
+                                        totalAmount={h.totalAmount || 0}
+                                        vatRate={h.vatRate}
+                                        currency={h.currency as Currency}
+                                      />
                                     </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrencyWithType(h.paidAmount || 0, h.currency as Currency)}
+                                    <TableCell className="text-right">
+                                      <AmountCell
+                                        className="text-right"
+                                        totalAmount={h.paidAmount || 0}
+                                        vatRate={h.vatRate}
+                                        currency={h.currency as Currency}
+                                      />
                                     </TableCell>
                                     <TableCell><StatusBadge status={h.approvalStatus} size="sm" /></TableCell>
                                     <TableCell><StatusBadge status={h.paymentStatus} size="sm" /></TableCell>
