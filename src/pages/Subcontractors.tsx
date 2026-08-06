@@ -216,22 +216,40 @@ export default function Subcontractors() {
     itemSearch,
   ]);
 
-  // Totals by currency
+  // Totals by currency (KDV hariç + KDV dahil)
   const totals = useMemo(() => {
+    const withVat = (amount: number, vatRate?: number | null) =>
+      amount * (1 + (vatRate && vatRate > 0 ? vatRate : 0) / 100);
     const contractByCur: Record<string, number> = {};
     const hakedisByCur: Record<string, number> = {};
     const paidByCur: Record<string, number> = {};
+    const contractByCurIncl: Record<string, number> = {};
+    const hakedisByCurIncl: Record<string, number> = {};
+    const paidByCurIncl: Record<string, number> = {};
     subContracts.forEach(({ c }) => {
       contractByCur[c.currency] =
         (contractByCur[c.currency] || 0) + (c.totalAmount || 0);
+      contractByCurIncl[c.currency] =
+        (contractByCurIncl[c.currency] || 0) + withVat(c.totalAmount || 0, c.vatRate);
     });
     subHakedisler.forEach((h) => {
       hakedisByCur[h.currency] =
         (hakedisByCur[h.currency] || 0) + (h.totalAmount || 0);
+      hakedisByCurIncl[h.currency] =
+        (hakedisByCurIncl[h.currency] || 0) + withVat(h.totalAmount || 0, h.vatRate);
       paidByCur[h.currency] =
         (paidByCur[h.currency] || 0) + (h.paidAmount || 0);
+      paidByCurIncl[h.currency] =
+        (paidByCurIncl[h.currency] || 0) + withVat(h.paidAmount || 0, h.vatRate);
     });
-    return { contractByCur, hakedisByCur, paidByCur };
+    return {
+      contractByCur,
+      hakedisByCur,
+      paidByCur,
+      contractByCurIncl,
+      hakedisByCurIncl,
+      paidByCurIncl,
+    };
   }, [subContracts, subHakedisler]);
 
   // Proje bazlı cari hesap (her proje + para birimi için ayrı kart)
