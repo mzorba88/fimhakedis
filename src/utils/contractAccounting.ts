@@ -86,6 +86,13 @@ export interface SubcontractorProjectAccount {
   remainingApproved: number;
   remainingContract: number;
   isOverPaid: boolean;
+  /** KDV dahil karşılıkları */
+  contractTotalIncl: number;
+  hakedisTotalIncl: number;
+  approvedTotalIncl: number;
+  paidTotalIncl: number;
+  remainingApprovedIncl: number;
+  remainingContractIncl: number;
 }
 
 export function getSubcontractorProjectAccounts(
