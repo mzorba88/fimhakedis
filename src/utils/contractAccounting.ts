@@ -86,6 +86,13 @@ export interface SubcontractorProjectAccount {
   remainingApproved: number;
   remainingContract: number;
   isOverPaid: boolean;
+  /** KDV dahil karşılıkları */
+  contractTotalIncl: number;
+  hakedisTotalIncl: number;
+  approvedTotalIncl: number;
+  paidTotalIncl: number;
+  remainingApprovedIncl: number;
+  remainingContractIncl: number;
 }
 
 export function getSubcontractorProjectAccounts(
@@ -110,10 +117,19 @@ export function getSubcontractorProjectAccounts(
         remainingApproved: 0,
         remainingContract: 0,
         isOverPaid: false,
+        contractTotalIncl: 0,
+        hakedisTotalIncl: 0,
+        approvedTotalIncl: 0,
+        paidTotalIncl: 0,
+        remainingApprovedIncl: 0,
+        remainingContractIncl: 0,
       });
     }
     return map.get(key)!;
   };
+
+  const withVat = (amount: number, vatRate?: number | null) =>
+    amount * (1 + (vatRate && vatRate > 0 ? vatRate : 0) / 100);
 
   contracts
     .filter((c) => c.subcontractor === subcontractor)
@@ -121,6 +137,7 @@ export function getSubcontractorProjectAccounts(
       const acc = ensure(c.projectId, c.currency as Currency);
       acc.contractCount += 1;
       acc.contractTotal += c.totalAmount || 0;
+      acc.contractTotalIncl += withVat(c.totalAmount || 0, c.vatRate);
     });
 
   hakedisler
@@ -128,19 +145,21 @@ export function getSubcontractorProjectAccounts(
     .forEach((h) => {
       const acc = ensure(h.projectId || '', h.currency as Currency);
       acc.hakedisTotal += h.totalAmount || 0;
+      acc.hakedisTotalIncl += withVat(h.totalAmount || 0, h.vatRate);
       if (h.approvalStatus === 'onaylandi') {
         acc.approvedTotal += h.totalAmount || 0;
+        acc.approvedTotalIncl += withVat(h.totalAmount || 0, h.vatRate);
       }
-      if (h.paymentStatus === 'odendi') {
-        acc.paidTotal += h.totalAmount || 0;
-      } else {
-        acc.paidTotal += h.paidAmount || 0;
-      }
+      const paid = h.paymentStatus === 'odendi' ? (h.totalAmount || 0) : (h.paidAmount || 0);
+      acc.paidTotal += paid;
+      acc.paidTotalIncl += withVat(paid, h.vatRate);
     });
 
   map.forEach((acc) => {
     acc.remainingApproved = acc.approvedTotal - acc.paidTotal;
     acc.remainingContract = acc.contractTotal - acc.hakedisTotal;
+    acc.remainingApprovedIncl = acc.approvedTotalIncl - acc.paidTotalIncl;
+    acc.remainingContractIncl = acc.contractTotalIncl - acc.hakedisTotalIncl;
     acc.isOverPaid = acc.contractTotal > 0 && acc.hakedisTotal > acc.contractTotal;
   });
 

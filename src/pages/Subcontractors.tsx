@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
+import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import {
   formatCurrencyWithType,
@@ -216,22 +217,40 @@ export default function Subcontractors() {
     itemSearch,
   ]);
 
-  // Totals by currency
+  // Totals by currency (KDV hariç + KDV dahil)
   const totals = useMemo(() => {
+    const withVat = (amount: number, vatRate?: number | null) =>
+      amount * (1 + (vatRate && vatRate > 0 ? vatRate : 0) / 100);
     const contractByCur: Record<string, number> = {};
     const hakedisByCur: Record<string, number> = {};
     const paidByCur: Record<string, number> = {};
+    const contractByCurIncl: Record<string, number> = {};
+    const hakedisByCurIncl: Record<string, number> = {};
+    const paidByCurIncl: Record<string, number> = {};
     subContracts.forEach(({ c }) => {
       contractByCur[c.currency] =
         (contractByCur[c.currency] || 0) + (c.totalAmount || 0);
+      contractByCurIncl[c.currency] =
+        (contractByCurIncl[c.currency] || 0) + withVat(c.totalAmount || 0, c.vatRate);
     });
     subHakedisler.forEach((h) => {
       hakedisByCur[h.currency] =
         (hakedisByCur[h.currency] || 0) + (h.totalAmount || 0);
+      hakedisByCurIncl[h.currency] =
+        (hakedisByCurIncl[h.currency] || 0) + withVat(h.totalAmount || 0, h.vatRate);
       paidByCur[h.currency] =
         (paidByCur[h.currency] || 0) + (h.paidAmount || 0);
+      paidByCurIncl[h.currency] =
+        (paidByCurIncl[h.currency] || 0) + withVat(h.paidAmount || 0, h.vatRate);
     });
-    return { contractByCur, hakedisByCur, paidByCur };
+    return {
+      contractByCur,
+      hakedisByCur,
+      paidByCur,
+      contractByCurIncl,
+      hakedisByCurIncl,
+      paidByCurIncl,
+    };
   }, [subContracts, subHakedisler]);
 
   // Proje bazlı cari hesap (her proje + para birimi için ayrı kart)
@@ -524,16 +543,19 @@ export default function Subcontractors() {
                         icon={<ClipboardList className="h-4 w-4" />}
                         title="Sözleşme Toplamı"
                         amounts={totals.contractByCur}
+                        amountsIncl={totals.contractByCurIncl}
                       />
                       <SummaryBox
                         icon={<FileText className="h-4 w-4" />}
                         title="Hakediş Toplamı"
                         amounts={totals.hakedisByCur}
+                        amountsIncl={totals.hakedisByCurIncl}
                       />
                       <SummaryBox
                         icon={<Wallet className="h-4 w-4" />}
                         title="Ödenen"
                         amounts={totals.paidByCur}
+                        amountsIncl={totals.paidByCurIncl}
                       />
                     </div>
 
@@ -608,12 +630,33 @@ export default function Subcontractors() {
                                   <TableCell>{projectName(c.projectId)}</TableCell>
                                   <TableCell>{c.workCategory}</TableCell>
                                   <TableCell>{contractTypeLabels[c.contractType]}</TableCell>
-                                  <TableCell className="text-right tabular-nums">
-                                    {formatCurrencyWithType(c.totalAmount || 0, c.currency as Currency)}
+                                  <TableCell className="text-right">
+                                    <AmountCell
+                                      className="text-right"
+                                      totalAmount={c.totalAmount || 0}
+                                      vatRate={c.vatRate}
+                                      currency={c.currency as Currency}
+                                    />
                                   </TableCell>
-                                  <TableCell className="text-right tabular-nums text-xs">
-                                    <div>{formatCurrencyWithType(derived.hakedisTotal, c.currency as Currency)}</div>
-                                    <div className="text-muted-foreground">{formatCurrencyWithType(derived.paid, c.currency as Currency)}</div>
+                                  <TableCell className="text-right tabular-nums text-xs space-y-1">
+                                    <div>
+                                      <div className="font-medium">
+                                        {formatCurrencyWithType(derived.hakedisTotal * (1 + (c.vatRate || 0) / 100), c.currency as Currency)}
+                                        <span className="ml-1 text-[10px] text-muted-foreground">(KDV Dahil)</span>
+                                      </div>
+                                      <div className="text-[11px] text-muted-foreground">
+                                        KDV Hariç: {formatCurrencyWithType(derived.hakedisTotal, c.currency as Currency)}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-primary">
+                                        {formatCurrencyWithType(derived.paid * (1 + (c.vatRate || 0) / 100), c.currency as Currency)}
+                                        <span className="ml-1 text-[10px] text-muted-foreground">(Ödenen, KDV Dahil)</span>
+                                      </div>
+                                      <div className="text-[11px] text-muted-foreground">
+                                        KDV Hariç: {formatCurrencyWithType(derived.paid, c.currency as Currency)}
+                                      </div>
+                                    </div>
                                   </TableCell>
                                   <TableCell><StatusBadge status={derived.approvalStatus} size="sm" /></TableCell>
                                   <TableCell><StatusBadge status={derived.paymentStatus} size="sm" /></TableCell>
@@ -689,11 +732,21 @@ export default function Subcontractors() {
                                     <TableCell>{formatDate(h.date)}</TableCell>
                                     <TableCell>{projectName(h.projectId)}</TableCell>
                                     <TableCell>{h.contractNo || '-'}</TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrencyWithType(h.totalAmount || 0, h.currency as Currency)}
+                                    <TableCell className="text-right">
+                                      <AmountCell
+                                        className="text-right"
+                                        totalAmount={h.totalAmount || 0}
+                                        vatRate={h.vatRate}
+                                        currency={h.currency as Currency}
+                                      />
                                     </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrencyWithType(h.paidAmount || 0, h.currency as Currency)}
+                                    <TableCell className="text-right">
+                                      <AmountCell
+                                        className="text-right"
+                                        totalAmount={h.paidAmount || 0}
+                                        vatRate={h.vatRate}
+                                        currency={h.currency as Currency}
+                                      />
                                     </TableCell>
                                     <TableCell><StatusBadge status={h.approvalStatus} size="sm" /></TableCell>
                                     <TableCell><StatusBadge status={h.paymentStatus} size="sm" /></TableCell>
@@ -768,10 +821,12 @@ function SummaryBox({
   icon,
   title,
   amounts,
+  amountsIncl,
 }: {
   icon: React.ReactNode;
   title: string;
   amounts: Record<string, number>;
+  amountsIncl?: Record<string, number>;
 }) {
   const entries = Object.entries(amounts).filter(([, v]) => v > 0);
   return (
@@ -780,13 +835,21 @@ function SummaryBox({
         {icon}
         <span>{title}</span>
       </div>
-      <div className="mt-1.5 space-y-0.5">
+      <div className="mt-1.5 space-y-1.5">
         {entries.length === 0 ? (
           <div className="text-sm text-muted-foreground">—</div>
         ) : (
           entries.map(([cur, val]) => (
-            <div key={cur} className="text-sm font-semibold tabular-nums">
-              {formatCurrencyWithType(val, cur as Currency)}
+            <div key={cur} className="tabular-nums">
+              <div className="text-sm font-semibold">
+                {formatCurrencyWithType(amountsIncl?.[cur] ?? val, cur as Currency)}
+                <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                  (KDV Dahil)
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground leading-tight">
+                KDV Hariç: {formatCurrencyWithType(val, cur as Currency)}
+              </div>
             </div>
           ))
         )}
@@ -814,8 +877,40 @@ function ProjectAccountCard({
     paidTotal,
     remainingApproved,
     remainingContract,
+    contractTotalIncl,
+    hakedisTotalIncl,
+    approvedTotalIncl,
+    paidTotalIncl,
+    remainingApprovedIncl,
+    remainingContractIncl,
     isOverPaid,
   } = account;
+
+  const Row = ({
+    label,
+    excl,
+    incl,
+    valueClass = 'text-foreground',
+    bordered = false,
+  }: {
+    label: string;
+    excl: number;
+    incl: number;
+    valueClass?: string;
+    bordered?: boolean;
+  }) => (
+    <div className={`flex justify-between gap-2 ${bordered ? 'border-t pt-1 mt-1' : ''}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right">
+        <span className={`block font-medium ${valueClass}`}>
+          {formatCurrencyWithType(incl, currency)}
+        </span>
+        <span className="block text-[10px] text-muted-foreground leading-tight">
+          Hariç: {formatCurrencyWithType(excl, currency)}
+        </span>
+      </span>
+    </div>
+  );
 
   return (
     <button
@@ -833,7 +928,7 @@ function ProjectAccountCard({
             {projectName}
           </div>
           <div className="text-xs text-muted-foreground">
-            {contractCount} sözleşme · {currency}
+            {contractCount} sözleşme · {currency} · tutarlar KDV dahil
           </div>
         </div>
         {isOverPaid && (
@@ -845,52 +940,34 @@ function ProjectAccountCard({
       </div>
 
       <div className="mt-2 space-y-1 text-xs tabular-nums">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Sözleşme</span>
-          <span className="font-medium">
-            {formatCurrencyWithType(contractTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Hakediş (toplam)</span>
-          <span>{formatCurrencyWithType(hakedisTotal, currency)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Onaylanan</span>
-          <span className="text-emerald-600">
-            {formatCurrencyWithType(approvedTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Ödenen</span>
-          <span className="text-primary">
-            {formatCurrencyWithType(paidTotal, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between border-t pt-1 mt-1">
-          <span className="text-muted-foreground">Ödenecek</span>
-          <span
-            className={`font-semibold ${
-              remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'
-            }`}
-          >
-            {formatCurrencyWithType(remainingApproved, currency)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Sözleşmeye kalan</span>
-          <span
-            className={`font-semibold ${
-              remainingContract < 0
-                ? 'text-destructive'
-                : remainingContract === 0
-                ? 'text-emerald-600'
-                : 'text-foreground'
-            }`}
-          >
-            {formatCurrencyWithType(remainingContract, currency)}
-          </span>
-        </div>
+        <Row label="Sözleşme" excl={contractTotal} incl={contractTotalIncl} />
+        <Row label="Hakediş (toplam)" excl={hakedisTotal} incl={hakedisTotalIncl} />
+        <Row
+          label="Onaylanan"
+          excl={approvedTotal}
+          incl={approvedTotalIncl}
+          valueClass="text-emerald-600"
+        />
+        <Row label="Ödenen" excl={paidTotal} incl={paidTotalIncl} valueClass="text-primary" />
+        <Row
+          label="Ödenecek"
+          excl={remainingApproved}
+          incl={remainingApprovedIncl}
+          valueClass={remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
+          bordered
+        />
+        <Row
+          label="Sözleşmeye kalan"
+          excl={remainingContract}
+          incl={remainingContractIncl}
+          valueClass={
+            remainingContract < 0
+              ? 'text-destructive'
+              : remainingContract === 0
+              ? 'text-emerald-600'
+              : 'text-foreground'
+          }
+        />
       </div>
     </button>
   );
