@@ -167,6 +167,7 @@ export type Database = {
           hakedis_no: string
           hakedis_type: string
           id: string
+          offset_amount: number | null
           paid_amount: number | null
           paid_date: string | null
           payment_amount: number | null
@@ -196,6 +197,7 @@ export type Database = {
           hakedis_no: string
           hakedis_type?: string
           id?: string
+          offset_amount?: number | null
           paid_amount?: number | null
           paid_date?: string | null
           payment_amount?: number | null
@@ -225,6 +227,7 @@ export type Database = {
           hakedis_no?: string
           hakedis_type?: string
           id?: string
+          offset_amount?: number | null
           paid_amount?: number | null
           paid_date?: string | null
           payment_amount?: number | null

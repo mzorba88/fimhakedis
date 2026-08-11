@@ -1,0 +1,1 @@
+ALTER TABLE public.hakedisler ADD COLUMN IF NOT EXISTS offset_amount numeric DEFAULT 0;
