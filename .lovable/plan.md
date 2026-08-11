@@ -1,78 +1,63 @@
+# Altyüklenici Cari Hesap Sistemi
 
-# Plan: Yüklenici ödeme takibi ve kesin hesap kolaylığı
+Amaç: Aynı proje + aynı altyüklenici için girilen alelhesap, ara hakediş ve kesin hesap kayıtlarının tek bir hesap defterinde toplanması; mükerrer ödemenin engellenmesi; kesin hesapta önceki ödemelerin otomatik mahsubu.
 
-Yapısal büyük bir değişiklik gerekmiyor. Veri modeline dokunmadan, mevcut ekranlara dört odaklı iyileştirme yapacağız. Tüm hesaplar mevcut `workEntries` (sözleşmeler) ve `subcontractorHakedisler` üzerinden türetilecek; yeni tablo/şema yok.
+Yapısal olarak veritabanını baştan kurmaya gerek yok. Mevcut tablolar korunuyor; eksik olan **birleşik cari hesap görünümü** ve **mahsup mantığı** ekleniyor.
 
-## 1) Altyükleniciler sayfasında "Proje Bazlı Cari Hesap" kartları
-`src/pages/Subcontractors.tsx`
+## 1. İş Dosyası (Cari Hesap) kavramı
 
-Seçili yüklenici detayında, mevcut iki tablonun (Sözleşmeler / Hakedişler) üstüne **proje bazlı kart grid'i** eklenecek. Aynı yüklenicinin birden çok projedeki durumu tek bakışta görülecek.
+Her altyüklenici + proje çifti bir "iş dosyası" olarak ele alınır. Sözleşmeli ve sözleşmesiz (küçük iş) kayıtlar aynı dosyada toplanır; sözleşmesiz kayıtlar "Sözleşmesiz İşler" grubu altında gösterilir (kayıt girişinde zorunluluk getirilmez).
 
-Her proje + para birimi kombinasyonu için bir kart:
-- Proje adı, iş kalemi
-- **Sözleşme Tutarı** (o projedeki tüm sözleşmelerin toplamı)
-- **Onaylanan Hakediş** (ara + alelhesap + kesin hesap, onay durumu = onaylandı)
-- **Ödenen** (`paidAmount` toplamı + `paymentStatus='odendi'` olanların `totalAmount`'u)
-- **Kalan Ödenecek** = Onaylanan − Ödenen
-- **Sözleşmeye Kalan** = Sözleşme − Onaylanan Hakediş
-- Fazla ödeme durumunda kırmızı bilgilendirici rozet (engelleme YOK, sadece görsel)
-- Kart tıklanınca aşağıdaki tablolar o projeye filtrelenir
-
-Mevcut "SummaryBox" toplam özetin yanında kalır.
-
-## 2) Hakediş formuna "Sözleşme Özet Paneli"
-`src/pages/SubcontractorHakedis.tsx` — yeni/düzenleme dialog'unun en üstüne
-
-Sözleşme seçildiği anda yukarıya yapışık bir bilgi paneli açılır:
+Dosya başlığında tek bakışta:
 
 ```text
-Bu sözleşmede şimdiye kadar
-─────────────────────────────────────────────────
-Sözleşme tutarı       :  1.000.000 ₺
-Önceki hakedişler (4) :    620.000 ₺  (ara 3, alelhesap 1)
-Önceki ödemeler       :    580.000 ₺
-─────────────────────────────────────────────────
-Onay bekleyen kalan   :     40.000 ₺
-Sözleşmeye kalan       :    380.000 ₺   ← kesin hesapta net olarak görülür
+ALTYÜKLENİCİ: MEHMET SEZER   PROJE: P-010 Villa Projesi        [TRY]
+Sözleşme tutarı        1.000.000   (KDV dahil 1.200.000)
+Toplam hakediş           720.000   (KDV dahil   864.000)
+  - Ara hakediş          500.000
+  - Alelhesap            220.000   <- mahsup edilecek
+  - Kesin hesap                0
+Ödenen                   650.000   (KDV dahil   780.000)
+Onaylı ama ödenmemiş      70.000
+Sözleşmeye kalan         280.000            [Kalanı tek tıkla kapat]
 ```
 
-- Düzenleme modunda mevcut hakediş hariç tutulur (kendi tutarını iki kez saymasın).
-- "Kesin Hesap" tipi seçilirse panel başlığı **"Kesin Hesap Özeti"** olur; "Sözleşmeye Kalan" satırı vurgulu gösterilir ve form footer'ında "Önceki ödemeler düşülmüş kalan: X" satırı görünür.
-- Bilgilendirici renkler kullanılır; hiçbir alan disable edilmez, kaydetme engellenmez.
+## 2. Hakediş tiplerinin netleşmesi
 
-## 3) Birim fiyat kalemlerinde kümülatif metraj + "Kalanı getir"
-`src/pages/SubcontractorHakedis.tsx` — hakediş kalem tablosu
+- **Alelhesap**: avans niteliğinde, üretime bağlı değil. Cari hesapta ayrı satır; kesin hesapta düşülür.
+- **Ara hakediş**: dönemsel üretim (birim fiyat metrajı veya götürü dilim).
+- **Kesin hesap**: dosyayı kapatır. Girişte toplam üretim tutarı hesaplanır ve mahsup tablosu otomatik gelir:
 
-Her kalem satırına iki yeni read-only kolon eklenir, türetilmiş değerler:
-- **Sözleşme Metrajı** (`contract.workItemEntries[i].quantity`)
-- **Şimdiye Kadar Yapılan** (önceki hakedişlerin aynı `workItemEntryId` için `quantity` toplamı; düzenleme modunda mevcut kayıt hariç)
-- **Kalan** = Sözleşme − Şimdiye Kadar
-
-Kullanıcı sadece "Bu Hakediş Miktarı" sütununu girer. Yanına **"Kalanı getir"** butonu eklenir → `quantity = kalan` olarak doldurulur. Tablonun üstünde tek tıkla **"Tüm kalemler için kalanı getir"** butonu (özellikle kesin hesap için).
-
-Kalemde "Kalan"ı aşan giriş kırmızı renkle vurgulanır ama bloklanmaz.
-
-## 4) Hakediş listesinde sözleşme bazlı gruplama göstergesi
-`src/pages/SubcontractorHakedis.tsx` — mevcut tablonun üstü
-
-Filtre olarak bir sözleşme seçildiğinde, tablonun üstünde mini bir çubuk gösterilir:
 ```text
-Sözleşme #2025-014 · ABC Yüklenici · A Projesi
-Sözleşme 1.000.000 ₺ · Onaylanan 620.000 ₺ · Ödenen 580.000 ₺ · Kalan 380.000 ₺
+Toplam üretim (metraj x birim fiyat)      950.000
+(-) Önceki ara hakedişler                -500.000
+(-) Önceki alelhesap ödemeleri           -220.000
+= Bu kesin hesapta ödenecek               230.000   [düzenlenebilir]
 ```
-Böylece hakediş eklerken bile sözleşme cari durumu görünür kalır.
 
-## Teknik notlar (ihtiyaç olursa)
+Rakamlar otomatik hesaplanır, kullanıcı isterse üzerine yazabilir; elle değiştirilirse "otomatik hesaplanandan farklı" uyarısı çıkar (engellemez).
 
-- Yeni yardımcı dosya: `src/utils/contractAccounting.ts`
-  - `getContractAccount(contractId, allHakedisler, excludeHakedisId?)` → `{ contractTotal, approvedTotal, paidTotal, remainingApproved, remainingContract, byCurrency }`
-  - `getCumulativeWorkItemQuantities(contractId, allHakedisler, excludeHakedisId?)` → `Map<workItemEntryId, number>`
-  - Bütün hesaplar para birimi bazında yapılır; karışık para birimi durumunda kart başına bir para birimi.
-- Hiçbir veri tabanı / şema değişikliği yok; mevcut Zustand store'dan beslenir.
-- PDF/Excel raporları değişmiyor (sonra istenirse cari hesap kartları rapora da eklenebilir).
-- Engelleyici fazla ödeme kontrolü yok — kullanıcı tercihi gereği sadece bilgilendirme.
+Bir dosyada kesin hesap varsa, aynı dosyaya yeni hakediş eklenmek istendiğinde uyarı verilir.
 
-## Etkilenen dosyalar
-- `src/pages/Subcontractors.tsx` — proje bazlı cari hesap kart grid'i
-- `src/pages/SubcontractorHakedis.tsx` — özet panel, kümülatif kolonlar, "kalanı getir" butonları, sözleşme bilgi çubuğu
-- `src/utils/contractAccounting.ts` — yeni yardımcı (türetilmiş hesaplar)
+## 3. Mükerrer giriş koruması
+
+Yeni hakediş kaydedilirken aynı altyüklenici + proje + (varsa) sözleşme için:
+- Yakın tarihli ve aynı tutarlı kayıt varsa "Benzer kayıt mevcut" uyarısı gösterilir (kaydetmeyi engellemez).
+- Birim fiyat kalemlerinde sözleşme metrajı aşılıyorsa kümülatif miktar uyarısı gösterilir (mevcut kümülatif altyapı kullanılır).
+
+## 4. Kalanı tek tıkla kapatma
+
+Cari hesap kartındaki **"Kalanı Kapat"** butonu, sözleşmenin kalan bakiyesi kadar bir hakediş kaydı oluşturur (tip seçimi: ara hakediş / kesin hesap), açıklaması otomatik doldurulur ve normal onay akışına girer. Onay sonrası ödeme işlemi her zamanki gibi Ödemeler sayfasından yapılır.
+
+## 5. Ekranlar
+
+- **Altyükleniciler sayfası**: mevcut kartlar, iş dosyası formatına göre yeniden düzenlenir; her dosyanın altında tüm hareketler tek zaman çizelgesinde listelenir (tarih, tip, no, açıklama, tutar, ödenen, bakiye — yürüyen bakiye kolonu ile).
+- **Hakediş formu**: seçilen altyüklenici + proje için üst kısımda özet şerit (sözleşme, önceki hakedişler, alelhesap, ödenen, kalan).
+- **Raporlar**: mevcut altyüklenici PDF/Excel raporuna hareket dökümü ve mahsup özeti eklenir.
+
+## Teknik notlar
+
+- `src/utils/contractAccounting.ts` genişletilir: sözleşmesiz kayıtları da kapsayan `getSubcontractorProjectLedger()` (tip kırılımı, yürüyen bakiye, mahsup hesabı). Para birimi bazında ayrım korunur, KDV dahil/hariç ikili gösterim sürer.
+- Şema değişikliği gerekmez; `hakedis_type`, `paid_amount`, `payment_status` alanları yeterli. Tek olası ekleme: kesin hesapta mahsup edilen tutarın kaydı için `hakedisler.offset_amount` (numeric, opsiyonel) — mahsubun raporda izlenebilmesi için.
+- Değişen dosyalar: `src/utils/contractAccounting.ts`, `src/pages/Subcontractors.tsx`, `src/pages/SubcontractorHakedis.tsx`, `src/components/MultiProjectHakedisDialog.tsx`, `src/utils/pdfGenerator.ts`, `src/utils/excelExport.ts`.
+- Mevcut veri korunur; hiçbir kayıt silinmez veya taşınmaz.
