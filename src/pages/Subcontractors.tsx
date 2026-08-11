@@ -74,6 +74,10 @@ import {
   Trash2,
   AlertTriangle,
   FolderKanban,
+  CheckCircle2,
+  CircleDollarSign,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 type DeleteTarget =
@@ -273,6 +277,28 @@ export default function Subcontractors() {
   }, [selected, workEntries, subcontractorHakedisler, projects]);
 
 
+
+  // Sözleşmenin kalan bakiyesi kadar hakediş oluşturmak için hakediş sayfasına yönlendir
+  const handleCloseRemaining = (led: SubcontractorLedger) => {
+    const candidates = led.contracts
+      .map((c) => {
+        const related = subcontractorHakedisler.filter((h) => h.contractId === c.id);
+        const used = related.reduce((s, h) => s + (h.totalAmount || 0), 0);
+        return { c, remaining: (c.totalAmount || 0) - used };
+      })
+      .filter((x) => x.remaining > 0.5)
+      .sort((a, b) => b.remaining - a.remaining);
+
+    if (candidates.length === 0) {
+      toast.info('Bu iş dosyasında kapatılacak sözleşme bakiyesi yok');
+      return;
+    }
+    const target = candidates[0];
+    if (candidates.length > 1) {
+      toast.info(`En yüksek bakiyeli sözleşme seçildi: ${target.c.contractNo}`);
+    }
+    navigate(`/altyuklenici-hakedis?closeContract=${target.c.id}`);
+  };
 
   const resetFilters = () => {
     setProjectFilter('all');
