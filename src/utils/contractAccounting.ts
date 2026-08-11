@@ -167,3 +167,313 @@ export function getSubcontractorProjectAccounts(
     a.projectName.localeCompare(b.projectName, 'tr')
   );
 }
+
+/* =========================================================================
+ * İŞ DOSYASI (CARİ HESAP DEFTERİ)
+ * Altyüklenici + Proje + Para birimi bazında, sözleşmeli ve sözleşmesiz tüm
+ * hakediş hareketlerini tek bir defterde toplar.
+ * ========================================================================= */
+
+export type LedgerEntryKind = 'contract' | 'hakedis';
+
+export interface LedgerMovement {
+  id: string;
+  kind: LedgerEntryKind;
+  date: string;
+  no: string;
+  /** ara_hakedis | alelhesap | kesin_hesap | sozlesme */
+  type: string;
+  typeLabel: string;
+  description: string;
+  contractId?: string;
+  contractNo?: string;
+  workCategory?: string;
+  amount: number;       // KDV hariç
+  amountIncl: number;   // KDV dahil
+  paid: number;         // KDV hariç ödenen
+  paidIncl: number;
+  runningBalance: number;      // kümülatif (hakediş - ödenen), KDV hariç
+  runningBalanceIncl: number;
+  approvalStatus?: string;
+  paymentStatus?: string;
+  vatRate?: number;
+  offsetAmount?: number;
+}
+
+export interface SubcontractorLedger {
+  key: string;
+  subcontractor: string;
+  projectId: string;
+  projectName: string;
+  projectCode?: string;
+  currency: Currency;
+  hasProject: boolean;
+
+  contracts: WorkEntry[];
+  contractTotal: number;
+  contractTotalIncl: number;
+
+  araTotal: number;
+  alelhesapTotal: number;
+  kesinHesapTotal: number;
+
+  hakedisTotal: number;
+  hakedisTotalIncl: number;
+  approvedTotal: number;
+  approvedTotalIncl: number;
+  paidTotal: number;
+  paidTotalIncl: number;
+
+  remainingApproved: number;      // onaylı ama ödenmemiş
+  remainingApprovedIncl: number;
+  remainingContract: number;      // sözleşme - hakediş
+  remainingContractIncl: number;
+
+  hasKesinHesap: boolean;
+  isOverPaid: boolean;
+  movements: LedgerMovement[];
+}
+
+const vatFactor = (vatRate?: number | null) =>
+  1 + (vatRate && vatRate > 0 ? vatRate : 0) / 100;
+
+const paidOf = (h: SubcontractorHakedis) =>
+  h.paymentStatus === 'odendi' ? (h.totalAmount || 0) : (h.paidAmount || 0);
+
+const typeLabels: Record<string, string> = {
+  ara_hakedis: 'Ara Hakediş',
+  alelhesap: 'Alelhesap',
+  kesin_hesap: 'Kesin Hesap',
+};
+
+/**
+ * Bir altyüklenicinin tüm iş dosyalarını (proje + para birimi) çıkarır.
+ * Sözleşmesiz (küçük iş) hakedişler de projeye göre aynı dosyada toplanır;
+ * projesiz kayıtlar "Proje belirtilmemiş" dosyasında gruplanır.
+ */
+export function getSubcontractorLedgers(
+  subcontractor: string,
+  contracts: WorkEntry[],
+  hakedisler: SubcontractorHakedis[],
+  projectInfo: (id?: string) => { name: string; code?: string }
+): SubcontractorLedger[] {
+  const map = new Map<string, SubcontractorLedger>();
+
+  const ensure = (projectId: string, currency: Currency): SubcontractorLedger => {
+    const key = `${projectId || 'none'}__${currency}`;
+    if (!map.has(key)) {
+      const info = projectInfo(projectId);
+      map.set(key, {
+        key,
+        subcontractor,
+        projectId,
+        projectName: info.name,
+        projectCode: info.code,
+        currency,
+        hasProject: Boolean(projectId),
+        contracts: [],
+        contractTotal: 0,
+        contractTotalIncl: 0,
+        araTotal: 0,
+        alelhesapTotal: 0,
+        kesinHesapTotal: 0,
+        hakedisTotal: 0,
+        hakedisTotalIncl: 0,
+        approvedTotal: 0,
+        approvedTotalIncl: 0,
+        paidTotal: 0,
+        paidTotalIncl: 0,
+        remainingApproved: 0,
+        remainingApprovedIncl: 0,
+        remainingContract: 0,
+        remainingContractIncl: 0,
+        hasKesinHesap: false,
+        isOverPaid: false,
+        movements: [],
+      });
+    }
+    return map.get(key)!;
+  };
+
+  contracts
+    .filter((c) => c.subcontractor === subcontractor)
+    .forEach((c) => {
+      const led = ensure(c.projectId, c.currency as Currency);
+      led.contracts.push(c);
+      led.contractTotal += c.totalAmount || 0;
+      led.contractTotalIncl += (c.totalAmount || 0) * vatFactor(c.vatRate);
+    });
+
+  hakedisler
+    .filter((h) => h.subcontractor === subcontractor)
+    .forEach((h) => {
+      const led = ensure(h.projectId || '', h.currency as Currency);
+      const amount = h.totalAmount || 0;
+      const amountIncl = amount * vatFactor(h.vatRate);
+      const paid = paidOf(h);
+      const paidIncl = paid * vatFactor(h.vatRate);
+      const contract = contracts.find((c) => c.id === h.contractId);
+
+      led.hakedisTotal += amount;
+      led.hakedisTotalIncl += amountIncl;
+      if (h.approvalStatus === 'onaylandi') {
+        led.approvedTotal += amount;
+        led.approvedTotalIncl += amountIncl;
+      }
+      led.paidTotal += paid;
+      led.paidTotalIncl += paidIncl;
+
+      if (h.hakedisType === 'alelhesap') led.alelhesapTotal += amount;
+      else if (h.hakedisType === 'kesin_hesap') {
+        led.kesinHesapTotal += amount;
+        led.hasKesinHesap = true;
+      } else led.araTotal += amount;
+
+      led.movements.push({
+        id: h.id,
+        kind: 'hakedis',
+        date: h.date,
+        no: h.hakedisNo,
+        type: h.hakedisType || 'ara_hakedis',
+        typeLabel: typeLabels[h.hakedisType || 'ara_hakedis'] || 'Hakediş',
+        description: h.description || '',
+        contractId: h.contractId || undefined,
+        contractNo: h.contractNo || undefined,
+        workCategory: contract?.workCategory,
+        amount,
+        amountIncl,
+        paid,
+        paidIncl,
+        runningBalance: 0,
+        runningBalanceIncl: 0,
+        approvalStatus: h.approvalStatus,
+        paymentStatus: h.paymentStatus,
+        vatRate: h.vatRate ?? undefined,
+        offsetAmount: h.offsetAmount ?? undefined,
+      });
+    });
+
+  map.forEach((led) => {
+    led.remainingApproved = led.approvedTotal - led.paidTotal;
+    led.remainingApprovedIncl = led.approvedTotalIncl - led.paidTotalIncl;
+    led.remainingContract = led.contractTotal - led.hakedisTotal;
+    led.remainingContractIncl = led.contractTotalIncl - led.hakedisTotalIncl;
+    led.isOverPaid = led.contractTotal > 0 && led.hakedisTotal > led.contractTotal;
+
+    led.movements.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    let bal = 0;
+    let balIncl = 0;
+    led.movements.forEach((m) => {
+      bal += m.amount - m.paid;
+      balIncl += m.amountIncl - m.paidIncl;
+      m.runningBalance = bal;
+      m.runningBalanceIncl = balIncl;
+    });
+    led.movements.reverse();
+  });
+
+  return Array.from(map.values()).sort(
+    (a, b) =>
+      (a.projectCode || 'zzz').localeCompare(b.projectCode || 'zzz', 'tr') ||
+      a.projectName.localeCompare(b.projectName, 'tr')
+  );
+}
+
+/**
+ * Kesin hesap mahsup hesabı: toplam üretimden, aynı dosyadaki (sözleşme varsa
+ * sözleşme bazlı, yoksa proje bazlı) önceki ara hakediş ve alelhesapları düşer.
+ */
+export interface FinalSettlement {
+  production: number;      // girilen toplam üretim (KDV hariç)
+  previousAra: number;
+  previousAlelhesap: number;
+  totalPrevious: number;
+  netPayable: number;      // production - totalPrevious
+}
+
+export function computeFinalSettlement(params: {
+  production: number;
+  subcontractor: string;
+  projectId?: string;
+  contractId?: string;
+  currency: Currency;
+  hakedisler: SubcontractorHakedis[];
+  excludeHakedisId?: string;
+}): FinalSettlement {
+  const {
+    production,
+    subcontractor,
+    projectId,
+    contractId,
+    currency,
+    hakedisler,
+    excludeHakedisId,
+  } = params;
+
+  const related = hakedisler.filter((h) => {
+    if (h.id === excludeHakedisId) return false;
+    if (h.subcontractor !== subcontractor) return false;
+    if (h.currency !== currency) return false;
+    if (h.hakedisType === 'kesin_hesap') return false;
+    if (contractId) return h.contractId === contractId;
+    return (h.projectId || '') === (projectId || '');
+  });
+
+  const previousAra = related
+    .filter((h) => (h.hakedisType || 'ara_hakedis') === 'ara_hakedis')
+    .reduce((s, h) => s + (h.totalAmount || 0), 0);
+  const previousAlelhesap = related
+    .filter((h) => h.hakedisType === 'alelhesap')
+    .reduce((s, h) => s + (h.totalAmount || 0), 0);
+
+  const totalPrevious = previousAra + previousAlelhesap;
+  return {
+    production,
+    previousAra,
+    previousAlelhesap,
+    totalPrevious,
+    netPayable: production - totalPrevious,
+  };
+}
+
+/**
+ * Aynı altyüklenici/proje/sözleşme için yakın tarihli ve aynı tutarlı kayıt var mı?
+ */
+export function findPossibleDuplicates(params: {
+  subcontractor: string;
+  projectId?: string;
+  contractId?: string;
+  currency: Currency;
+  amount: number;
+  date: string;
+  hakedisler: SubcontractorHakedis[];
+  excludeHakedisId?: string;
+  dayWindow?: number;
+}): SubcontractorHakedis[] {
+  const {
+    subcontractor,
+    projectId,
+    contractId,
+    currency,
+    amount,
+    date,
+    hakedisler,
+    excludeHakedisId,
+    dayWindow = 30,
+  } = params;
+  if (!amount || amount <= 0) return [];
+  const target = new Date(date).getTime();
+  const tol = Math.max(1, amount * 0.005);
+
+  return hakedisler.filter((h) => {
+    if (h.id === excludeHakedisId) return false;
+    if (h.subcontractor !== subcontractor) return false;
+    if (h.currency !== currency) return false;
+    if (contractId ? h.contractId !== contractId : (h.projectId || '') !== (projectId || ''))
+      return false;
+    if (Math.abs((h.totalAmount || 0) - amount) > tol) return false;
+    const d = new Date(h.date).getTime();
+    if (Number.isNaN(d) || Number.isNaN(target)) return false;
+    return Math.abs(d - target) <= dayWindow * 86400000;
+  });
+}

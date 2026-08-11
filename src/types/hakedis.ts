@@ -126,6 +126,8 @@ export interface SubcontractorHakedis {
   extraItems?: ExtraWorkItem[];
   totalAmount: number;
   paidAmount: number; // Amount paid so far (for partial payments)
+  /** Kesin hesapta önceki hakediş/alelhesaplardan mahsup edilen tutar (KDV hariç) */
+  offsetAmount?: number;
   createdBy: string;
   approvalStatus: ApprovalStatus;
   approvedBy?: string;
