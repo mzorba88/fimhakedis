@@ -568,32 +568,37 @@ export default function Subcontractors() {
                       />
                     </div>
 
-                    {/* Proje Bazlı Cari Hesap */}
-                    {projectAccounts.length > 0 && (
+                    {/* İş Dosyaları (Cari Hesap) */}
+                    {ledgers.length > 0 && (
                       <div className="space-y-2 pt-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                           <FolderKanban className="h-4 w-4 text-primary" />
-                          Proje Bazlı Cari Hesap
+                          İş Dosyaları (Cari Hesap)
                           <span className="text-xs font-normal text-muted-foreground">
-                            (her proje + para birimi için)
+                            (proje + para birimi bazında, sözleşmeli ve sözleşmesiz tüm hareketler)
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                          {projectAccounts.map((acc) => (
-                            <ProjectAccountCard
-                              key={`${acc.projectId}-${acc.currency}`}
-                              account={acc}
-                              active={projectFilter === acc.projectId}
-                              onClick={() =>
+                        <div className="space-y-3">
+                          {ledgers.map((led) => (
+                            <LedgerCard
+                              key={led.key}
+                              ledger={led}
+                              active={projectFilter === led.projectId}
+                              onFilter={() =>
                                 setProjectFilter(
-                                  projectFilter === acc.projectId ? 'all' : acc.projectId
+                                  projectFilter === led.projectId ? 'all' : led.projectId
                                 )
+                              }
+                              onCloseRemaining={() => handleCloseRemaining(led)}
+                              onOpenHakedis={(id) =>
+                                navigate(`/altyuklenici-hakedis?view=${id}`)
                               }
                             />
                           ))}
                         </div>
                       </div>
                     )}
+
                   </CardContent>
                 </Card>
 
