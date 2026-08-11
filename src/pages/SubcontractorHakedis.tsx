@@ -2702,6 +2702,70 @@ export default function SubcontractorHakedis() {
                   })()}
                 </div>
 
+                {/* Aynı proje + altyüklenici diğer hakedişler */}
+                {(() => {
+                  const related = subcontractorHakedisler
+                    .filter(h =>
+                      h.subcontractor === selectedHakedis.subcontractor &&
+                      (h.projectId || '') === (selectedHakedis.projectId || '')
+                    )
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                  if (related.length <= 1) return null;
+
+                  const withVat = (h: typeof related[number]) =>
+                    h.totalAmount + (h.vatRate ? h.totalAmount * (h.vatRate / 100) : 0);
+                  const totalWithVat = related.reduce((s, h) => s + withVat(h), 0);
+                  const totalPaid = related.reduce((s, h) => s + (h.paidAmount || 0), 0);
+
+                  return (
+                    <div className="rounded-lg border">
+                      <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-2">
+                        <p className="text-sm font-semibold">
+                          Bu Proje ve Altyüklenicideki Diğer Hakedişler ({related.length})
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          Toplam (KDV dahil): {formatCurrencyWithType(totalWithVat, selectedHakedis.currency)} · Ödenen: {formatCurrencyWithType(totalPaid, selectedHakedis.currency)}
+                        </span>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto divide-y">
+                        {related.map(h => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => setSelectedHakedis(h)}
+                            className={`w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors ${h.id === selectedHakedis.id ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {h.hakedisNo} · {hakedisTypeLabels[h.hakedisType || 'ara_hakedis']}
+                                  {h.id === selectedHakedis.id && (
+                                    <span className="ml-2 text-xs text-primary">(görüntülenen)</span>
+                                  )}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {formatDate(h.date)} · {h.contractNo || 'Sözleşmesiz'}
+                                  {h.description ? ` · ${h.description}` : ''}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-semibold">
+                                  {formatCurrencyWithType(withVat(h), h.currency)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Ödenen: {formatCurrencyWithType(h.paidAmount || 0, h.currency)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+
                 {/* Dates */}
                 <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
                   <div>
