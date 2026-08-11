@@ -693,6 +693,7 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
+          offsetAmount: hakedisType === 'kesin_hesap' ? offsetValue : 0,
           contractExceededNote: undefined,
 
           ...(shouldResetToOnayBekliyor && {
@@ -736,7 +737,7 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
-          
+          offsetAmount: hakedisType === 'kesin_hesap' ? offsetValue : 0,
           createdBy: currentUser.id,
           approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
           approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
@@ -1556,7 +1557,7 @@ export default function SubcontractorHakedis() {
               {/* Kesin Hesap - Birim Fiyat items with final quantities + previous payment deduction */}
               {hakedisType === 'kesin_hesap' && selectedContract?.contractType === 'birim_fiyat' && hakedisItems.length > 0 && (
                 <div className="space-y-4">
-                  <div className="rounded-lg border bg-muted/30 p-4">
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Sözleşme Tutarı</p>
@@ -1565,11 +1566,60 @@ export default function SubcontractorHakedis() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Önceki Ödemeler Toplamı</p>
-                        <p className="font-semibold text-primary">
-                          {formatCurrencyWithType(previousPaymentsTotal, hakedisCurrency)}
+                        <p className="text-muted-foreground">Toplam Üretim (metraj x birim fiyat)</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(settlement.production, hakedisCurrency)}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="rounded-md border bg-background p-3 text-sm space-y-1.5 tabular-nums">
+                      <div className="font-medium text-foreground">Mahsup Hesabı</div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Toplam üretim</span>
+                        <span>{formatCurrencyWithType(settlement.production, hakedisCurrency)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>(-) Önceki ara hakedişler</span>
+                        <span>-{formatCurrencyWithType(settlement.previousAra, hakedisCurrency)}</span>
+                      </div>
+                      <div className="flex justify-between text-amber-600">
+                        <span>(-) Önceki alelhesap ödemeleri</span>
+                        <span>-{formatCurrencyWithType(settlement.previousAlelhesap, hakedisCurrency)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-t pt-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Mahsup edilecek tutar (düzenlenebilir)
+                        </Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          className="h-8 w-40 text-right"
+                          value={finalOffset}
+                          onChange={(e) => {
+                            setFinalOffsetTouched(true);
+                            setFinalOffset(e.target.value.replace(',', '.'));
+                          }}
+                          onWheel={(e) => e.currentTarget.blur()}
+                        />
+                      </div>
+                      <div className="flex justify-between border-t pt-2 font-semibold">
+                        <span>= Bu kesin hesapta ödenecek</span>
+                        <span className={netPayableManual < 0 ? 'text-destructive' : 'text-primary'}>
+                          {formatCurrencyWithType(netPayableManual, hakedisCurrency)}
+                        </span>
+                      </div>
+                      {Math.abs(offsetValue - settlement.totalPrevious) > 0.5 && (
+                        <p className="text-xs text-amber-600">
+                          Uyarı: Girilen mahsup tutarı otomatik hesaplanandan (
+                          {formatCurrencyWithType(settlement.totalPrevious, hakedisCurrency)}) farklı.
+                        </p>
+                      )}
+                      {netPayableManual < 0 && (
+                        <p className="text-xs text-destructive">
+                          Önceki ödemeler toplam üretimden fazla. Altyükleniciden iade alınması gerekebilir.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -2283,6 +2333,30 @@ export default function SubcontractorHakedis() {
                           {vr === 0 && (<div className="flex justify-between font-semibold"><span>Toplam</span><span>{formatCurrencyWithType(entered, cur)}</span></div>)}
                         </>);
                       })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Uyarılar */}
+              {selectedSubcontractor && (duplicateCandidates.length > 0 || (!isEditMode && existingKesinHesap && hakedisType !== 'kesin_hesap')) && (
+                <div className="space-y-2 pt-2">
+                  {duplicateCandidates.length > 0 && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 space-y-1">
+                      <p className="font-medium">Benzer kayıt mevcut olabilir (mükerrer giriş kontrolü)</p>
+                      {duplicateCandidates.slice(0, 3).map((d) => (
+                        <p key={d.id}>
+                          {d.hakedisNo} · {formatDate(d.date)} ·{' '}
+                          {formatCurrencyWithType(d.totalAmount || 0, d.currency as Currency)}
+                        </p>
+                      ))}
+                      <p className="text-[11px]">Kaydetmeye devam edebilirsiniz, bu sadece bir uyarıdır.</p>
+                    </div>
+                  )}
+                  {!isEditMode && existingKesinHesap && hakedisType !== 'kesin_hesap' && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+                      Bu iş dosyası için daha önce kesin hesap yapılmış ({existingKesinHesap.hakedisNo}). Yeni
+                      hakediş eklemek istediğinizden emin olun.
                     </div>
                   )}
                 </div>
