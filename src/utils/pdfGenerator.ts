@@ -1,4 +1,5 @@
 import { 
+import { getSubcontractorLedgers } from '@/utils/contractAccounting';
   WorkEntry, 
   SubcontractorHakedis, 
   Project,
@@ -419,6 +420,67 @@ export const generateSubcontractorPDF = async (
     margin: { left: 14, right: 14 },
   });
   y = (doc as any).lastAutoTable.finalY + 6;
+
+  // Is dosyalari (cari hesap) - proje + para birimi bazinda ozet ve hareket dokumu
+  const ledgers = getSubcontractorLedgers(
+    subcontractorName,
+    contracts,
+    hakedisler,
+    (id?: string) => {
+      const p = projects.find(x => x.id === id);
+      return { name: p?.projectName || 'Proje belirtilmemis', code: p?.projectCode };
+    }
+  );
+
+  ledgers.forEach((led) => {
+    if (y > 220) { doc.addPage(); y = 14; }
+    const title = `Is Dosyasi: ${led.projectCode ? led.projectCode + ' - ' : ''}${led.projectName} (${led.currency})`;
+    y = addSectionTitle(doc, title, y, COLORS.primary);
+
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ['Sozlesme Tutari', formatCurrencyWithType(led.contractTotalIncl, led.currency), 'Toplam Hakedis', formatCurrencyWithType(led.hakedisTotalIncl, led.currency)],
+        ['Ara Hakedis', formatCurrencyWithType(led.araTotal, led.currency), 'Alelhesap (mahsup)', formatCurrencyWithType(led.alelhesapTotal, led.currency)],
+        ['Kesin Hesap', formatCurrencyWithType(led.kesinHesapTotal, led.currency), 'Odenen', formatCurrencyWithType(led.paidTotalIncl, led.currency)],
+        ['Onayli Odenmemis', formatCurrencyWithType(led.remainingApprovedIncl, led.currency), 'Sozlesmeye Kalan', formatCurrencyWithType(led.remainingContractIncl, led.currency)],
+      ],
+      theme: 'grid',
+      styles: { font: 'Roboto', fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 38 },
+        1: { halign: 'right' },
+        2: { fontStyle: 'bold', cellWidth: 38 },
+        3: { halign: 'right' },
+      },
+      alternateRowStyles: { fillColor: COLORS.lightGray },
+      margin: { left: 14, right: 14 },
+    });
+    y = (doc as any).lastAutoTable.finalY + 4;
+
+    if (led.movements.length > 0) {
+      autoTable(doc, {
+        startY: y,
+        head: [['Tarih', 'No', 'Tip', 'Aciklama', 'Tutar', 'Odenen', 'Bakiye']],
+        body: [...led.movements].reverse().map((m) => [
+          formatDate(m.date),
+          m.no + (m.contractId ? '' : ' (Sozlesmesiz)'),
+          m.typeLabel,
+          m.description || '-',
+          formatCurrencyWithType(m.amountIncl, led.currency),
+          formatCurrencyWithType(m.paidIncl, led.currency),
+          formatCurrencyWithType(m.runningBalanceIncl, led.currency),
+        ]),
+        theme: 'grid',
+        styles: { font: 'Roboto', fontSize: 7.5, cellPadding: 1.8 },
+        headStyles: { fillColor: COLORS.primary, textColor: COLORS.white },
+        alternateRowStyles: { fillColor: COLORS.lightGray },
+        columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 6;
+    }
+  });
 
   // Contracts table
   if (contracts.length > 0) {
