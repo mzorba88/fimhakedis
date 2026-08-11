@@ -1431,6 +1431,46 @@ export default function SubcontractorHakedis() {
               {/* Hakediş Type Selection */}
               {selectedContractId && (
                 <div className="space-y-2">
+                  {selectedContract && contractAccount && (
+                    <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs tabular-nums grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div>
+                        <p className="text-muted-foreground">Sözleşme</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(contractAccount.contractTotal, hakedisCurrency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Önceki hakedişler</p>
+                        <p className="font-semibold">
+                          {formatCurrencyWithType(settlement.previousAra, hakedisCurrency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Alelhesap</p>
+                        <p className="font-semibold text-amber-600">
+                          {formatCurrencyWithType(settlement.previousAlelhesap, hakedisCurrency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Ödenen</p>
+                        <p className="font-semibold text-primary">
+                          {formatCurrencyWithType(contractAccount.paidTotal, hakedisCurrency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Sözleşmeye kalan</p>
+                        <p
+                          className={`font-semibold ${
+                            contractAccount.remainingContract < 0
+                              ? 'text-destructive'
+                              : 'text-emerald-600'
+                          }`}
+                        >
+                          {formatCurrencyWithType(contractAccount.remainingContract, hakedisCurrency)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Label>Hakediş Tipi</Label>
                   <Select 
                     value={hakedisType} 
