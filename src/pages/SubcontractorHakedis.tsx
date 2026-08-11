@@ -613,6 +613,59 @@ export default function SubcontractorHakedis() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subcontractorHakedisler]);
 
+  // "Kalanı Kapat" - sözleşmenin kalan bakiyesi kadar hakediş formunu hazır aç
+  useEffect(() => {
+    const contractId = searchParams.get('closeContract');
+    if (!contractId) return;
+    const contract = workEntries.find((c) => c.id === contractId);
+    searchParams.delete('closeContract');
+    setSearchParams(searchParams, { replace: true });
+    if (!contract) return;
+
+    const used = subcontractorHakedisler
+      .filter((h) => h.contractId === contract.id)
+      .reduce((sum, h) => sum + (h.totalAmount || 0), 0);
+    const remaining = (contract.totalAmount || 0) - used;
+    if (remaining <= 0) {
+      toast.info('Bu sözleşmede kalan bakiye yok');
+      return;
+    }
+
+    resetForm();
+    setSelectedProjectId(contract.projectId);
+    setSelectedSubcontractor(contract.subcontractor);
+    handleContractSelect(contract.id);
+    setHakedisType('ara_hakedis');
+    setVatRate(contract.vatRate !== undefined && contract.vatRate !== null ? String(contract.vatRate) : '10');
+    setVatInclusive(false);
+    setDescription(`${contract.contractNo} sözleşmesi kalan bakiye kapanışı`);
+
+    if (contract.contractType === 'goturu_bedel') {
+      setPaymentAmount(String(Math.round(remaining * 100) / 100));
+    } else {
+      // Birim fiyat: her kalem için kalan metrajı doldur
+      const cumulative = getCumulativeWorkItemQuantities(contract.id, subcontractorHakedisler);
+      const items: HakedisItem[] = (contract.workItemEntries || []).map((item) => {
+        const qty = Math.max(0, (item.quantity || 0) - (cumulative.get(item.id) || 0));
+        return {
+          id: crypto.randomUUID(),
+          workItemEntryId: item.id,
+          workCategory: item.workCategory,
+          description: item.description,
+          unit: item.unit,
+          unitPrice: item.unitPrice,
+          quantity: qty,
+          amount: qty * item.unitPrice,
+        };
+      });
+      setHakedisItems(items);
+    }
+
+    setIsDialogOpen(true);
+    toast.success('Kalan bakiye forma dolduruldu, kontrol edip kaydedin');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workEntries, subcontractorHakedisler]);
+
 
   const handleSubmit = async () => {
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
