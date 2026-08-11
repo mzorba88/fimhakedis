@@ -253,16 +253,20 @@ export default function Subcontractors() {
     };
   }, [subContracts, subHakedisler]);
 
-  // Proje bazlı cari hesap (her proje + para birimi için ayrı kart)
-  const projectAccounts: SubcontractorProjectAccount[] = useMemo(() => {
+  // İş dosyaları (altyüklenici + proje + para birimi bazlı cari hesap defteri)
+  const ledgers: SubcontractorLedger[] = useMemo(() => {
     if (!selected) return [];
-    return getSubcontractorProjectAccounts(
+    return getSubcontractorLedgers(
       selected,
       workEntries,
       subcontractorHakedisler,
-      (id?: string) => projects.find((p) => p.id === id)?.projectName || 'Proje belirtilmemiş'
+      (id?: string) => {
+        const p = projects.find((x) => x.id === id);
+        return { name: p?.projectName || 'Proje belirtilmemiş', code: p?.projectCode };
+      }
     );
   }, [selected, workEntries, subcontractorHakedisler, projects]);
+
 
 
   const resetFilters = () => {
