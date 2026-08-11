@@ -24,7 +24,12 @@ import {
   PaymentStatus
 } from '@/types/hakedis';
 import { generateHakedisPDF } from '@/utils/pdfGenerator';
-import { getCumulativeWorkItemQuantities, getContractAccount } from '@/utils/contractAccounting';
+import {
+  getCumulativeWorkItemQuantities,
+  getContractAccount,
+  computeFinalSettlement,
+  findPossibleDuplicates,
+} from '@/utils/contractAccounting';
 import { 
   Plus, 
   Search, 
@@ -184,6 +189,9 @@ export default function SubcontractorHakedis() {
   const [hakedisType, setHakedisType] = useState<HakedisRecordType>('ara_hakedis');
   const [vatInclusive, setVatInclusive] = useState(false);
   const [hakedisCurrency, setHakedisCurrency] = useState<Currency>('TRY');
+  // Kesin hesap mahsubu (önceki ödemelerden düşülecek tutar) - otomatik hesaplanır, elle değiştirilebilir
+  const [finalOffset, setFinalOffset] = useState<string>('');
+  const [finalOffsetTouched, setFinalOffsetTouched] = useState(false);
   const contractSubcontractors = useMemo(() => {
     const subs = new Set<string>();
 
@@ -257,6 +265,85 @@ export default function SubcontractorHakedis() {
       editingHakedisId || undefined
     );
   }, [selectedContract, subcontractorHakedisler, editingHakedisId]);
+
+  // Kesin hesap mahsup hesabı (otomatik)
+  const settlement = useMemo(() => {
+    return computeFinalSettlement({
+      production: birimFiyatTotal,
+      subcontractor: selectedSubcontractor,
+      projectId: selectedProjectId,
+      contractId: selectedContractId || undefined,
+      currency: hakedisCurrency,
+      hakedisler: subcontractorHakedisler,
+      excludeHakedisId: editingHakedisId || undefined,
+    });
+  }, [
+    birimFiyatTotal,
+    selectedSubcontractor,
+    selectedProjectId,
+    selectedContractId,
+    hakedisCurrency,
+    subcontractorHakedisler,
+    editingHakedisId,
+  ]);
+
+  // Mahsup tutarını otomatik doldur (kullanıcı elle değiştirmediyse)
+  useEffect(() => {
+    if (hakedisType !== 'kesin_hesap') return;
+    if (finalOffsetTouched) return;
+    setFinalOffset(settlement.totalPrevious ? String(Math.round(settlement.totalPrevious * 100) / 100) : '0');
+  }, [hakedisType, settlement.totalPrevious, finalOffsetTouched]);
+
+  const offsetValue = parseFloat(finalOffset) || 0;
+  const netPayableManual = birimFiyatTotal - offsetValue;
+
+  // Aynı dosyada daha önce kesin hesap yapılmış mı?
+  const existingKesinHesap = useMemo(() => {
+    if (!selectedSubcontractor) return null;
+    return (
+      subcontractorHakedisler.find(
+        (h) =>
+          h.id !== editingHakedisId &&
+          h.hakedisType === 'kesin_hesap' &&
+          h.subcontractor === selectedSubcontractor &&
+          (selectedContractId
+            ? h.contractId === selectedContractId
+            : (h.projectId || '') === (selectedProjectId || ''))
+      ) || null
+    );
+  }, [subcontractorHakedisler, selectedSubcontractor, selectedContractId, selectedProjectId, editingHakedisId]);
+
+  // Mükerrer kayıt uyarısı
+  const currentFormAmount = useMemo(() => {
+    if (hakedisType === 'alelhesap') return parseFloat(paymentAmount) || 0;
+    if (selectedContract?.contractType === 'goturu_bedel' && hakedisType === 'ara_hakedis') {
+      return (parseFloat(paymentAmount) || 0) + extraItems.reduce((s, i) => s + i.amount, 0);
+    }
+    return birimFiyatTotal;
+  }, [hakedisType, paymentAmount, selectedContract, extraItems, birimFiyatTotal]);
+
+  const duplicateCandidates = useMemo(() => {
+    if (!selectedSubcontractor) return [];
+    return findPossibleDuplicates({
+      subcontractor: selectedSubcontractor,
+      projectId: selectedProjectId,
+      contractId: selectedContractId || undefined,
+      currency: hakedisCurrency,
+      amount: currentFormAmount,
+      date: hakedisDate,
+      hakedisler: subcontractorHakedisler,
+      excludeHakedisId: editingHakedisId || undefined,
+    });
+  }, [
+    selectedSubcontractor,
+    selectedProjectId,
+    selectedContractId,
+    hakedisCurrency,
+    currentFormAmount,
+    hakedisDate,
+    subcontractorHakedisler,
+    editingHakedisId,
+  ]);
 
   // Helper: fill "remaining" quantity for one row or all rows
   const fillRemainingQuantity = (itemId: string) => {
@@ -369,6 +456,8 @@ export default function SubcontractorHakedis() {
     setHakedisType('ara_hakedis');
     setVatInclusive(false);
     setHakedisCurrency('TRY');
+    setFinalOffset('');
+    setFinalOffsetTouched(false);
     setIsEditMode(false);
     setEditingHakedisId(null);
   };
