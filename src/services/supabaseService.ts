@@ -73,6 +73,7 @@ const toHakedis = (row: any): SubcontractorHakedis => ({
   extraItems: row.extra_items as ExtraWorkItem[] | undefined,
   totalAmount: Number(row.total_amount),
   paidAmount: Number(row.paid_amount || 0),
+  offsetAmount: row.offset_amount !== null && row.offset_amount !== undefined ? Number(row.offset_amount) : undefined,
   createdBy: row.created_by,
   approvalStatus: row.approval_status as ApprovalStatus,
   approvedBy: row.approved_by,
@@ -258,6 +259,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
     approval_status: hakedis.approvalStatus,
     payment_status: hakedis.paymentStatus,
     paid_amount: hakedis.paidAmount || 0,
+    offset_amount: hakedis.offsetAmount ?? 0,
     contract_exceeded_note: hakedis.contractExceededNote,
   };
   // Only set nullable FK fields if they have values
@@ -297,6 +299,7 @@ export const updateHakedis = async (id: string, updates: Partial<SubcontractorHa
   if (updates.rejectionReason !== undefined) dbUpdates.rejection_reason = updates.rejectionReason;
   if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
   if (updates.paidAmount !== undefined) dbUpdates.paid_amount = updates.paidAmount;
+  if (updates.offsetAmount !== undefined) dbUpdates.offset_amount = updates.offsetAmount;
   if (updates.paidDate !== undefined) dbUpdates.paid_date = updates.paidDate;
   if (updates.contractExceededNote !== undefined) dbUpdates.contract_exceeded_note = updates.contractExceededNote;
 
