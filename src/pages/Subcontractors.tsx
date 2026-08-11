@@ -872,33 +872,21 @@ function SummaryBox({
   );
 }
 
-function ProjectAccountCard({
-  account,
+function LedgerCard({
+  ledger,
   active,
-  onClick,
+  onFilter,
+  onCloseRemaining,
+  onOpenHakedis,
 }: {
-  account: SubcontractorProjectAccount;
+  ledger: SubcontractorLedger;
   active: boolean;
-  onClick: () => void;
+  onFilter: () => void;
+  onCloseRemaining: () => void;
+  onOpenHakedis: (id: string) => void;
 }) {
-  const {
-    projectName,
-    currency,
-    contractCount,
-    contractTotal,
-    hakedisTotal,
-    approvedTotal,
-    paidTotal,
-    remainingApproved,
-    remainingContract,
-    contractTotalIncl,
-    hakedisTotalIncl,
-    approvedTotalIncl,
-    paidTotalIncl,
-    remainingApprovedIncl,
-    remainingContractIncl,
-    isOverPaid,
-  } = account;
+  const [open, setOpen] = useState(false);
+  const c = ledger.currency;
 
   const Row = ({
     label,
@@ -906,84 +894,220 @@ function ProjectAccountCard({
     incl,
     valueClass = 'text-foreground',
     bordered = false,
+    hint,
   }: {
     label: string;
     excl: number;
     incl: number;
     valueClass?: string;
     bordered?: boolean;
+    hint?: string;
   }) => (
     <div className={`flex justify-between gap-2 ${bordered ? 'border-t pt-1 mt-1' : ''}`}>
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground">
+        {label}
+        {hint && <span className="ml-1 text-[10px] text-amber-600">{hint}</span>}
+      </span>
       <span className="text-right">
         <span className={`block font-medium ${valueClass}`}>
-          {formatCurrencyWithType(incl, currency)}
+          {formatCurrencyWithType(incl, c)}
         </span>
         <span className="block text-[10px] text-muted-foreground leading-tight">
-          Hariç: {formatCurrencyWithType(excl, currency)}
+          Hariç: {formatCurrencyWithType(excl, c)}
         </span>
       </span>
     </div>
   );
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-left rounded-lg border p-3 transition-colors ${
-        active
-          ? 'border-primary bg-primary/5'
-          : 'bg-card hover:border-primary/40 hover:bg-muted/40'
+    <div
+      className={`rounded-lg border transition-colors ${
+        active ? 'border-primary bg-primary/5' : 'bg-card'
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-foreground truncate">
-            {projectName}
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2 flex-wrap">
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={onFilter}
+              className="text-sm font-semibold text-foreground hover:text-primary text-left"
+            >
+              {ledger.projectCode ? `${ledger.projectCode} - ` : ''}
+              {ledger.projectName}
+            </button>
+            <div className="text-xs text-muted-foreground">
+              {ledger.contracts.length} sözleşme · {ledger.movements.length} hareket · {c}
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            {contractCount} sözleşme · {currency} · tutarlar KDV dahil
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {ledger.hasKesinHesap && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[10px] font-medium px-1.5 py-0.5">
+                <CheckCircle2 className="h-3 w-3" />
+                Kesin Hesap Yapıldı
+              </span>
+            )}
+            {ledger.isOverPaid && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive text-[10px] font-medium px-1.5 py-0.5">
+                <AlertTriangle className="h-3 w-3" />
+                Sözleşme Aşıldı
+              </span>
+            )}
+            {ledger.remainingContract > 0.5 && ledger.contracts.length > 0 && (
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onCloseRemaining}>
+                <CircleDollarSign className="h-3.5 w-3.5 mr-1" />
+                Kalanı Kapat
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() => setOpen((o) => !o)}
+            >
+              {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              Hareketler
+            </Button>
           </div>
         </div>
-        {isOverPaid && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 text-destructive text-[10px] font-medium px-1.5 py-0.5 shrink-0">
-            <AlertTriangle className="h-3 w-3" />
-            Sözleşme Aşıldı
-          </span>
-        )}
+
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs tabular-nums">
+          <div className="space-y-1">
+            <Row label="Sözleşme tutarı" excl={ledger.contractTotal} incl={ledger.contractTotalIncl} />
+            <Row label="Toplam hakediş" excl={ledger.hakedisTotal} incl={ledger.hakedisTotalIncl} />
+            <div className="pl-3 space-y-0.5 text-[11px] text-muted-foreground">
+              <div className="flex justify-between">
+                <span>· Ara hakediş</span>
+                <span>{formatCurrencyWithType(ledger.araTotal, c)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>· Alelhesap (mahsup edilecek)</span>
+                <span className="text-amber-600">
+                  {formatCurrencyWithType(ledger.alelhesapTotal, c)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>· Kesin hesap</span>
+                <span>{formatCurrencyWithType(ledger.kesinHesapTotal, c)}</span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Row
+              label="Onaylanan"
+              excl={ledger.approvedTotal}
+              incl={ledger.approvedTotalIncl}
+              valueClass="text-emerald-600"
+            />
+            <Row
+              label="Ödenen"
+              excl={ledger.paidTotal}
+              incl={ledger.paidTotalIncl}
+              valueClass="text-primary"
+            />
+            <Row
+              label="Onaylı ama ödenmemiş"
+              excl={ledger.remainingApproved}
+              incl={ledger.remainingApprovedIncl}
+              valueClass={ledger.remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
+              bordered
+            />
+            <Row
+              label="Sözleşmeye kalan"
+              excl={ledger.remainingContract}
+              incl={ledger.remainingContractIncl}
+              valueClass={
+                ledger.remainingContract < 0
+                  ? 'text-destructive'
+                  : ledger.remainingContract === 0
+                  ? 'text-emerald-600'
+                  : 'text-foreground'
+              }
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="mt-2 space-y-1 text-xs tabular-nums">
-        <Row label="Sözleşme" excl={contractTotal} incl={contractTotalIncl} />
-        <Row label="Hakediş (toplam)" excl={hakedisTotal} incl={hakedisTotalIncl} />
-        <Row
-          label="Onaylanan"
-          excl={approvedTotal}
-          incl={approvedTotalIncl}
-          valueClass="text-emerald-600"
-        />
-        <Row label="Ödenen" excl={paidTotal} incl={paidTotalIncl} valueClass="text-primary" />
-        <Row
-          label="Ödenecek"
-          excl={remainingApproved}
-          incl={remainingApprovedIncl}
-          valueClass={remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
-          bordered
-        />
-        <Row
-          label="Sözleşmeye kalan"
-          excl={remainingContract}
-          incl={remainingContractIncl}
-          valueClass={
-            remainingContract < 0
-              ? 'text-destructive'
-              : remainingContract === 0
-              ? 'text-emerald-600'
-              : 'text-foreground'
-          }
-        />
-      </div>
-    </button>
+      {open && (
+        <div className="border-t overflow-x-auto">
+          {ledger.movements.length === 0 ? (
+            <div className="py-6 text-center text-xs text-muted-foreground">Hareket yok</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Tarih</TableHead>
+                  <TableHead className="text-xs">No</TableHead>
+                  <TableHead className="text-xs">Tip</TableHead>
+                  <TableHead className="text-xs">Açıklama</TableHead>
+                  <TableHead className="text-xs text-right">Tutar</TableHead>
+                  <TableHead className="text-xs text-right">Ödenen</TableHead>
+                  <TableHead className="text-xs text-right">Bakiye</TableHead>
+                  <TableHead className="text-xs text-center">Detay</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ledger.movements.map((m: LedgerMovement) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{formatDate(m.date)}</TableCell>
+                    <TableCell className="text-xs font-medium whitespace-nowrap">
+                      {m.no}
+                      {!m.contractId && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">(Sözleşmesiz)</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          m.type === 'alelhesap'
+                            ? 'bg-amber-500/10 text-amber-600'
+                            : m.type === 'kesin_hesap'
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : 'bg-primary/10 text-primary'
+                        }`}
+                      >
+                        {m.typeLabel}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs max-w-[240px] truncate" title={m.description}>
+                      {m.description || '-'}
+                      {m.offsetAmount ? (
+                        <span className="block text-[10px] text-muted-foreground">
+                          Mahsup: {formatCurrencyWithType(m.offsetAmount, c)}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-xs text-right tabular-nums">
+                      <span className="block font-medium">
+                        {formatCurrencyWithType(m.amountIncl, c)}
+                      </span>
+                      <span className="block text-[10px] text-muted-foreground">
+                        Hariç: {formatCurrencyWithType(m.amount, c)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-right tabular-nums text-primary">
+                      {formatCurrencyWithType(m.paidIncl, c)}
+                    </TableCell>
+                    <TableCell className="text-xs text-right tabular-nums font-medium">
+                      {formatCurrencyWithType(m.runningBalanceIncl, c)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => onOpenHakedis(m.id)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
-
