@@ -212,6 +212,7 @@ export default function Payments() {
         paymentStatus: 'odendi',
         paidAmount: hakedis?.totalAmount || 0,
         paidDate: new Date().toISOString(),
+        isUrgent: false,
       });
       if (hakedis) {
         await addActivityLog(
@@ -254,6 +255,7 @@ export default function Payments() {
         paidAmount: newPaidAmount,
         paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
         paidDate: new Date().toISOString(),
+        ...(isFullyPaid ? { isUrgent: false } : {}),
       });
 
       await addActivityLog(

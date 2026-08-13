@@ -244,6 +244,7 @@ export const useHakedisStore = create<HakedisState>((set, get) => ({
     const updates = { 
       paymentStatus: 'odendi' as PaymentStatus, 
       paidDate: new Date().toISOString(),
+      isUrgent: false,
     };
     await api.updateHakedis(id, updates);
     set((state) => ({
