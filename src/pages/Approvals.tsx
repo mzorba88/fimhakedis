@@ -54,6 +54,7 @@ export default function Approvals() {
   const [filterProject, setFilterProject] = useState<string>('all');
   const { sortConfig, handleSort } = useSorting({ key: 'createdAt', direction: 'asc' });
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const [detailHakedisId, setDetailHakedisId] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedHakedisId, setSelectedHakedisId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
