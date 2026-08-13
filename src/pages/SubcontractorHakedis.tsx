@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { exportSingleHakedisToExcel } from '@/utils/excelExport';
 import { MobileCard, MobileCardHeader, MobileCardRow, MobileCardActions } from '@/components/MobileCard';
+import { UrgentBadge, isHakedisUrgent } from '@/components/UrgentBadge';
 import { ProjectCombobox } from '@/components/ProjectCombobox';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -153,6 +154,7 @@ export default function SubcontractorHakedis() {
   const [smallCustomSubcontractor, setSmallCustomSubcontractor] = useState('');
   const [smallDate, setSmallDate] = useState(new Date().toISOString().split('T')[0]);
   const [smallCurrency, setSmallCurrency] = useState<Currency>('TRY');
+  const [smallIsUrgent, setSmallIsUrgent] = useState(false);
   // Multi-project rows for small hakediş
   type SmallRow = {
     projectMode: 'existing' | 'custom';
@@ -189,6 +191,7 @@ export default function SubcontractorHakedis() {
   const [hakedisType, setHakedisType] = useState<HakedisRecordType>('ara_hakedis');
   const [vatInclusive, setVatInclusive] = useState(false);
   const [hakedisCurrency, setHakedisCurrency] = useState<Currency>('TRY');
+  const [isUrgent, setIsUrgent] = useState(false);
   // Kesin hesap mahsubu (önceki ödemelerden düşülecek tutar) - otomatik hesaplanır, elle değiştirilebilir
   const [finalOffset, setFinalOffset] = useState<string>('');
   const [finalOffsetTouched, setFinalOffsetTouched] = useState(false);
@@ -456,6 +459,7 @@ export default function SubcontractorHakedis() {
     setHakedisType('ara_hakedis');
     setVatInclusive(false);
     setHakedisCurrency('TRY');
+    setIsUrgent(false);
     setFinalOffset('');
     setFinalOffsetTouched(false);
     setIsEditMode(false);
@@ -525,6 +529,7 @@ export default function SubcontractorHakedis() {
       setSmallSubcontractor(hakedis.subcontractor);
       setSmallDate(hakedis.date);
       setSmallCurrency((hakedis.currency as Currency) || 'TRY');
+      setSmallIsUrgent(!!hakedis.isUrgent);
       setSmallRows([{
         projectMode: 'existing',
         projectId: hakedis.projectId || '',
@@ -549,6 +554,7 @@ export default function SubcontractorHakedis() {
     setDescription(hakedis.description || '');
     setHakedisType(hakedis.hakedisType || 'ara_hakedis');
     setHakedisCurrency((hakedis.currency as Currency) || (contract.currency as Currency) || 'TRY');
+    setIsUrgent(!!hakedis.isUrgent);
     
     if (contract.contractType === 'goturu_bedel') {
       // For götürü bedel, set payment amount (subtract extra items if any)
@@ -746,6 +752,7 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
+          isUrgent,
           offsetAmount: hakedisType === 'kesin_hesap' ? offsetValue : 0,
           contractExceededNote: undefined,
 
@@ -790,6 +797,7 @@ export default function SubcontractorHakedis() {
           hakedisItems: (hakedisType !== 'alelhesap' && contract.contractType === 'birim_fiyat') ? hakedisItems.filter(i => i.quantity > 0) : undefined,
           extraItems: extraItems.length > 0 ? extraItems : undefined,
           totalAmount,
+          isUrgent,
           offsetAmount: hakedisType === 'kesin_hesap' ? offsetValue : 0,
           createdBy: currentUser.id,
           approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
@@ -823,6 +831,7 @@ export default function SubcontractorHakedis() {
     setSmallCustomSubcontractor('');
     setSmallDate(new Date().toISOString().split('T')[0]);
     setSmallCurrency('TRY');
+    setSmallIsUrgent(false);
     setSmallRows([makeEmptyRow()]);
     setIsEditMode(false);
     setEditingHakedisId(null);
@@ -899,6 +908,7 @@ export default function SubcontractorHakedis() {
           description: `${workCategoryLabel}${projectPrefix}${row.description.trim()}`,
           paymentAmount: totalAmount,
           totalAmount,
+          isUrgent: smallIsUrgent,
           createdBy: currentUser.id,
           approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
           approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
@@ -1039,6 +1049,7 @@ export default function SubcontractorHakedis() {
                   subtitle={hakedis.contractId ? `${hakedisTypeLabels[hakedis.hakedisType || 'ara_hakedis']} • ${contractTypeLabels[hakedis.contractType]}` : 'Sözleşmesiz Küçük Hakediş'}
                   badge={
                     <div className="flex flex-col items-end gap-1">
+                      {isHakedisUrgent(hakedis) && <UrgentBadge size="sm" />}
                       <StatusBadge status={hakedis.approvalStatus} size="sm" />
                       <StatusBadge status={hakedis.paymentStatus} size="sm" />
                     </div>
@@ -1220,7 +1231,10 @@ export default function SubcontractorHakedis() {
                           <AmountCell totalAmount={hakedis.totalAmount} vatRate={hakedis.vatRate} currency={hakedis.currency} />
                         </td>
                         <td className="px-4 py-4 text-center">
-                          <StatusBadge status={hakedis.approvalStatus} />
+                          <div className="flex flex-col items-center gap-1">
+                            {isHakedisUrgent(hakedis) && <UrgentBadge size="sm" />}
+                            <StatusBadge status={hakedis.approvalStatus} />
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-center">
                           <StatusBadge status={hakedis.paymentStatus} />
@@ -1498,6 +1512,13 @@ export default function SubcontractorHakedis() {
                       İş tamamlandığında kesin miktarlar girilir, önceki ödemeler otomatik düşülür.
                     </p>
                   )}
+                  <label className={`mt-2 flex items-center gap-2 rounded-lg border p-3 cursor-pointer transition-colors ${isUrgent ? 'border-destructive bg-destructive/5' : 'border-border'}`}>
+                    <Checkbox checked={isUrgent} onCheckedChange={(c) => setIsUrgent(c === true)} />
+                    <span className={`text-sm font-medium ${isUrgent ? 'text-destructive' : 'text-foreground'}`}>
+                      ACİL HAKEDİŞ
+                    </span>
+                    <span className="text-xs text-muted-foreground">(ödendiğinde otomatik kalkar)</span>
+                  </label>
                 </div>
               )}
 
@@ -2524,7 +2545,13 @@ export default function SubcontractorHakedis() {
                   </div>
                 )}
                 {/* Status */}
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-end">
+                  {isHakedisUrgent(selectedHakedis) && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Öncelik</p>
+                      <UrgentBadge />
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Onay Durumu</p>
                     <StatusBadge status={selectedHakedis.approvalStatus} />
@@ -2739,6 +2766,7 @@ export default function SubcontractorHakedis() {
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-medium truncate">
+                                  {isHakedisUrgent(h) && <UrgentBadge size="sm" className="mr-1 align-middle" />}
                                   {h.hakedisNo} · {hakedisTypeLabels[h.hakedisType || 'ara_hakedis']}
                                   {h.id === selectedHakedis.id && (
                                     <span className="ml-2 text-xs text-primary">(görüntülenen)</span>
@@ -2939,6 +2967,12 @@ export default function SubcontractorHakedis() {
                   </Select>
                 </div>
               </div>
+
+              <label className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer transition-colors ${smallIsUrgent ? 'border-destructive bg-destructive/5' : 'border-border'}`}>
+                <Checkbox checked={smallIsUrgent} onCheckedChange={(c) => setSmallIsUrgent(c === true)} />
+                <span className={`text-sm font-medium ${smallIsUrgent ? 'text-destructive' : 'text-foreground'}`}>ACİL HAKEDİŞ</span>
+                <span className="text-xs text-muted-foreground">(ödendiğinde otomatik kalkar)</span>
+              </label>
 
               {/* Project rows */}
               <div className="space-y-3">

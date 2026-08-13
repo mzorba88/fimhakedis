@@ -135,6 +135,8 @@ export interface SubcontractorHakedis {
   rejectionReason?: string;
   paymentStatus: PaymentStatus;
   paidDate?: string;
+  /** Acil hakediş işareti - ödendiğinde otomatik kalkar */
+  isUrgent?: boolean;
   createdAt: string;
   updatedAt: string;
   // Warning note when total hakedis exceeds contract amount

@@ -43,6 +43,7 @@ interface ProjectRow {
   contractId: string;
   hakedisType: HakedisRecordType;
   currency: Currency;
+  isUrgent: boolean;
   date: string;
   description: string;
   // götürü bedel / alelhesap (contract mode)
@@ -74,6 +75,7 @@ const makeRow = (): ProjectRow => ({
   contractId: '',
   hakedisType: 'ara_hakedis',
   currency: 'TRY',
+  isUrgent: false,
   date: new Date().toISOString().split('T')[0],
   description: '',
   amount: '',
@@ -287,6 +289,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
             paymentAmount: totalAmount,
             extraItems: itemsAsExtra.length > 0 ? itemsAsExtra : undefined,
             totalAmount,
+            isUrgent: row.isUrgent,
             createdBy: currentUser.id,
             approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
             approvedBy: currentUser.role === 'direktor' ? roleLabels[currentUser.role] : undefined,
@@ -334,6 +337,7 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
               ? row.hakedisItems.filter(i => i.quantity > 0) : undefined,
             extraItems: row.extraItems.length > 0 ? row.extraItems : undefined,
             totalAmount,
+            isUrgent: row.isUrgent,
 
             createdBy: currentUser.id,
             approvalStatus: currentUser.role === 'direktor' ? 'onaylandi' as ApprovalStatus : 'onay_bekliyor' as ApprovalStatus,
@@ -572,6 +576,12 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                         </div>
                       </div>
                     </div>
+
+                    <label className={`flex items-center gap-2 rounded-lg border p-2.5 cursor-pointer transition-colors ${row.isUrgent ? 'border-destructive bg-destructive/5' : 'border-border'}`}>
+                      <Checkbox checked={row.isUrgent} onCheckedChange={(c) => updateRow(row.id, { isUrgent: c === true })} />
+                      <span className={`text-sm font-medium ${row.isUrgent ? 'text-destructive' : 'text-foreground'}`}>ACİL HAKEDİŞ</span>
+                      <span className="text-xs text-muted-foreground">(ödendiğinde otomatik kalkar)</span>
+                    </label>
 
                     {/* Description */}
                     <div className="space-y-2">

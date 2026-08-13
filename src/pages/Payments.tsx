@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
+import { UrgentBadge, isHakedisUrgent } from '@/components/UrgentBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
@@ -212,6 +213,7 @@ export default function Payments() {
         paymentStatus: 'odendi',
         paidAmount: hakedis?.totalAmount || 0,
         paidDate: new Date().toISOString(),
+        isUrgent: false,
       });
       if (hakedis) {
         await addActivityLog(
@@ -254,6 +256,7 @@ export default function Payments() {
         paidAmount: newPaidAmount,
         paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
         paidDate: new Date().toISOString(),
+        ...(isFullyPaid ? { isUrgent: false } : {}),
       });
 
       await addActivityLog(
@@ -649,6 +652,7 @@ export default function Payments() {
                                   >
                                     <td className="px-4 py-3 pl-8">
                                       <p className="text-xs text-muted-foreground">{hakedis.hakedisNo}</p>
+                                      {isHakedisUrgent(hakedis) && <UrgentBadge size="sm" className="mt-1" />}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-foreground">
                                       {hakedis.subcontractor}

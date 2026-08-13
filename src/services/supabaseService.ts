@@ -81,6 +81,7 @@ const toHakedis = (row: any): SubcontractorHakedis => ({
   rejectionReason: row.rejection_reason,
   paymentStatus: row.payment_status as PaymentStatus,
   paidDate: row.paid_date,
+  isUrgent: !!row.is_urgent,
   contractExceededNote: row.contract_exceeded_note,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -260,6 +261,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
     payment_status: hakedis.paymentStatus,
     paid_amount: hakedis.paidAmount || 0,
     offset_amount: hakedis.offsetAmount ?? 0,
+    is_urgent: hakedis.isUrgent ?? false,
     contract_exceeded_note: hakedis.contractExceededNote,
   };
   // Only set nullable FK fields if they have values
@@ -301,6 +303,7 @@ export const updateHakedis = async (id: string, updates: Partial<SubcontractorHa
   if (updates.paidAmount !== undefined) dbUpdates.paid_amount = updates.paidAmount;
   if (updates.offsetAmount !== undefined) dbUpdates.offset_amount = updates.offsetAmount;
   if (updates.paidDate !== undefined) dbUpdates.paid_date = updates.paidDate;
+  if (updates.isUrgent !== undefined) dbUpdates.is_urgent = updates.isUrgent;
   if (updates.contractExceededNote !== undefined) dbUpdates.contract_exceeded_note = updates.contractExceededNote;
 
   const { error } = await supabase
