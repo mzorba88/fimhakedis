@@ -529,6 +529,7 @@ export default function SubcontractorHakedis() {
       setSmallSubcontractor(hakedis.subcontractor);
       setSmallDate(hakedis.date);
       setSmallCurrency((hakedis.currency as Currency) || 'TRY');
+      setSmallIsUrgent(!!hakedis.isUrgent);
       setSmallRows([{
         projectMode: 'existing',
         projectId: hakedis.projectId || '',
@@ -830,6 +831,7 @@ export default function SubcontractorHakedis() {
     setSmallCustomSubcontractor('');
     setSmallDate(new Date().toISOString().split('T')[0]);
     setSmallCurrency('TRY');
+    setSmallIsUrgent(false);
     setSmallRows([makeEmptyRow()]);
     setIsEditMode(false);
     setEditingHakedisId(null);
@@ -2965,6 +2967,12 @@ export default function SubcontractorHakedis() {
                   </Select>
                 </div>
               </div>
+
+              <label className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer transition-colors ${smallIsUrgent ? 'border-destructive bg-destructive/5' : 'border-border'}`}>
+                <Checkbox checked={smallIsUrgent} onCheckedChange={(c) => setSmallIsUrgent(c === true)} />
+                <span className={`text-sm font-medium ${smallIsUrgent ? 'text-destructive' : 'text-foreground'}`}>ACİL HAKEDİŞ</span>
+                <span className="text-xs text-muted-foreground">(ödendiğinde otomatik kalkar)</span>
+              </label>
 
               {/* Project rows */}
               <div className="space-y-3">
