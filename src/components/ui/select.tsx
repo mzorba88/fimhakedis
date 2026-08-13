@@ -74,7 +74,7 @@ const normalize = (s: string) =>
     .trim();
 
 const isSelectItem = (el: React.ReactElement) =>
-  (el.type as any) === SelectItemBase || (el.type as any)?.displayName === SelectPrimitive.Item.displayName;
+  (el.type as any) === SelectItem || (el.type as any)?.displayName === SelectPrimitive.Item.displayName;
 
 const countItems = (children: React.ReactNode): number => {
   let count = 0;
