@@ -1,0 +1,1 @@
+ALTER TABLE public.hakedisler ADD COLUMN IF NOT EXISTS is_urgent boolean NOT NULL DEFAULT false;
