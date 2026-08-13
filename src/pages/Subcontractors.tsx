@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
+import { UrgentBadge, isHakedisUrgent } from '@/components/UrgentBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { useHakedisStore } from '@/store/hakedisStore';
 import {
@@ -788,7 +789,12 @@ export default function Subcontractors() {
                                         currency={h.currency as Currency}
                                       />
                                     </TableCell>
-                                    <TableCell><StatusBadge status={h.approvalStatus} size="sm" /></TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-col items-start gap-1">
+                                        {isHakedisUrgent(h) && <UrgentBadge size="sm" />}
+                                        <StatusBadge status={h.approvalStatus} size="sm" />
+                                      </div>
+                                    </TableCell>
                                     <TableCell><StatusBadge status={h.paymentStatus} size="sm" /></TableCell>
                                     <TableCell>
                                       <div className="flex items-center justify-center gap-0.5">

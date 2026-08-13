@@ -4,7 +4,8 @@ import { sortNatural } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
-import { formatCurrencyWithType, formatDate, contractTypeLabels } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, contractTypeLabels, hakedisTypeLabels, approvalStatusLabels, paymentStatusLabels } from '@/types/hakedis';
+import { UrgentBadge, isHakedisUrgent } from '@/components/UrgentBadge';
 import { 
   Search, 
   CheckCircle2,
@@ -266,7 +267,10 @@ export default function Approvals() {
                             {contractTypeLabels[hakedis.contractType]}
                           </p>
                         </div>
-                        <StatusBadge status={hakedis.approvalStatus} />
+                        <div className="flex items-center gap-2">
+                          {isHakedisUrgent(hakedis) && <UrgentBadge />}
+                          <StatusBadge status={hakedis.approvalStatus} />
+                        </div>
                       </div>
                     </div>
 
@@ -415,6 +419,48 @@ export default function Approvals() {
                                 </>
                               )}
                             </div>
+
+                            {/* Diğer hakedişler (aynı proje + altyüklenici) */}
+                            {(() => {
+                              const related = subcontractorHakedisler
+                                .filter(h =>
+                                  h.subcontractor === hakedis.subcontractor &&
+                                  (h.projectId || '') === (hakedis.projectId || '') &&
+                                  h.id !== hakedis.id
+                                )
+                                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                              if (related.length === 0) return null;
+                              return (
+                                <div className="rounded-lg border overflow-hidden">
+                                  <div className="bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+                                    Bu proje ve altyüklenici için diğer hakedişler ({related.length})
+                                  </div>
+                                  <div className="max-h-64 overflow-y-auto divide-y">
+                                    {related.map(h => (
+                                      <div key={h.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-medium truncate">
+                                            {isHakedisUrgent(h) && <UrgentBadge size="sm" className="mr-1 align-middle" />}
+                                            {h.hakedisNo} · {hakedisTypeLabels[h.hakedisType || 'ara_hakedis']}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground truncate">
+                                            {formatDate(h.date)} · {h.contractNo || 'Sözleşmesiz'} · {approvalStatusLabels[h.approvalStatus]} · {paymentStatusLabels[h.paymentStatus]}
+                                          </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <p className="text-sm font-semibold">
+                                            {formatCurrencyWithType(h.totalAmount * (1 + (h.vatRate || 0) / 100), h.currency)}
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            Ödenen: {formatCurrencyWithType(h.paidAmount || 0, h.currency)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {/* Meta info */}
                             <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground pt-2 border-t">
