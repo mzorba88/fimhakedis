@@ -588,6 +588,107 @@ export default function Approvals() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Hakediş Detay Dialog */}
+        <Dialog open={!!detailHakedisId} onOpenChange={(o) => !o && setDetailHakedisId(null)}>
+          <DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto">
+            {(() => {
+              const d = subcontractorHakedisler.find(h => h.id === detailHakedisId);
+              if (!d) return null;
+              const dProject = projects.find(p => p.id === d.projectId);
+              const dItems = [...(d.hakedisItems || []), ...(d.extraItems || [])];
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      {d.hakedisNo}
+                      {isHakedisUrgent(d) && <UrgentBadge size="sm" />}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {d.subcontractor} · {dProject?.projectCode} - {dProject?.projectName}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tarih</p>
+                        <p className="text-sm font-medium">{formatDate(d.date)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Hakediş Tipi</p>
+                        <p className="text-sm font-medium">{hakedisTypeLabels[d.hakedisType || 'ara_hakedis']}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Sözleşme</p>
+                        <p className="text-sm font-medium">{d.contractNo || 'Sözleşmesiz'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Durum</p>
+                        <p className="text-sm font-medium">{approvalStatusLabels[d.approvalStatus]} · {paymentStatusLabels[d.paymentStatus]}</p>
+                      </div>
+                    </div>
+
+                    {d.description && (
+                      <div className="rounded-lg bg-muted/30 p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Açıklama</p>
+                        <p className="text-sm whitespace-pre-wrap">{d.description}</p>
+                      </div>
+                    )}
+
+                    {dItems.length > 0 && (
+                      <div className="rounded-lg border overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Açıklama</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Miktar</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Birim Fiyat</th>
+                              <th className="text-right px-3 py-2 text-xs font-medium text-muted-foreground">Tutar</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {dItems.map((it, i) => (
+                              <tr key={i}>
+                                <td className="px-3 py-2">{it.description}</td>
+                                <td className="px-3 py-2 text-right">{it.quantity} {it.unit}</td>
+                                <td className="px-3 py-2 text-right">{formatCurrencyWithType(it.unitPrice, d.currency)}</td>
+                                <td className="px-3 py-2 text-right font-medium">{formatCurrencyWithType(it.amount, d.currency)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    <div className="rounded-lg bg-muted/50 p-4 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Tutar (KDV Hariç)</span>
+                        <span className="font-medium">{formatCurrencyWithType(d.totalAmount, d.currency)}</span>
+                      </div>
+                      {!!d.vatRate && (
+                        <div className="flex justify-between text-sm">
+                          <span>KDV (%{d.vatRate})</span>
+                          <span>{formatCurrencyWithType(d.totalAmount * (d.vatRate / 100), d.currency)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm font-bold pt-1 border-t">
+                        <span>Genel Toplam</span>
+                        <span className="text-primary">{formatCurrencyWithType(d.totalAmount * (1 + (d.vatRate || 0) / 100), d.currency)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Ödenen</span>
+                        <span>{formatCurrencyWithType(d.paidAmount || 0, d.currency)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDetailHakedisId(null)}>Kapat</Button>
+                  </DialogFooter>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
