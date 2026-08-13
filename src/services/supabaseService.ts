@@ -213,7 +213,6 @@ export const updateContract = async (id: string, updates: Partial<WorkEntry>): P
   if (updates.totalAmount !== undefined) dbUpdates.total_amount = updates.totalAmount;
   if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
   if (updates.paidDate !== undefined) dbUpdates.paid_date = updates.paidDate;
-  if (updates.isUrgent !== undefined) dbUpdates.is_urgent = updates.isUrgent;
 
   const { error } = await supabase
     .from('contracts')
