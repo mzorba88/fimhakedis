@@ -13,6 +13,9 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHakedisStore } from '@/store/hakedisStore';
 import {
+  getContractAccount, getCumulativeWorkItemQuantities, computeFinalSettlement,
+} from '@/utils/contractAccounting';
+import {
   Currency, HakedisRecordType, ApprovalStatus, PaymentStatus,
   HakedisItem, ExtraWorkItem,
   formatCurrencyWithType, contractTypeLabels, hakedisTypeLabels, roleLabels, currencySymbols,
@@ -86,6 +89,7 @@ const makeRow = (): ProjectRow => ({
   extraItems: [],
   smallItems: [makeSmallItem()],
   vatRate: '10',
+  offsetAmount: '',
   vatInclusive: false,
 });
 
@@ -174,6 +178,23 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
         hakedisItems: r.hakedisItems.map(it =>
           it.id === itemId ? { ...it, quantity, amount: quantity * it.unitPrice } : it
         ),
+      };
+    }));
+  };
+
+  const fillAllRemaining = (row: ProjectRow) => {
+    const contract = workEntries.find(e => e.id === row.contractId);
+    if (!contract) return;
+    const cum = getCumulativeWorkItemQuantities(contract.id, subcontractorHakedisler);
+    setRows(prev => prev.map(r => {
+      if (r.id !== row.id) return r;
+      return {
+        ...r,
+        hakedisItems: r.hakedisItems.map(it => {
+          const contractQty = contract.workItemEntries?.find(w => w.id === it.workItemEntryId)?.quantity || 0;
+          const remaining = Math.max(0, contractQty - (cum.get(it.workItemEntryId) || 0));
+          return { ...it, quantity: remaining, amount: remaining * it.unitPrice };
+        }),
       };
     }));
   };
@@ -340,6 +361,18 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
               ? row.hakedisItems.filter(i => i.quantity > 0) : undefined,
             extraItems: row.extraItems.length > 0 ? row.extraItems : undefined,
             totalAmount,
+            offsetAmount: row.hakedisType === 'kesin_hesap'
+              ? (row.offsetAmount !== ''
+                  ? (parseFloat(row.offsetAmount) || 0)
+                  : computeFinalSettlement({
+                      production: totalAmount,
+                      subcontractor: effectiveSub,
+                      projectId: row.projectId,
+                      contractId: row.contractId,
+                      currency: row.currency,
+                      hakedisler: subcontractorHakedisler,
+                    }).totalPrevious)
+              : 0,
             isUrgent: row.isUrgent,
 
             createdBy: currentUser.id,
@@ -557,11 +590,24 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                           <SelectContent>
                             <SelectItem value="ara_hakedis">Ara Hakediş</SelectItem>
                             <SelectItem value="alelhesap">Alelhesap (Avans)</SelectItem>
-                            {contract.contractType === 'birim_fiyat' && (
-                              <SelectItem value="kesin_hesap">Kesin Hesap</SelectItem>
-                            )}
+                            <SelectItem value="kesin_hesap">Kesin Hesap</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+
+                    {/* Sözleşme cari hesap özeti */}
+                    {row.rowMode === 'contract' && contract && account && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border bg-muted/30 p-2.5 text-xs">
+                        <div><div className="text-muted-foreground">Sözleşme</div>
+                          <div className="font-medium">{formatCurrencyWithType(account.contractTotal, account.currency)}</div></div>
+                        <div><div className="text-muted-foreground">Önceki hakediş</div>
+                          <div className="font-medium">{formatCurrencyWithType(account.hakedisTotal, account.currency)}</div></div>
+                        <div><div className="text-muted-foreground">Ödenen</div>
+                          <div className="font-medium">{formatCurrencyWithType(account.paidTotal, account.currency)}</div></div>
+                        <div><div className="text-muted-foreground">Sözleşmeye kalan</div>
+                          <div className={`font-semibold ${account.remainingContract < 0 ? 'text-destructive' : 'text-primary'}`}>
+                            {formatCurrencyWithType(account.remainingContract, account.currency)}</div></div>
                       </div>
                     )}
 
@@ -617,7 +663,15 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                     {row.rowMode === 'contract' && contract &&
                       (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') && (
                       <div className="space-y-2">
-                        <Label className="text-xs">Tutar ({currency})</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">Tutar ({currency})</Label>
+                          {account && account.remainingContract > 0 && (
+                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+                              onClick={() => updateRow(row.id, { amount: String(Math.round(account.remainingContract * 100) / 100) })}>
+                              Kalanı öde ({formatCurrencyWithType(account.remainingContract, currency)})
+                            </Button>
+                          )}
+                        </div>
                         <Input type="number" placeholder="0.00" value={row.amount}
                           onChange={e => updateRow(row.id, { amount: e.target.value })}
                           min="0" step="0.01" />
