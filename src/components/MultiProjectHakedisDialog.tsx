@@ -55,6 +55,8 @@ interface ProjectRow {
   smallItems: SmallItem[];
   vatRate: string;
   offsetAmount: string;
+  vatInclusive: boolean;
+
 
 }
 
