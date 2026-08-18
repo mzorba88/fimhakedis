@@ -682,7 +682,13 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                     {row.rowMode === 'contract' && contract?.contractType === 'birim_fiyat' &&
                       row.hakedisType !== 'alelhesap' && row.hakedisItems.length > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-xs">İş Kalemleri (Miktar Girin)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">İş Kalemleri (Miktar Girin)</Label>
+                          <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+                            onClick={() => fillAllRemaining(row)}>
+                            Tüm kalanı getir
+                          </Button>
+                        </div>
                         <div className="rounded border overflow-hidden">
                           <table className="w-full text-xs">
                             <thead className="bg-muted/50">
@@ -690,16 +696,31 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                                 <th className="text-left p-2">Açıklama</th>
                                 <th className="text-left p-2 w-16">Birim</th>
                                 <th className="text-right p-2 w-24">Birim Fiyat</th>
+                                <th className="text-right p-2 w-20">Sözleşme</th>
+                                <th className="text-right p-2 w-20">Şimdiye</th>
+                                <th className="text-right p-2 w-20">Kalan</th>
                                 <th className="text-right p-2 w-24">Miktar</th>
                                 <th className="text-right p-2 w-28">Tutar</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {row.hakedisItems.map(item => (
+                              {row.hakedisItems.map(item => {
+                                const contractQty = contract.workItemEntries?.find(w => w.id === item.workItemEntryId)?.quantity || 0;
+                                const done = cumulative.get(item.workItemEntryId) || 0;
+                                const remaining = Math.max(0, contractQty - done);
+                                return (
                                 <tr key={item.id} className="border-t">
                                   <td className="p-2">{item.description}</td>
                                   <td className="p-2">{item.unit}</td>
                                   <td className="p-2 text-right">{formatCurrencyWithType(item.unitPrice, currency)}</td>
+                                  <td className="p-2 text-right text-muted-foreground">{contractQty}</td>
+                                  <td className="p-2 text-right text-muted-foreground">{done}</td>
+                                  <td className="p-2 text-right">
+                                    <button type="button" className="text-primary underline underline-offset-2"
+                                      onClick={() => updateHakedisItemQty(row.id, item.id, remaining)}>
+                                      {remaining}
+                                    </button>
+                                  </td>
                                   <td className="p-2">
                                     <Input type="number" value={item.quantity || ''} min="0" step="0.01"
                                       className="h-7 text-right text-xs"
@@ -707,14 +728,44 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                                   </td>
                                   <td className="p-2 text-right font-medium">{formatCurrencyWithType(item.amount, currency)}</td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
                       </div>
                     )}
 
+                    {/* Kesin hesap mahsup paneli */}
+                    {row.rowMode === 'contract' && contract && row.hakedisType === 'kesin_hesap' && settlement && (
+                      <div className="rounded border border-primary/40 bg-primary/5 p-3 space-y-1.5 text-xs">
+                        <div className="font-semibold text-sm">Kesin Hesap Mahsubu</div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Toplam üretim (KDV hariç)</span>
+                          <span>{formatCurrencyWithType(settlement.production, currency)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Önceki ara hakedişler</span>
+                          <span>- {formatCurrencyWithType(settlement.previousAra, currency)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Önceki alelhesap</span>
+                          <span>- {formatCurrencyWithType(settlement.previousAlelhesap, currency)}</span></div>
+                        <div className="flex items-center justify-between gap-2 border-t pt-1.5">
+                          <span className="text-muted-foreground">Mahsup tutarı (düzenlenebilir)</span>
+                          <Input type="number" className="h-7 w-36 text-right text-xs"
+                            value={row.offsetAmount !== '' ? row.offsetAmount : String(settlement.totalPrevious)}
+                            onChange={e => updateRow(row.id, { offsetAmount: e.target.value })} />
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>Ödenecek net tutar</span>
+                          <span className={netPayable < 0 ? 'text-destructive' : 'text-primary'}>
+                            {formatCurrencyWithType(netPayable, currency)}
+                          </span>
+                        </div>
+                        {netPayable < 0 && (
+                          <p className="text-destructive">Fazla ödeme var: altyükleniciden iade alınması gerekir.</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Summary */}
+
                     {base > 0 && (
                       <div className="rounded border bg-muted/30 p-2.5 space-y-1 text-xs">
                         <div className="flex justify-between"><span className="text-muted-foreground">KDV Hariç</span>
