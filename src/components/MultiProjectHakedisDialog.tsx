@@ -428,6 +428,25 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                 const { base, total, currency } = computeRowTotal(row);
                 const vr = row.vatRate !== '' ? Number(row.vatRate) : 0;
                 const vatAmount = vr > 0 ? base * (vr / 100) : 0;
+                const account = contract ? getContractAccount(contract, subcontractorHakedisler) : null;
+                const cumulative = contract
+                  ? getCumulativeWorkItemQuantities(contract.id, subcontractorHakedisler)
+                  : new Map<string, number>();
+                const settlement = contract && row.hakedisType === 'kesin_hesap'
+                  ? computeFinalSettlement({
+                      production: base,
+                      subcontractor: effectiveSub,
+                      projectId: row.projectId,
+                      contractId: contract.id,
+                      currency,
+                      hakedisler: subcontractorHakedisler,
+                    })
+                  : null;
+                const offsetValue = settlement
+                  ? (row.offsetAmount !== '' ? (parseFloat(row.offsetAmount) || 0) : settlement.totalPrevious)
+                  : 0;
+                const netPayable = settlement ? settlement.production - offsetValue : 0;
+
 
                 return (
                   <div key={row.id} className="rounded-lg border p-4 space-y-3 bg-background">
