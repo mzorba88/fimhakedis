@@ -54,7 +54,8 @@ interface ProjectRow {
   // small mode items
   smallItems: SmallItem[];
   vatRate: string;
-  vatInclusive: boolean;
+  offsetAmount: string;
+
 }
 
 const makeSmallItem = (): SmallItem => ({
