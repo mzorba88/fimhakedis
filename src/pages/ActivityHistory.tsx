@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { foldTr } from '@/lib/utils';
 import { MainLayout } from '@/components/MainLayout';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { activityTypeLabels } from '@/types/activityLog';
