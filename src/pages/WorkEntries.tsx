@@ -66,6 +66,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SubcontractorCombobox } from '@/components/SubcontractorCombobox';
 import { toast } from 'sonner';
 
 export default function WorkEntries() {
