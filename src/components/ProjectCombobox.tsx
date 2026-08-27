@@ -57,12 +57,7 @@ export function ProjectCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command
-          filter={(val, search) => {
-            if (val.toLowerCase().includes(search.toLowerCase())) return 1;
-            return 0;
-          }}
-        >
+        <Command>
           <CommandInput placeholder="Proje ara..." />
           <CommandList>
             <CommandEmpty>Proje bulunamadı.</CommandEmpty>

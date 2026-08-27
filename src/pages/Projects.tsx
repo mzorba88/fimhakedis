@@ -58,9 +58,9 @@ export default function Projects() {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = 
-      project.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.projectCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.location.toLowerCase().includes(searchQuery.toLowerCase());
+      foldTr(project.projectName).includes(foldTr(searchQuery)) ||
+      foldTr(project.projectCode).includes(foldTr(searchQuery)) ||
+      foldTr(project.location).includes(foldTr(searchQuery));
     const matchesStatus = project.status === activeTab;
     return matchesSearch && matchesStatus;
   });

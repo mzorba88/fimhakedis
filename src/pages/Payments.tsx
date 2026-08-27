@@ -110,13 +110,13 @@ export default function Payments() {
 
   const filteredHakedisler = approvedHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const query = searchQuery.toLowerCase();
+    const query = foldTr(searchQuery);
     const matchesSearch = !query ||
-      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
-      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
-      (hakedis.contractNo || '').toLowerCase().includes(query) ||
-      (project?.projectName || '').toLowerCase().includes(query) ||
-      (project?.projectCode || '').toLowerCase().includes(query);
+      foldTr(hakedis.subcontractor).includes(query) ||
+      foldTr(hakedis.hakedisNo).includes(query) ||
+      foldTr(hakedis.contractNo).includes(query) ||
+      foldTr(project?.projectName).includes(query) ||
+      foldTr(project?.projectCode).includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;
     return matchesSearch && matchesProject && matchesPayment;
