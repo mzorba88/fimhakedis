@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
-import { sortNatural } from '@/lib/utils';
+import { sortNatural, foldTr } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { AmountCell } from '@/components/AmountCell';
@@ -375,7 +375,7 @@ export default function SubcontractorHakedis() {
   const filteredHakedisler = subcontractorHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
     const contract = workEntries.find(e => e.id === hakedis.contractId);
-    const query = searchQuery.toLowerCase().trim();
+    const query = foldTr(searchQuery);
     const haystack = [
       hakedis.subcontractor,
       hakedis.contractNo,
@@ -388,9 +388,9 @@ export default function SubcontractorHakedis() {
       ...(hakedis.extraItems?.map(i => i.description) || []),
     ]
       .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    const matchesSearch = !query || haystack.includes(query);
+      .join(' ');
+    const haystackFolded = foldTr(haystack);
+    const matchesSearch = !query || haystackFolded.includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     const matchesApproval = filterApproval === 'all' || hakedis.approvalStatus === filterApproval;
     const matchesPayment = filterPayment === 'all' || hakedis.paymentStatus === filterPayment;

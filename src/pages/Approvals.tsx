@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/MainLayout';
-import { sortNatural } from '@/lib/utils';
+import { sortNatural, foldTr } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { useHakedisStore } from '@/store/hakedisStore';
@@ -64,13 +64,13 @@ export default function Approvals() {
 
   const filteredHakedisler = pendingHakedisler.filter(hakedis => {
     const project = projects.find(p => p.id === hakedis.projectId);
-    const query = searchQuery.toLowerCase();
+    const query = foldTr(searchQuery);
     const matchesSearch = !query ||
-      (hakedis.hakedisNo || '').toLowerCase().includes(query) ||
-      (hakedis.subcontractor || '').toLowerCase().includes(query) ||
-      (hakedis.contractNo || '').toLowerCase().includes(query) ||
-      (project?.projectName || '').toLowerCase().includes(query) ||
-      (project?.projectCode || '').toLowerCase().includes(query);
+      foldTr(hakedis.hakedisNo).includes(query) ||
+      foldTr(hakedis.subcontractor).includes(query) ||
+      foldTr(hakedis.contractNo).includes(query) ||
+      foldTr(project?.projectName).includes(query) ||
+      foldTr(project?.projectCode).includes(query);
     const matchesProject = filterProject === 'all' || hakedis.projectId === filterProject;
     return matchesSearch && matchesProject;
   });

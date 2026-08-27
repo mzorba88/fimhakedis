@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
-import { sortNatural } from '@/lib/utils';
+import { sortNatural, foldTr } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { UrgentBadge, isHakedisUrgent } from '@/components/UrgentBadge';
 import { AmountCell } from '@/components/AmountCell';
@@ -130,10 +130,10 @@ export default function Subcontractors() {
   }, [workEntries, subcontractorHakedisler]);
 
   const filteredSubs = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('tr');
+    const term = foldTr(search);
     if (!term) return subcontractorStats;
     return subcontractorStats.filter((s) =>
-      s.name.toLocaleLowerCase('tr').includes(term)
+      foldTr(s.name).includes(term)
     );
   }, [subcontractorStats, search]);
 
@@ -177,12 +177,12 @@ export default function Subcontractors() {
           paymentFilter === 'all' || derived.paymentStatus === paymentFilter
       )
       .filter(({ c }) => {
-        const term = itemSearch.trim().toLocaleLowerCase('tr');
+        const term = foldTr(itemSearch);
         if (!term) return true;
         return (
-          (c.contractNo || '').toLocaleLowerCase('tr').includes(term) ||
-          (c.description || '').toLocaleLowerCase('tr').includes(term) ||
-          (c.workCategory || '').toLocaleLowerCase('tr').includes(term)
+          foldTr(c.contractNo).includes(term) ||
+          foldTr(c.description).includes(term) ||
+          foldTr(c.workCategory).includes(term)
         );
       })
       .sort((a, b) => (b.c.date || '').localeCompare(a.c.date || ''));
@@ -208,12 +208,12 @@ export default function Subcontractors() {
       })
       .filter((h) => paymentFilter === 'all' || h.paymentStatus === paymentFilter)
       .filter((h) => {
-        const term = itemSearch.trim().toLocaleLowerCase('tr');
+        const term = foldTr(itemSearch);
         if (!term) return true;
         return (
-          (h.hakedisNo || '').toLocaleLowerCase('tr').includes(term) ||
-          (h.contractNo || '').toLocaleLowerCase('tr').includes(term) ||
-          (h.description || '').toLocaleLowerCase('tr').includes(term)
+          foldTr(h.hakedisNo).includes(term) ||
+          foldTr(h.contractNo).includes(term) ||
+          foldTr(h.description).includes(term)
         );
       })
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''));

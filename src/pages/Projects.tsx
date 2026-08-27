@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { foldTr } from '@/lib/utils';
 import { MainLayout } from '@/components/MainLayout';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { formatDate, Project, ProjectStatus, projectStatusLabels } from '@/types/hakedis';
@@ -58,9 +59,9 @@ export default function Projects() {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = 
-      project.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.projectCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.location.toLowerCase().includes(searchQuery.toLowerCase());
+      foldTr(project.projectName).includes(foldTr(searchQuery)) ||
+      foldTr(project.projectCode).includes(foldTr(searchQuery)) ||
+      foldTr(project.location).includes(foldTr(searchQuery));
     const matchesStatus = project.status === activeTab;
     return matchesSearch && matchesStatus;
   });

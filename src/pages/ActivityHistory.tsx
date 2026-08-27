@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { foldTr } from '@/lib/utils';
 import { MainLayout } from '@/components/MainLayout';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { activityTypeLabels } from '@/types/activityLog';
@@ -67,11 +68,11 @@ export default function ActivityHistory() {
   const [filterType, setFilterType] = useState<string>('all');
 
   const filteredLogs = activityLogs.filter(log => {
-    const query = searchQuery.toLowerCase();
+    const query = foldTr(searchQuery);
     const matchesSearch = !query ||
-      (log.userName || '').toLowerCase().includes(query) ||
-      (log.description || '').toLowerCase().includes(query) ||
-      (log.details || '').toLowerCase().includes(query);
+      foldTr(log.userName).includes(query) ||
+      foldTr(log.description).includes(query) ||
+      foldTr(log.details).includes(query);
     
     const matchesType = filterType === 'all' || log.type === filterType;
     

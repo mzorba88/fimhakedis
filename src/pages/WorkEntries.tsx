@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
-import { sortNatural } from '@/lib/utils';
+import { sortNatural, foldTr } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
 import { AmountCell } from '@/components/AmountCell';
 import { SortableTableHeader, useSorting, SortConfig } from '@/components/SortableTableHeader';
@@ -121,12 +121,12 @@ export default function WorkEntries() {
 
   const filteredEntries = workEntries.filter(entry => {
     const project = projects.find(p => p.id === entry.projectId);
-    const query = searchQuery.toLowerCase();
+    const query = foldTr(searchQuery);
     const matchesSearch = !query ||
-      (entry.workCategory || '').toLowerCase().includes(query) ||
-      (entry.subcontractor || '').toLowerCase().includes(query) ||
-      (project?.projectName || '').toLowerCase().includes(query) ||
-      (project?.projectCode || '').toLowerCase().includes(query);
+      foldTr(entry.workCategory).includes(query) ||
+      foldTr(entry.subcontractor).includes(query) ||
+      foldTr(project?.projectName).includes(query) ||
+      foldTr(project?.projectCode).includes(query);
     const matchesProject = filterProject === 'all' || entry.projectId === filterProject;
     return matchesSearch && matchesProject;
   });
