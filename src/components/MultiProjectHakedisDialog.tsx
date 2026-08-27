@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
+import { SubcontractorCombobox } from '@/components/SubcontractorCombobox';
 import { toast } from 'sonner';
 import { useHakedisStore } from '@/store/hakedisStore';
 import {
