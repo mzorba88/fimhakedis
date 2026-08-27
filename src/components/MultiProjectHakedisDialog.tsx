@@ -415,32 +415,22 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
           {/* Subcontractor first */}
           <div className="space-y-2 p-4 rounded-lg border bg-muted/30">
             <Label className="text-sm font-semibold">1. Altyüklenici Seçin</Label>
-            <Select value={subMode} onValueChange={(v: 'existing' | 'custom') => {
-              setSubMode(v); setSubcontractor(''); setCustomSubcontractor('');
-              setRows([makeRow()]);
-            }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="existing">Mevcut Altyüklenici</SelectItem>
-                <SelectItem value="custom">Yeni Altyüklenici</SelectItem>
-              </SelectContent>
-            </Select>
-            {subMode === 'existing' ? (
-              <Select value={subcontractor} onValueChange={(v) => { setSubcontractor(v); setRows([makeRow()]); }}>
-                <SelectTrigger><SelectValue placeholder="Altyüklenici seçin" /></SelectTrigger>
-                <SelectContent>
-                  {sortNatural(allSubcontractorNames, (n) => n).map(n => (
-                    <SelectItem key={n} value={n}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                placeholder="Yeni altyüklenici adı"
-                value={customSubcontractor}
-                onChange={e => setCustomSubcontractor(e.target.value)}
-              />
-            )}
+            <SubcontractorCombobox
+              names={allSubcontractorNames}
+              value={effectiveSub}
+              onChange={(name, isNew) => {
+                if (isNew) {
+                  setSubMode('custom');
+                  setCustomSubcontractor(name);
+                  setSubcontractor('');
+                } else {
+                  setSubMode('existing');
+                  setSubcontractor(name);
+                  setCustomSubcontractor('');
+                }
+                setRows([makeRow()]);
+              }}
+            />
           </div>
 
           {/* Project rows */}
