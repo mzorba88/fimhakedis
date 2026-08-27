@@ -66,6 +66,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SubcontractorCombobox } from '@/components/SubcontractorCombobox';
 import { toast } from 'sonner';
 
 export default function WorkEntries() {
@@ -731,55 +732,38 @@ export default function WorkEntries() {
                   ? subcontractors.filter(sub => sub.workCategory === newEntry.workCategory)
                   : subcontractors;
                 return (
-                  <>
-                    <Select
-                      value={newEntry.subcontractor}
-                      onValueChange={(value) => {
-                        setNewEntry({ ...newEntry, subcontractor: value });
-                        // Auto-fill work items from the subcontractor's most recent contract
-                        if (value !== 'new' && !isEditMode) {
-                          const subContracts = workEntries
-                            .filter(e => e.subcontractor === value && e.contractType === 'birim_fiyat' && e.workItemEntries && e.workItemEntries.length > 0)
-                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                          
-                          if (subContracts.length > 0) {
-                            const lastContract = subContracts[0];
-                            const copiedItems: WorkItemEntry[] = (lastContract.workItemEntries || []).map((item, idx) => ({
-                              ...item,
-                              id: `wie_copy_${Date.now()}_${idx}`,
-                              quantity: 0,
-                              currency: newEntry.currency,
-                            }));
-                            setWorkItemEntries(copiedItems);
-                            if (newEntry.contractType !== 'birim_fiyat') {
-                              setNewEntry(prev => ({ ...prev, subcontractor: value, contractType: 'birim_fiyat' }));
-                            }
-                            toast.info(`${value} altyüklenicisinin önceki sözleşmesindeki iş kalemleri yüklendi. Düzenleyebilirsiniz.`);
+                  <SubcontractorCombobox
+                    names={filteredSubs.map(s => s.name)}
+                    value={newEntry.subcontractor === 'new' ? newEntry.newSubcontractor : newEntry.subcontractor}
+                    onChange={(value, isNew) => {
+                      if (isNew) {
+                        setNewEntry({ ...newEntry, subcontractor: 'new', newSubcontractor: value });
+                        return;
+                      }
+                      setNewEntry({ ...newEntry, subcontractor: value, newSubcontractor: '' });
+                      // Auto-fill work items from the subcontractor's most recent contract
+                      if (!isEditMode) {
+                        const subContracts = workEntries
+                          .filter(e => e.subcontractor === value && e.contractType === 'birim_fiyat' && e.workItemEntries && e.workItemEntries.length > 0)
+                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                        if (subContracts.length > 0) {
+                          const lastContract = subContracts[0];
+                          const copiedItems: WorkItemEntry[] = (lastContract.workItemEntries || []).map((item, idx) => ({
+                            ...item,
+                            id: `wie_copy_${Date.now()}_${idx}`,
+                            quantity: 0,
+                            currency: newEntry.currency,
+                          }));
+                          setWorkItemEntries(copiedItems);
+                          if (newEntry.contractType !== 'birim_fiyat') {
+                            setNewEntry(prev => ({ ...prev, subcontractor: value, newSubcontractor: '', contractType: 'birim_fiyat' }));
                           }
+                          toast.info(`${value} altyüklenicisinin önceki sözleşmesindeki iş kalemleri yüklendi. Düzenleyebilirsiniz.`);
                         }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Altyüklenici seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sortNatural(filteredSubs, (s) => s.name).map((sub) => (
-                          <SelectItem key={sub.name} value={sub.name}>
-                            {sub.name}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="new">+ Yeni Altyüklenici Ekle</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {newEntry.subcontractor === 'new' && (
-                      <Input
-                        placeholder="Yeni altyüklenici adı"
-                        value={newEntry.newSubcontractor}
-                        onChange={(e) => setNewEntry({ ...newEntry, newSubcontractor: e.target.value })}
-                        className="mt-2"
-                      />
-                    )}
-                  </>
+                      }
+                    }}
+                  />
                 );
               })()}
             </div>

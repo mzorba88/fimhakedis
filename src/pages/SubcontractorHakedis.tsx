@@ -78,6 +78,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { SubcontractorCombobox } from '@/components/SubcontractorCombobox';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MultiProjectHakedisDialog } from '@/components/MultiProjectHakedisDialog';
@@ -2913,29 +2914,22 @@ export default function SubcontractorHakedis() {
               {/* Subcontractor */}
               <div className="space-y-2">
                 <Label>Altyüklenici</Label>
-                <Select value={smallSubcontractorMode} onValueChange={(v: 'existing' | 'custom') => { setSmallSubcontractorMode(v); setSmallSubcontractor(''); setSmallCustomSubcontractor(''); }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="existing">Mevcut Altyüklenici</SelectItem>
-                    <SelectItem value="custom">Yeni Altyüklenici</SelectItem>
-                  </SelectContent>
-                </Select>
-                {smallSubcontractorMode === 'existing' ? (
-                  <Select value={smallSubcontractor} onValueChange={setSmallSubcontractor}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Altyüklenici seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sortNatural(allSubcontractorNames, (n) => n).map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input placeholder="Altyüklenici adını yazın" value={smallCustomSubcontractor} onChange={e => setSmallCustomSubcontractor(e.target.value)} />
-                )}
+                <SubcontractorCombobox
+                  names={allSubcontractorNames}
+                  value={smallSubcontractorMode === 'existing' ? smallSubcontractor : smallCustomSubcontractor}
+                  onChange={(name, isNew) => {
+                    if (isNew) {
+                      setSmallSubcontractorMode('custom');
+                      setSmallCustomSubcontractor(name);
+                      setSmallSubcontractor('');
+                    } else {
+                      setSmallSubcontractorMode('existing');
+                      setSmallSubcontractor(name);
+                      setSmallCustomSubcontractor('');
+                    }
+                  }}
+                />
+
                 {smallSubcontractorMode === 'existing' && smallSubcontractor && (() => {
                   const sub = subcontractors.find(s => s.name === smallSubcontractor);
                   return sub?.workCategory ? (
