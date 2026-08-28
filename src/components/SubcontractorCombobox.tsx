@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { cn, sortNatural, matchesSearch } from '@/lib/utils';
+import { cn, sortNatural, matchesSearch, foldTr } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Command,
