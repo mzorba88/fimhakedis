@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { cn, sortNatural, matchesSearch } from '@/lib/utils';
+import { cn, sortNatural, matchesSearch, foldTr } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -34,8 +34,8 @@ export function SubcontractorCombobox({
   const sorted = sortNatural(names, (n) => n);
   const filtered = query.trim() ? sorted.filter((n) => matchesSearch(n, query)) : sorted;
   const trimmed = query.trim();
-  const canCreate =
-    trimmed.length > 0 && !names.some((n) => n.toLocaleLowerCase('tr') === trimmed.toLocaleLowerCase('tr'));
+  const existingMatch = names.find((n) => foldTr(n) === foldTr(trimmed));
+  const canCreate = trimmed.length > 0 && !existingMatch;
 
   const select = (name: string, isNew: boolean) => {
     onChange(name, isNew);
