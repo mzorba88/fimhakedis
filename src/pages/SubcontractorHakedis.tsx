@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural, foldTr } from '@/lib/utils';
+import { resolveHakedisCategory } from '@/utils/workCategory';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SortableTableHeader, useSorting } from '@/components/SortableTableHeader';
 import { AmountCell } from '@/components/AmountCell';
@@ -384,7 +385,7 @@ export default function SubcontractorHakedis() {
       hakedis.description,
       project?.projectName,
       project?.projectCode,
-      contract?.workCategory,
+      resolveHakedisCategory(hakedis, contract, subcontractors),
       ...(hakedis.hakedisItems?.map(i => i.description) || []),
       ...(hakedis.extraItems?.map(i => i.description) || []),
     ]
@@ -422,7 +423,7 @@ export default function SubcontractorHakedis() {
         case 'workCategory': {
           const contractA = workEntries.find(e => e.id === a.contractId);
           const contractB = workEntries.find(e => e.id === b.contractId);
-          comparison = (contractA?.workCategory || '').localeCompare(contractB?.workCategory || '', 'tr');
+          comparison = resolveHakedisCategory(a, contractA, subcontractors).localeCompare(resolveHakedisCategory(b, contractB, subcontractors), 'tr');
           break;
         }
         case 'date':
@@ -1035,7 +1036,7 @@ export default function SubcontractorHakedis() {
           {sortedHakedisler.map((hakedis) => {
             const project = projects.find(p => p.id === hakedis.projectId);
             const contract = workEntries.find(e => e.id === hakedis.contractId);
-            const workCategory = contract?.workCategory || '-';
+            const workCategory = resolveHakedisCategory(hakedis, contract, subcontractors) || '-';
             
             return (
               <MobileCard 
@@ -1192,7 +1193,7 @@ export default function SubcontractorHakedis() {
                 {sortedHakedisler.map((hakedis) => {
                     const project = projects.find(p => p.id === hakedis.projectId);
                     const contract = workEntries.find(e => e.id === hakedis.contractId);
-                    const workCategory = contract?.workCategory || '-';
+                    const workCategory = resolveHakedisCategory(hakedis, contract, subcontractors) || '-';
                     
                     return (
                       <motion.tr
