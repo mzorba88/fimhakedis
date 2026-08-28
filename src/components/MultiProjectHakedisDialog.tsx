@@ -655,17 +655,41 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                       (row.hakedisType === 'alelhesap' || contract.contractType === 'goturu_bedel') && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs">Tutar ({currency})</Label>
-                          {account && account.remainingContract > 0 && (
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
-                              onClick={() => updateRow(row.id, { amount: String(Math.round(account.remainingContract * 100) / 100) })}>
-                              Kalanı öde ({formatCurrencyWithType(account.remainingContract, currency)})
-                            </Button>
-                          )}
+                          <Label className="text-xs">
+                            {row.hakedisType === 'kesin_hesap' ? `Toplam yapılan iş tutarı (${currency})` : `Tutar (${currency})`}
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            {row.hakedisType === 'kesin_hesap' && account && (
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+                                onClick={() => updateRow(row.id, { amount: String(Math.round(account.contractTotal * 100) / 100) })}>
+                                Sözleşmenin tamamı ({formatCurrencyWithType(account.contractTotal, currency)})
+                              </Button>
+                            )}
+                            {row.hakedisType !== 'kesin_hesap' && account && account.remainingContract > 0 && (
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs"
+                                onClick={() => updateRow(row.id, { amount: String(Math.round(account.remainingContract * 100) / 100) })}>
+                                Kalanı öde ({formatCurrencyWithType(account.remainingContract, currency)})
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <Input type="number" placeholder="0.00" value={row.amount}
                           onChange={e => updateRow(row.id, { amount: e.target.value })}
                           min="0" step="0.01" />
+                        {row.hakedisType === 'kesin_hesap' && account && account.contractTotal > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">Gerçekleşme oranı (%)</Label>
+                            <Input type="number" className="h-7 w-24 text-xs text-right" min="0" step="1"
+                              placeholder="100"
+                              onChange={e => {
+                                const pct = parseFloat(e.target.value);
+                                if (!isNaN(pct)) {
+                                  updateRow(row.id, { amount: String(Math.round(account.contractTotal * pct) / 100) });
+                                }
+                              }} />
+                            <span className="text-xs text-muted-foreground">Sözleşme bedeline göre tutarı hesaplar</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
