@@ -1,11 +1,11 @@
-import { Hakedis, WorkEntry } from '@/types/hakedis';
+import { SubcontractorHakedis, WorkEntry } from '@/types/hakedis';
 
 /**
  * Bir hakediş için iş kalemi kategorisini çözer.
  * Öncelik: sözleşme kategorisi -> kalemlerdeki kategori -> açıklamadaki [Etiket] -> altyüklenici kategorisi
  */
 export const resolveHakedisCategory = (
-  hakedis: Partial<Hakedis> | undefined | null,
+  hakedis: Partial<SubcontractorHakedis> | undefined | null,
   contract?: Partial<WorkEntry> | null,
   subcontractors?: { name: string; workCategory: string }[]
 ): string => {
