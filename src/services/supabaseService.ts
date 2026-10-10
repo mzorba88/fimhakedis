@@ -1,4 +1,4 @@
-import { CONTRACT_AGREEMENT_FIELDS_ENABLED, PLAN_LINKS_WRITE_ENABLED } from '@/config/schemaFeatures';
+import { CONTRACT_AGREEMENT_FIELDS_ENABLED, PLAN_LINKS_WRITE_ENABLED, ALELHESAP_NATURE_WRITE_ENABLED } from '@/config/schemaFeatures';
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Project, 
@@ -274,6 +274,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
     payment_amount: hakedis.paymentAmount,
     hakedis_items: hakedis.hakedisItems as any,
     extra_items: hakedis.extraItems as any,
+    ...(ALELHESAP_NATURE_WRITE_ENABLED && hakedis.hakedisType === 'alelhesap' && hakedis.alelhesapNature ? { alelhesap_nature: hakedis.alelhesapNature } : {}),
     total_amount: hakedis.totalAmount,
     created_by: hakedis.createdBy,
     approval_status: hakedis.approvalStatus,
@@ -314,6 +315,7 @@ export const updateHakedis = async (id: string, updates: Partial<SubcontractorHa
   if (updates.paymentAmount !== undefined) dbUpdates.payment_amount = updates.paymentAmount;
   if (updates.hakedisItems !== undefined) dbUpdates.hakedis_items = updates.hakedisItems;
   if (updates.extraItems !== undefined) dbUpdates.extra_items = updates.extraItems;
+  if (ALELHESAP_NATURE_WRITE_ENABLED && updates.alelhesapNature !== undefined) dbUpdates.alelhesap_nature = updates.alelhesapNature;
   if (updates.totalAmount !== undefined) dbUpdates.total_amount = updates.totalAmount;
   if (updates.approvalStatus !== undefined) dbUpdates.approval_status = updates.approvalStatus;
   if (updates.approvedBy !== undefined) dbUpdates.approved_by = updates.approvedBy;
