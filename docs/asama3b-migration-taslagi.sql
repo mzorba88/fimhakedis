@@ -1,6 +1,5 @@
--- UYGULANDI: 2026-10-10 (PROMPT_3D) — canlı veritabanına yalnızca bu üç alan eklendi. Uygulama anahtarı (SCHEMA_3B_APPLIED) KAPALI.
+-- UYGULANDI: 2026-10-10 (PROMPT_3D). Anahtarlar: src/config/schemaFeatures.ts (sözleşme alanları 3E ile açık; plan_links yazımı Aşama 4e kadar kapalı).
 -- Yalnızca EKLEME: mevcut kolon/veri/politika değişmez. Eski kayıtlar NULL kalır (= "bilinmiyor / kayıttan hesapla").
--- Uygulandıktan sonra src/config/schemaFeatures.ts → SCHEMA_3B_APPLIED = true yapılmalıdır.
 -- Bu dosya izole PostgreSQL (PGlite) üzerinde doğrulandı: docs/asama3b-migration-dogrulama.mjs
 
 BEGIN;

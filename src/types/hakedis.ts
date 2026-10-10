@@ -109,9 +109,9 @@ export interface WorkEntry {
   // For Birim Fiyat
   workItemEntries?: WorkItemEntry[];
   /** Anlaşma düzeyi fiyat esası (contracts.price_basis). Eski kayıtlarda yok = bilinmiyor */
-  priceBasis?: 'kdv_haric' | 'kdv_dahil';
+  priceBasis?: 'kdv_haric' | 'kdv_dahil' | null;
   /** Beyan edilen bedel niteliği (contracts.value_status). Yoksa kayıttan hesaplanır */
-  valueStatus?: 'kesin' | 'tahmini_tam' | 'tahmini_kismi' | 'yalniz_birim_fiyat';
+  valueStatus?: 'kesin' | 'tahmini_tam' | 'tahmini_kismi' | 'yalniz_birim_fiyat' | null;
   createdBy: string;
   approvalStatus: ApprovalStatus;
   approvedBy?: string;

@@ -1,4 +1,4 @@
-import { SCHEMA_3B_APPLIED } from '@/config/schemaFeatures';
+import { CONTRACT_AGREEMENT_FIELDS_ENABLED, PLAN_LINKS_WRITE_ENABLED } from '@/config/schemaFeatures';
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Project, 
@@ -28,15 +28,15 @@ const toProject = (row: any): Project => ({
   updatedAt: row.updated_at,
 });
 
-/** Yeni kolonlar yalnızca şema uygulandığında ve değer verildiğinde yazılır */
-export const schema3bContractFields = (e: Partial<WorkEntry>, applied = SCHEMA_3B_APPLIED): Record<string, unknown> => {
+/** Yeni kolonlar yalnızca anahtar açıkken ve değer verildiğinde yazılır. undefined = dokunma; null = bilerek "bilinmiyor" yap */
+export const schema3bContractFields = (e: Partial<WorkEntry>, applied = CONTRACT_AGREEMENT_FIELDS_ENABLED): Record<string, unknown> => {
   if (!applied) return {};
   const out: Record<string, unknown> = {};
   if (e.priceBasis !== undefined) out.price_basis = e.priceBasis;
   if (e.valueStatus !== undefined) out.value_status = e.valueStatus;
   return out;
 };
-export const schema3bHakedisFields = (h: Partial<SubcontractorHakedis>, applied = SCHEMA_3B_APPLIED): Record<string, unknown> =>
+export const schema3bHakedisFields = (h: Partial<SubcontractorHakedis>, applied = PLAN_LINKS_WRITE_ENABLED): Record<string, unknown> =>
   applied && h.planLinks !== undefined ? { plan_links: h.planLinks } : {};
 
 // Helper to convert database row to WorkEntry type
