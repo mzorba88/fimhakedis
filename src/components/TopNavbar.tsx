@@ -9,6 +9,7 @@ import {
   FileText,
   History,
   Users,
+  PieChart,
   Menu,
   X
 } from 'lucide-react';
@@ -33,6 +34,7 @@ export function TopNavbar() {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Projeler', href: '/projeler', icon: FolderKanban },
+    { name: 'Maliyet', href: '/maliyet', icon: PieChart },
     { name: 'Sözleşmeler', href: '/yapilanisler', icon: ClipboardList },
     { name: 'Hakedişler', href: '/hakedisler', icon: FileText },
     { name: 'Altyükleniciler', href: '/altyukleniciler', icon: Users },

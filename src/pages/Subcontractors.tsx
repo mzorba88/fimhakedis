@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural, foldTr } from '@/lib/utils';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -100,7 +100,8 @@ export default function Subcontractors() {
   const { categories: workCategories } = useWorkCategories();
   const navigate = useNavigate();
 
-  const [selected, setSelected] = useState<string | null>(null);
+  const [linkParams] = useSearchParams();
+  const [selected, setSelected] = useState<string | null>(() => linkParams.get('name'));
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
