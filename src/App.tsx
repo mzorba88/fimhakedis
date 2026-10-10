@@ -18,6 +18,7 @@ const Subcontractors = lazy(() => import("./pages/Subcontractors"));
 const AccountVerification = lazy(() => import("./pages/AccountVerification"));
 const Agreements = lazy(() => import("./pages/Agreements"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
+const NewHakedis = lazy(() => import("./pages/NewHakedis"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
