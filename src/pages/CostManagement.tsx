@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/MainLayout';
 import { ProjectCombobox } from '@/components/ProjectCombobox';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
+import { contractValueBreakdown } from '@/utils/agreements';
 import { buildProjectCost, UNCLASSIFIED, type Money, type SubcontractorRow } from '@/utils/projectCost';
 import { formatCurrencyWithType, formatDate, hakedisTypeLabels, contractTypeLabels, type Currency } from '@/types/hakedis';
 import { foldTr, cn } from '@/lib/utils';
@@ -61,6 +62,10 @@ export default function CostManagement() {
   const v = (m: Money) => (vat === 'excl' ? m.excl : m.incl);
   const curOk = (c: Currency) => cur === 'all' || cur === c;
   const project = projects.find((p) => p.id === projectId);
+  const valueBreakdown = useMemo(
+    () => (projectId ? contractValueBreakdown(workEntries.filter((c) => c.projectId === projectId)) : []),
+    [projectId, workEntries]
+  );
 
   const subRows = useMemo(() => {
     if (!data) return [];
@@ -144,7 +149,7 @@ export default function CostManagement() {
                 <thead className="bg-muted/40 text-xs text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Para birimi</th>
-                    <th className="px-3 py-2 text-right font-medium">Anlaşılan bedel</th>
+                    <th className="px-3 py-2 text-right font-medium">Anlaşılan bedel <span className="font-normal">(kesin + tahmini)</span></th>
                     <th className="px-3 py-2 text-right font-medium">Onaylı hakediş</th>
                     <th className="px-3 py-2 text-right font-medium">Kayıtlı ödeme</th>
                     <th className="px-3 py-2 text-right font-medium">Kalan ödeme</th>
@@ -184,6 +189,47 @@ export default function CostManagement() {
                 {vat === 'incl' && data.recordsWithoutVatRate > 0 && ` (${data.recordsWithoutVatRate} kayıtta KDV oranı yok.)`}
               </p>
             </div>
+
+            {/* Anlaşma bedeli türleri (yalnızca gösterim; cari toplamları etkilemez) */}
+            {valueBreakdown.length > 0 && (
+              <div className="card-elevated overflow-x-auto">
+                <div className="border-b px-3 py-2 text-sm font-medium">Anlaşma bedelleri — türüne göre</div>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Para birimi</th>
+                      <th className="px-3 py-2 text-right font-medium">Kesinleşmiş bedel</th>
+                      <th className="px-3 py-2 text-right font-medium">Tahmini bedel</th>
+                      <th className="px-3 py-2 text-right font-medium">Kısmi tahmini değer</th>
+                      <th className="px-3 py-2 text-right font-medium">Toplamı belirsiz</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {valueBreakdown.filter((b) => curOk(b.currency)).map((b) => {
+                      const cell = (bk: { amount: number; count: number; contractNos: string[] }, showAmount = true) => (
+                        <td className="px-3 py-2 text-right" title={bk.contractNos.join(', ')}>
+                          {bk.count === 0 ? <span className="text-muted-foreground">—</span> : (
+                            <div className="leading-tight">
+                              {showAmount ? <Num value={bk.amount} currency={b.currency} /> : <span>{bk.count} anlaşma</span>}
+                              {showAmount && <div className="text-[10px] text-muted-foreground">{bk.count} anlaşma</div>}
+                            </div>
+                          )}
+                        </td>
+                      );
+                      return (
+                        <tr key={b.currency}>
+                          <td className="px-3 py-2 font-medium">{b.currency}</td>
+                          {cell(b.kesin)}{cell(b.tahmini)}{cell(b.kismi)}{cell(b.belirsiz, false)}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
+                  Tutarlar KDV hariç. Kesinleşmiş: götürü bedel ve kesin bedel beyan edilmiş birim fiyat anlaşmaları. Tahmini: tüm metrajları girilmiş ama kesinleşmemiş. Kısmi tahmini: yalnızca metrajı girilmiş kalemlerin tutarı — anlaşılan bedele ve sözleşmeye kalan işe katılmaz. Toplamı belirsiz: yalnızca birim fiyat. Bu tablo hakediş, ödeme ve cari hesap toplamlarını etkilemez. Üstteki "Anlaşılan bedel" kesin + tahmini bedeli içerir.
+                </p>
+              </div>
+            )}
 
             {/* İnceleme bekleyenler */}
             {(data.unresolved.length > 0 || data.unverifiedAlelhesap.length > 0) && (
