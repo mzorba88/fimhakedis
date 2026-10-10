@@ -24,7 +24,7 @@ import {
 } from '@/types/hakedis';
 import {
   EnteredBasis, PlanRowInput, UnitPriceRowInput, agreementValueStatus, buildLumpSumAgreement,
-  buildUnitPriceAgreement, checkPaymentPlan, readPriceBasis, toNet, vatBreakdown,
+  buildUnitPriceAgreement, checkPaymentPlan, stableId, valueStatusLabels, countsInContractTotal, readPriceBasis, toNet, vatBreakdown,
 } from '@/utils/agreements';
 import { collectPriceObservations, suggestUnitPrice, PriceObservation } from '@/utils/priceMemory';
 
@@ -39,8 +39,8 @@ const noWheel = { onWheel: (e: React.WheelEvent<HTMLInputElement>) => e.currentT
 
 interface Row { id: string; description: string; workCategory: string; unit: string; price: string; qty: string; source?: string }
 interface PRow { id: string; name: string; mode: 'yuzde' | 'tutar'; value: string; dueDate: string; note: string }
-const newRow = (): Row => ({ id: `r${Math.random().toString(36).slice(2)}`, description: '', workCategory: '', unit: '', price: '', qty: '' });
-const newPRow = (name = '', value = ''): PRow => ({ id: `p${Math.random().toString(36).slice(2)}`, name, mode: 'yuzde', value, dueDate: '', note: '' });
+const newRow = (): Row => ({ id: stableId('wie'), description: '', workCategory: '', unit: '', price: '', qty: '' });
+const newPRow = (name = '', value = ''): PRow => ({ id: stableId('pi'), name, mode: 'yuzde', value, dueDate: '', note: '' });
 
 export default function Agreements() {
   const { projects, workEntries, subcontractorHakedisler, subcontractors, addSubcontractor, addWorkEntry, getNextContractNo, currentUser } = useHakedisStore();
@@ -206,8 +206,12 @@ export default function Agreements() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        {st === 'bedel_yok' ? <span className="text-muted-foreground">Bedel girilmemiş</span> : formatCurrencyWithType(w.totalAmount, w.currency)}
-                        {st === 'tahmini_eksik' && <div className="text-[10px] text-amber-700">tahmini · miktarı eksik kalem var</div>}
+                        {st === 'bedel_yok' ? <span className="text-muted-foreground">Bedel girilmemiş</span>
+                          : st === 'yalniz_birim_fiyat' ? <span className="text-muted-foreground">Bedel belirsiz</span>
+                          : formatCurrencyWithType(w.totalAmount, w.currency)}
+                        {st === 'tahmini_kismi' && <div className="text-[10px] text-amber-700">kısmi · bazı metrajlar eksik</div>}
+                        {st === 'tahmini_tam' && <div className="text-[10px] text-muted-foreground">tahmini</div>}
+                        {st === 'yalniz_birim_fiyat' && <div className="text-[10px] text-muted-foreground">yalnızca birim fiyat</div>}
                       </td>
                     </tr>
                   );
@@ -347,8 +351,9 @@ export default function Agreements() {
 
               <div className="rounded-md border">
                 <div className="flex items-center justify-between border-b px-3 py-2">
-                  <span className="text-sm font-medium">Ödeme / hakediş aşamaları <span className="font-normal text-muted-foreground">(opsiyonel)</span></span>
+                  <span className="text-sm font-medium">Ödeme / hakediş aşamaları <span className="font-normal text-muted-foreground">(en az bir aşama — fiyat esası için gerekli)</span></span>
                   <div className="flex gap-2">
+                    {!plan.length && <Button size="sm" variant="ghost" onClick={() => setPlan([newPRow('Tek ödeme', '100')])}>Tek ödeme %100</Button>}
                     {!plan.length && <Button size="sm" variant="ghost" onClick={() => setPlan([newPRow('İş başlangıcı', '20'), newPRow('İmalatın tamamlanması', '60'), newPRow('Nihai kabul', '20')])}>Örnek: 20/60/20</Button>}
                     <Button size="sm" variant="outline" className="gap-1" onClick={() => setPlan((p) => [...p, newPRow()])}><Plus className="h-3.5 w-3.5" />Aşama</Button>
                   </div>
@@ -487,12 +492,14 @@ function Detail({ c, projectName, hakedisCount, onClose }: { c: WorkEntry; proje
         </Badge>
       </div>
       <dl className="grid grid-cols-2 gap-y-1 tabular-nums">
-        <dt className="text-muted-foreground">Bedel (KDV hariç)</dt><dd className="text-right font-semibold">{st === 'bedel_yok' ? '—' : formatCurrencyWithType(b.net, c.currency)}</dd>
+        <dt className="text-muted-foreground">{st === 'tahmini_kismi' ? 'Kısmi tahmini tutar' : 'Bedel'} (KDV hariç)</dt><dd className="text-right font-semibold">{st === 'bedel_yok' || st === 'yalniz_birim_fiyat' ? '—' : formatCurrencyWithType(b.net, c.currency)}</dd>
         <dt className="text-muted-foreground">KDV %{c.vatRate ?? '—'}</dt><dd className="text-right">{formatCurrencyWithType(b.vat, c.currency)}</dd>
         <dt className="text-muted-foreground">KDV dahil</dt><dd className="text-right">{formatCurrencyWithType(b.gross, c.currency)}</dd>
         <dt className="text-muted-foreground">Bağlı hakediş</dt><dd className="text-right">{hakedisCount}</dd>
       </dl>
-      {st === 'tahmini_eksik' && <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">Bazı kalemlerde miktar yok; bedel tahminidir.</p>}
+      <p className={cn('rounded p-2 text-xs', countsInContractTotal(c) ? 'bg-muted/50 text-muted-foreground' : 'bg-amber-50 text-amber-800')}>
+        {valueStatusLabels[st]}{!countsInContractTotal(c) && st !== 'bedel_yok' && ' · anlaşılan bedel ve sözleşmeye kalan toplamlarına katılmaz'}
+      </p>
       {c.description && <p className="text-xs text-muted-foreground">{c.description}</p>}
 
       {c.contractType === 'birim_fiyat' ? (
