@@ -15,10 +15,17 @@ import {
   MapPin
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { compareOldNew } from '@/utils/hakedisCalculations';
+import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Dashboard() {
-  const { projects, workEntries } = useHakedisStore();
+  const { projects, workEntries, subcontractorHakedisler } = useHakedisStore();
+  const unreliableFiles = useMemo(
+    () => compareOldNew(subcontractorHakedisler, workEntries).filter(r => !r.reliable),
+    [subcontractorHakedisler, workEntries]
+  );
   const stats = calculateDashboardStats(projects, workEntries);
   // Para birimleri ayrı tutulur; kur olmadan dönüşüm/toplama yapılmaz
   const approvedList = workEntries.filter(e => e.approvalStatus === 'onaylandi');
@@ -45,6 +52,16 @@ export default function Dashboard() {
           </p>
         </div>
 
+        {unreliableFiles.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+            <span className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              {unreliableFiles.length} cari dosyada giriş esası belirsiz kesin hesap veya ödeme kaydı var. Bu dosyaları içeren toplamlar manuel kontrol edilene kadar kesin kabul edilmemelidir.
+            </span>
+            <Link to="/cari-dogrulama" className="font-medium underline whitespace-nowrap">İncele</Link>
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
@@ -62,10 +79,9 @@ export default function Dashboard() {
             title="Onaylanan Hakediş"
             value={formatCurrencyTotals(approvedByCur)}
             icon={<CheckCircle2 className="h-5 w-5" />}
-            trend={{ value: 12, label: 'bu ay', positive: true }}
           />
           <StatCard
-            title="Gerçekleşen Ödeme"
+            title="Kayıtlı Ödeme"
             value={formatCurrencyTotals(paidByCur)}
             subtitle={`Kalan: ${formatCurrencyTotals(remainingByCur)}`}
             icon={<Wallet className="h-5 w-5" />}
