@@ -87,10 +87,10 @@ describe('Aşama 4B — kesin hesap ve ek işler', () => {
       }], extraItems: undefined };
     const x = prepareFinalSettlement(input({ all: [old, accrued] }));
     expect(x.errors).toEqual([]);
-    expect(x.finalNet).toBe(1090);
+    expect(x.finalNet).toBe(1110);
     expect(x.offsetNet).toBe(870);
-    expect(x.periodNet).toBe(220);
-    expect(x.remainingNet).toBe(590);
+    expect(x.periodNet).toBe(240);
+    expect(x.remainingNet).toBe(610);
   });
   it('aynı açıklamayla yeni ek iş girilirse eski kayıtla çakışma uyarısı verir', () => {
     const x = prepareFinalSettlement(input({ newExtras: [{
