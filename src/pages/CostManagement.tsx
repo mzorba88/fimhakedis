@@ -156,7 +156,7 @@ export default function CostManagement() {
                   {data.currencies.filter((c) => curOk(c.currency)).map((c) => (
                     <tr key={c.currency}>
                       <td className="px-3 py-2 font-medium">{c.currency}</td>
-                      <td className="px-3 py-2 text-right"><Num value={v(c.contract)} currency={c.currency} /></td>
+                      <td className="px-3 py-2 text-right"><Num value={v(c.contract)} currency={c.currency} />{(() => { const n = data.subcontractors.filter((r) => r.currency === c.currency).reduce((s, r) => s + r.file.incompleteContracts.length, 0); return n > 0 ? <div className="text-[10px] text-amber-700">+{n} anlaşma bedeli belirsiz/kısmi (dahil değil)</div> : null; })()}</td>
                       <td className="px-3 py-2 text-right"><Num value={v(c.approved)} currency={c.currency} />{data.unverifiedAlelhesap.some((a) => a.currency === c.currency) && <div className="text-[10px] text-amber-700">geçici · alelhesap sınıflandırma bekliyor</div>}</td>
                       <td className="px-3 py-2 text-right"><Num value={c.paid.excl} currency={c.currency} /></td>
                       <td className="px-3 py-2 text-right">
@@ -169,7 +169,7 @@ export default function CostManagement() {
                           </div>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right"><Num value={v(c.remainingContract)} currency={c.currency} /></td>
+                      <td className="px-3 py-2 text-right">{data.subcontractors.some((r) => r.currency === c.currency && r.file.incompleteContracts.length) ? <div className="leading-tight"><Num value={v(c.remainingContract)} currency={c.currency} /><div className="text-[10px] text-amber-700">belirsiz bedelli anlaşmalar hariç</div></div> : <Num value={v(c.remainingContract)} currency={c.currency} />}</td>
                       <td className="px-3 py-2 text-right text-muted-foreground"><Num value={c.pending} currency={c.currency} /></td>
                     </tr>
                   ))}
@@ -268,7 +268,7 @@ export default function CostManagement() {
                             </div>
                           </td>
                           <td className="hidden px-3 py-2 text-muted-foreground md:table-cell">{r.category || '—'}</td>
-                          <td className="px-3 py-2 text-right">{r.contract.excl > 0 ? <Num value={v(r.contract)} currency={r.currency} /> : <span className="text-muted-foreground">{r.contracts.length ? 'Bedel girilmemiş' : 'Sözleşmesiz'}</span>}</td>
+                          <td className="px-3 py-2 text-right">{r.contract.excl > 0 ? <Num value={v(r.contract)} currency={r.currency} /> : <span className="text-muted-foreground">{r.file.incompleteContracts.length ? 'Bedel belirsiz' : r.contracts.length ? 'Bedel girilmemiş' : 'Sözleşmesiz'}</span>}{r.contract.excl > 0 && r.file.incompleteContracts.length > 0 && <div className="text-[10px] text-amber-700">+ belirsiz bedelli anlaşma</div>}</td>
                           <td className="px-3 py-2 text-right"><Num value={v(r.approved)} currency={r.currency} /></td>
                           <td className="px-3 py-2 text-right"><Num value={r.paid.excl} currency={r.currency} /></td>
                           <td className="px-3 py-2 text-right font-medium">
@@ -280,7 +280,7 @@ export default function CostManagement() {
                               <Num value={v(r.remaining)} currency={r.currency} className={r.remaining.excl > 0.01 ? 'text-amber-700' : ''} />
                             )}
                           </td>
-                          <td className="hidden px-3 py-2 text-right lg:table-cell">{r.contract.excl > 0 ? <Num value={v(r.remainingContract)} currency={r.currency} /> : '—'}</td>
+                          <td className="hidden px-3 py-2 text-right lg:table-cell">{r.contract.excl > 0 && !r.file.incompleteContracts.length ? <Num value={v(r.remainingContract)} currency={r.currency} /> : r.file.incompleteContracts.length ? <span className="text-xs text-muted-foreground">hesaplanamaz</span> : '—'}</td>
                         </tr>
                       ))}
                       {subRows.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Kayıt yok</td></tr>}
@@ -475,7 +475,10 @@ export default function CostManagement() {
                   <dd className="border-t pt-1 text-right font-semibold">
                     {selected.reliable ? <Num value={Math.abs(v(selected.remaining))} currency={selected.currency} /> : <span className="text-amber-700">Kesin değil</span>}
                   </dd>
-                  {selected.contract.excl > 0 && (
+                  {selected.file.incompleteContracts.length > 0 && (
+                    <><dt className="col-span-2 text-xs text-amber-700">Bedeli belirsiz/kısmi anlaşma: {selected.file.incompleteContracts.join(', ')} — anlaşılan bedele katılmadı, sözleşmeye kalan hesaplanmadı</dt></>
+                  )}
+                  {selected.contract.excl > 0 && !selected.file.incompleteContracts.length && (
                     <><dt className="text-muted-foreground">Sözleşmeye kalan iş</dt><dd className="text-right"><Num value={v(selected.remainingContract)} currency={selected.currency} /></dd></>
                   )}
                 </dl>

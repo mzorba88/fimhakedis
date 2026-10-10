@@ -61,7 +61,7 @@ describe('İş anlaşmaları', () => {
       { description: 'B', workCategory: '', unit: 'm2', unitPrice: 99, estimatedQuantity: null }]);
     expect(r.payload.totalAmount).toBe(50);
     expect(r.totalIsComplete).toBe(false);
-    expect(agreementValueStatus(asEntry(r.payload))).toBe('tahmini_eksik');
+    expect(agreementValueStatus(asEntry(r.payload))).toBe('tahmini_kismi');
   });
   it('8. ödeme planı toplam kontrolü', () => {
     expect(checkPaymentPlan(100, [{ amount: 50 }], true).ok).toBe(false);
