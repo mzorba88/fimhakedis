@@ -154,7 +154,7 @@ export default function NewHakedis() {
         created.id, 'hakedis',
       );
       toast.success(`${created.hakedisNo} kaydedildi`);
-      navigate(`/hakedisler?hakedis=${created.id}`);
+      navigate(`/hakedisler?view=${created.id}`);
     } catch (e: any) {
       toast.error('Kayıt başarısız: ' + (e?.message || ''));
     } finally { setSaving(false); }
@@ -459,7 +459,7 @@ export default function NewHakedis() {
                 <CollapsibleTrigger className="w-full flex items-center justify-between p-3 text-sm font-medium">Bu dosyadaki son hakedişler <ChevronDown className="h-4 w-4" /></CollapsibleTrigger>
                 <CollapsibleContent className="px-3 pb-3 space-y-1">
                   {recentFile.map((h) => (
-                    <Link key={h.id} to={`/hakedisler?hakedis=${h.id}`} className="flex justify-between text-xs hover:underline">
+                    <Link key={h.id} to={`/hakedisler?view=${h.id}`} className="flex justify-between text-xs hover:underline">
                       <span>{h.hakedisNo} · {hakedisTypeLabels[h.hakedisType] || ''}</span>
                       <span className="tabular-nums">{formatCurrencyWithType(h.totalAmount, h.currency)}</span>
                     </Link>
