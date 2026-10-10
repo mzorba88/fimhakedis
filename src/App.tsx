@@ -18,6 +18,7 @@ const Subcontractors = lazy(() => import("./pages/Subcontractors"));
 const AccountVerification = lazy(() => import("./pages/AccountVerification"));
 const Agreements = lazy(() => import("./pages/Agreements"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
+const NewHakedis = lazy(() => import("./pages/NewHakedis"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="/is-anlasmalari" element={<Agreements />} />
             <Route path="/maliyet" element={<CostManagement />} />
+            <Route path="/hakedis-yeni" element={<NewHakedis />} />
             <Route path="/cari-dogrulama" element={<AccountVerification />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

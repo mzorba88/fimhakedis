@@ -7,5 +7,9 @@
 /** Aşama 3E: sözleşmelerde price_basis / value_status okunur ve YAZILIR. */
 export const CONTRACT_AGREEMENT_FIELDS_ENABLED = true;
 
-/** Aşama 4'te yeni hakediş formuyla açılacak. false iken hakedisler.plan_links'e HİÇ yazılmaz. */
-export const PLAN_LINKS_WRITE_ENABLED = false;
+/**
+ * Aşama 4A: yeni hakediş ekranı (/hakedis-yeni) götürü aşama bağlantılarını yazar.
+ * Yalnızca planLinks açıkça verilen kayıtlarda yazılır; eski formlar bu alanı göndermez.
+ * NOT: aşım kontrolü tarayıcıda yapılır, veritabanında atomik kontrol yoktur.
+ */
+export const PLAN_LINKS_WRITE_ENABLED = true;

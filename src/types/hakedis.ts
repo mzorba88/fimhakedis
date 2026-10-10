@@ -181,12 +181,19 @@ export interface HakedisItem {
   unitPrice: number;
   quantity: number; // Quantity for this hakediş
   amount: number;
+  // --- Aşama 4A (JSON içinde, geriye uyumlu, opsiyonel) ---
+  /** Hakediş anında anlaşmadaki birim fiyat (KDV hariç); unitPrice'tan farklıysa yalnızca bu hakedişe özel fiyat */
+  agreementUnitPrice?: number;
+  /** Fiyat değiştirildiyse kısa gerekçe */
+  priceOverrideReason?: string;
 }
 
 // Extra work item outside contract (Sözleşme Harici Ek İş)
 export interface ExtraWorkItem {
   id: string;
   description: string;
+  /** Aşama 4A: opsiyonel iş kategorisi (yoksa raporda sözleşme kategorisi / Sınıflandırılmamış) */
+  workCategory?: string;
   unit: string;
   unitPrice: number;
   quantity: number;

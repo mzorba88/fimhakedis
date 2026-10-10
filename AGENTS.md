@@ -9,3 +9,4 @@
 - Legacy contract form saves go through `reconcileLegacyEdit`: non-pricing edits never touch price_basis/value_status; pricing edits require an explicit basis choice. Why: no silent loss between the two contract screens.
 - Cost-screen value buckets (`contractValueBreakdown`) are display-only and never feed cari/hakediş/payment totals. Why: estimated values must stay visible without altering balances.
 - Götürü plan links live in `hakedisler.plan_links`; validate with `validatePlanLinks`, revize hakedişler release their share. Why: prevents duplicate accrual of a payment stage.
+- The quick hakediş screen (`/hakedis-yeni`) builds records only through `buildNewHakedis` (src/utils/newHakedis.ts), which reuses snapshot/plan-link/VAT helpers and re-validates against freshly fetched hakedişler before insert. Why: one tested path; plan-link overrun has no atomic DB check.

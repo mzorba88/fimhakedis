@@ -44,9 +44,9 @@ const save = async (payload: any, no: string) => { await createContract({ ...pay
 beforeEach(() => { tables.contracts.length = 0; tables.hakedisler.length = 0; writes.length = 0; });
 
 describe('Aşama 3E', () => {
-  it('anahtarlar: sözleşme alanları açık, plan_links yazımı kapalı', () => {
+  it('anahtarlar: sözleşme alanları açık, plan_links yazımı (4A) açık', () => {
     expect(CONTRACT_AGREEMENT_FIELDS_ENABLED).toBe(true);
-    expect(PLAN_LINKS_WRITE_ENABLED).toBe(false);
+    expect(PLAN_LINKS_WRITE_ENABLED).toBe(true);
   });
 
   it('1+2: ödeme planı olmadan götürü, KDV dahil esas kaydedilir ve geri okunur', async () => {
@@ -137,10 +137,17 @@ describe('Aşama 3E', () => {
     expect(snap).toMatchObject({ unitPrice: 12, amount: 36 });
   });
 
-  it('10: plan_links bu aşamada veritabanına yazılmaz', async () => {
+  it('10: plan_links yalnızca açıkça verildiğinde yazılır; vermeyen eski formlar alana dokunmaz', async () => {
+    await createHakedis({ hakedisNo: 'KH-0', hakedisType: 'ara_hakedis', projectId: 'P1', subcontractor: 'Ali', contractId: 'c', contractNo: 'SZ', contractType: 'goturu_bedel', currency: 'GBP', date: '2026-10-10', totalAmount: 10, paidAmount: 0, createdBy: 'u', approvalStatus: 'onay_bekliyor', paymentStatus: 'odenmedi' } as any);
+    await updateHakedis(tables.hakedisler[0].id, { description: 'y' } as any);
+    writes.filter((x) => x.table === 'hakedisler').forEach((x) => expect('plan_links' in x.row).toBe(false));
+    writes.length = 0;
+  });
+
+  it('10b: plan_links verildiğinde yazılır (Aşama 4A)', async () => {
     await createHakedis({ hakedisNo: 'KH-1', hakedisType: 'ara_hakedis', projectId: 'P1', subcontractor: 'Ali', contractId: 'c', contractNo: 'SZ', contractType: 'goturu_bedel', currency: 'GBP', date: '2026-10-10', totalAmount: 10, paidAmount: 0, createdBy: 'u', approvalStatus: 'onay_bekliyor', paymentStatus: 'odenmedi', planLinks: [{ planItemId: 'pi_1', amount: 10 }] } as any);
     await updateHakedis(tables.hakedisler[0].id, { planLinks: [{ planItemId: 'pi_1', amount: 5 }], description: 'x' } as any);
-    writes.filter((x) => x.table === 'hakedisler').forEach((x) => expect('plan_links' in x.row).toBe(false));
+    writes.filter((x) => x.table === 'hakedisler').forEach((x) => expect('plan_links' in x.row).toBe(true));
   });
 
   it('11+12: eski NULL alanlı sözleşmeler açılır; hakediş/ödeme toplamları değişmez', async () => {
