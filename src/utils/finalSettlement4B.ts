@@ -30,8 +30,6 @@ export interface FinalInput {
   description?: string;
   urgent?: boolean;
   user: { id: string; role: string; label: string };
-  /** Önizleme içindir. Alelhesap varken sınıflandırma kalıcı saklanmadığından kayıt engellenir. */
-  alelNature?: 'avans' | 'tahakkuk';
 }
 export interface FinalLine {
   key: string;
@@ -84,9 +82,16 @@ export function prepareFinalSettlement(i: FinalInput): FinalResult {
   const approved = active.filter(h => h.approvalStatus === 'onaylandi');
   const alel = approved.filter(h => h.hakedisType === 'alelhesap');
   const ara = approved.filter(h => h.hakedisType === 'ara_hakedis');
-  if (alel.length) {
-    warnings.push('Alelhesap avans/tahakkuk türü kalıcı olarak saklanmıyor; yalnızca bilgi amaçlı gösterilir');
-    errors.push('Alelhesap bulunan dosyada otomatik kesin hesabı kaydetmek için kalıcı sınıflandırma gerekir');
+  const unclassified = alel.filter(h => !h.alelhesapNature);
+  if (unclassified.length) {
+    errors.push('Avans/tahakkuk niteliği belirsiz alelhesap(lar): ' + unclassified.map(h => h.hakedisNo).join(', '));
+    warnings.push('Eski alelhesapları otomatik sınıflandırma; her kaydı ayrı ayrı teyit edin');
+  }
+  const accruedAlel = alel.filter(h => h.alelhesapNature === 'tahakkuk');
+  const advanceAlel = alel.filter(h => h.alelhesapNature === 'avans');
+  const accrued = [...ara, ...accruedAlel];
+  if (advanceAlel.some(h => (h.hakedisItems?.length || 0) > 0 || (h.extraItems?.length || 0) > 0)) {
+    errors.push('Avans olarak sınıflanmış alelhesapta metraj/ek iş mevcut; manuel kontrol gerekli');
   }
   if (approved.some(h => h.paymentStatus === 'odendi' && !(h.paidAmount > 0))) {
     errors.push('Ödendi işaretli ancak ödeme tutarı boş eski kayıt var; manuel doğrulama gerekli');
@@ -95,12 +100,12 @@ export function prepareFinalSettlement(i: FinalInput): FinalResult {
     errors.push('Revize durumundaki kayıtta ödeme var; manuel ödeme kontrolü gerekli');
   }
 
-  const oldItems = ara.flatMap(h => h.hakedisItems || []);
-  const oldExtras = ara.flatMap(h => h.extraItems || []);
+  const oldItems = accrued.flatMap(h => h.hakedisItems || []);
+  const oldExtras = accrued.flatMap(h => h.extraItems || []);
   const oldMainNet = round(oldItems.reduce((s, r) => s + (Number(r.amount) || 0), 0));
   const previousExtraNet = round(oldExtras.reduce((s, r) => s + (Number(r.amount) || 0), 0));
-  const previousAra = round(ara.reduce((s, h) => s + (Number(h.totalAmount) || 0), 0));
-  if (!close(previousAra, round(oldMainNet + previousExtraNet))) {
+  const previousAccrual = round(accrued.reduce((s, h) => s + (Number(h.totalAmount) || 0), 0));
+  if (!close(previousAccrual, round(oldMainNet + previousExtraNet))) {
     errors.push('Eski ara hakediş toplamı kalemlerle uyuşmuyor; otomatik mahsup güvenilir değil');
   }
   const allowedIds = new Set((contract.workItemEntries || []).map(r => r.id));
@@ -159,7 +164,14 @@ export function prepareFinalSettlement(i: FinalInput): FinalResult {
   const newExtras: ExtraWorkItem[] = buildExtraItems(i.newExtras, i.extraBasis, i.vatRate).map(r => ({
     ...r, settlementSnapshot: 'cumulative_v4b', settlementPeriodAmount: r.amount,
   }));
+  const oldDescriptions = new Set(oldExtras.map(r => r.description.trim().toLocaleLowerCase('tr')));
   for (const row of i.newExtras) {
+    if (row.description.trim() && oldDescriptions.has(row.description.trim().toLocaleLowerCase('tr')))
+      warnings.push('"' + row.description + '" adlı ek iş önceki hakedişlerde de var; gerçekten yeni miktar olduğundan emin olun');
+    if (row.quantity != null && row.quantity < 0 || row.unitPrice != null && row.unitPrice < 0 || row.lumpAmount != null && row.lumpAmount < 0)
+      errors.push('"' + row.description + '": negatif miktar/fiyat girilemez');
+    if ((row.lumpAmount || 0) > 0 && (row.unitPrice || 0) > 0)
+      errors.push('"' + row.description + '": hem birim fiyat hem götürü toplam girilmemeli');
     if (!(row.description || '').trim()) {
       if (row.quantity != null || row.unitPrice != null || row.lumpAmount != null) errors.push('Ek iş açıklaması gerekli');
     } else if (!((row.lumpAmount || 0) > 0 || ((row.quantity || 0) > 0 && (row.unitPrice || 0) > 0))) {
@@ -169,16 +181,16 @@ export function prepareFinalSettlement(i: FinalInput): FinalResult {
 
   const newExtraNet = round(newExtras.reduce((s, r) => s + r.amount, 0));
   const finalNet = round(lines.reduce((s, r) => s + r.totalNet, 0) + previousExtraNet + newExtraNet);
-  const offsetNet = previousAra;
+  const offsetNet = previousAccrual;
   const periodNet = round(finalNet - offsetNet);
   const paidNet = round(approved.reduce((s, h) => s + (Number(h.paidAmount) || 0), 0));
-  const remainingNet = alel.length && !i.alelNature ? null : round(finalNet - paidNet);
+  const remainingNet = unclassified.length ? null : round(finalNet - paidNet);
 
   if (periodNet < -0.02) errors.push('Dönem tahakkuku negatif; manuel kesin hesap gerekli');
   if (!Number.isFinite(finalNet) || !Number.isFinite(periodNet)) errors.push('Geçersiz kesin hesap tutarı');
   if (remainingNet !== null && remainingNet < -0.02) warnings.push('Fazla ödeme / devreden avans bulunuyor');
   if (oldExtras.length) warnings.push('Önceden hakedişe alınmış ek işler nihai üretime taşındı; yeni dönem tutarına tekrar eklenmedi');
-  if (alel.length && i.alelNature) warnings.push('Alelhesap türü seçimi yalnızca önizlemedir, kalıcı kaydedilmedi');
+  if (advanceAlel.length) warnings.push(advanceAlel.length + ' alelhesap avansı yalnızca kayıtlı ödemeler üzerinden bakiye hesabına girdi');
 
   const result: FinalResult = {
     errors, warnings, lines, previousExtras, newExtras, previousExtraNet, newExtraNet,
