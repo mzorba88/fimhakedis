@@ -16,6 +16,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
 const Subcontractors = lazy(() => import("./pages/Subcontractors"));
 const AccountVerification = lazy(() => import("./pages/AccountVerification"));
+const Agreements = lazy(() => import("./pages/Agreements"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/raporlar" element={<Reports />} />
             <Route path="/islem-gecmisi" element={<ActivityHistory />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/is-anlasmalari" element={<Agreements />} />
             <Route path="/maliyet" element={<CostManagement />} />
             <Route path="/cari-dogrulama" element={<AccountVerification />} />
             <Route path="*" element={<NotFound />} />

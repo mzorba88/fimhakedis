@@ -58,10 +58,20 @@ export interface Milestone {
 export interface PaymentInstallment {
   id: string;
   description: string;
+  /** KDV hariç */
   amount: number;
   currency: Currency;
   dueDate?: string;
   isPaid: boolean;
+  // --- İş Anlaşması ek alanları (JSON içinde, geriye uyumlu, opsiyonel) ---
+  name?: string;
+  percentage?: number;
+  inputMode?: 'yuzde' | 'tutar';
+  note?: string;
+  priceBasis?: 'kdv_haric' | 'kdv_dahil';
+  planComplete?: boolean;
+  agreementTotalNet?: number;
+  enteredAgreementTotal?: number;
 }
 
 // Work item entry for Birim Fiyat
@@ -71,8 +81,14 @@ export interface WorkItemEntry {
   description: string;
   unit: string;
   quantity: number;
+  /** KDV hariç */
   unitPrice: number;
   currency: Currency;
+  // --- İş Anlaşması ek alanları (JSON içinde, geriye uyumlu, opsiyonel) ---
+  enteredUnitPrice?: number;
+  priceBasis?: 'kdv_haric' | 'kdv_dahil';
+  quantityUnknown?: boolean;
+  priceSource?: string;
 }
 
 // Work Entry (Yapılan İş / Altyüklenici Sözleşmesi)

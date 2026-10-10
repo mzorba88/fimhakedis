@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FolderKanban, 
-  ClipboardList, 
+  ClipboardList,
+  Handshake, 
   CheckCircle2, 
   Wallet,
   FileText,
@@ -35,6 +36,7 @@ export function TopNavbar() {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Projeler', href: '/projeler', icon: FolderKanban },
     { name: 'Maliyet', href: '/maliyet', icon: PieChart },
+    { name: 'İş Anlaşmaları', href: '/is-anlasmalari', icon: Handshake },
     { name: 'Sözleşmeler', href: '/yapilanisler', icon: ClipboardList },
     { name: 'Hakedişler', href: '/hakedisler', icon: FileText },
     { name: 'Altyükleniciler', href: '/altyukleniciler', icon: Users },
