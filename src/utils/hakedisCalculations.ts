@@ -1,3 +1,4 @@
+import { agreementValueStatus, countsInContractTotal } from './agreements';
 /**
  * Merkezi hakediş hesaplama altyapısı (Aşama 1A).
  *
@@ -189,6 +190,8 @@ export interface FileSummary {
   /** Fazla Ödeme / Devreden Avans (pozitif sayı) */
   overpayment: number;
   remainingContract: number;
+  /** Bedeli kesin/tam tahmini olmayan anlaşmalar (kısmi metraj veya yalnızca birim fiyat) — toplama katılmaz */
+  incompleteContracts: string[];
   /** Aynı tutarlar KDV dahil (her kaydın kendi KDV oranıyla) */
   vat: { approvedAccrual: number; recordedPayment: number; remainingPayment: number; contractTotal: number };
   unresolved: HakedisBreakdown[];
@@ -216,13 +219,17 @@ export function summarizeFiles(
         araAccrual: 0, alelhesapAccrual: 0, kesinAccrual: 0, advancePayments: 0,
         pendingAmount: 0, recordedPayment: 0, remainingPayment: 0, overpayment: 0, remainingContract: 0,
         vat: { approvedAccrual: 0, recordedPayment: 0, remainingPayment: 0, contractTotal: 0 },
-        unresolved: [], items: [], reliable: true,
+        unresolved: [], items: [], reliable: true, incompleteContracts: [],
       });
     return map.get(key)!;
   };
 
   contracts.forEach((c) => {
     const f = ensure(c.subcontractor, c.projectId, c.currency);
+    if (!countsInContractTotal(c)) {
+      if (agreementValueStatus(c) !== 'bedel_yok') f.incompleteContracts.push(c.contractNo);
+      return;
+    }
     f.contractTotal += c.totalAmount || 0;
     f.vat.contractTotal += (c.totalAmount || 0) * vatF(c.vatRate);
   });
@@ -271,7 +278,7 @@ export function summarizeFiles(
     f.remainingPayment = f.approvedAccrual - f.recordedPayment;
     f.vat.remainingPayment = f.vat.approvedAccrual - f.vat.recordedPayment;
     f.overpayment = f.remainingPayment < -0.0049 ? -f.remainingPayment : 0;
-    f.remainingContract = f.contractTotal > 0 ? f.contractTotal - f.cumulativeProduction : 0;
+    f.remainingContract = f.contractTotal > 0 && f.incompleteContracts.length === 0 ? f.contractTotal - f.cumulativeProduction : 0;
     f.reliable = f.unresolved.length === 0;
   });
 

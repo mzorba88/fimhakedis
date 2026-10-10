@@ -72,7 +72,7 @@ export function buildUnitPriceAgreement(h: AgreementHeader, rows: UnitPriceRowIn
     const qtyKnown = r.estimatedQuantity != null && r.estimatedQuantity > 0;
     if (!qtyKnown) missing++;
     return {
-      id: r.id || `wie${Date.now()}_${i}`,
+      id: r.id || stableId('wie'),
       workCategory: r.workCategory || '',
       description: r.description.trim(),
       unit: r.unit.trim(),
@@ -149,6 +149,10 @@ export interface LumpSumInput {
 export function buildLumpSumAgreement(h: AgreementHeader, input: LumpSumInput): { payload: AgreementPayload; check: PlanCheck } {
   if (!h.projectId || !h.subcontractor) throw new Error('Proje ve altyüklenici zorunlu');
   if (!(input.totalAmount > 0)) throw new Error('Anlaşılan toplam bedeli girin');
+  // Mevcut veri yapısında fiyat esası yalnızca aşama satırlarında saklanabiliyor.
+  // Aşama yoksa esas kaydedilemez → başarılı görünüp bilgiyi kaybetmek yerine reddet.
+  if (!input.plan.some((p) => (p.name || '').trim()))
+    throw new Error('Fiyat esası (KDV dahil/hariç) ödeme planı olmadan kalıcı saklanamıyor. En az bir aşama ekleyin (örn. "Tek ödeme — %100"). Anlaşma düzeyinde alan için veritabanı onayı bekleniyor.');
   const totalNet = r2(toNet(input.totalAmount, h.priceBasis, h.vatRate));
   const plan: PaymentInstallment[] = input.plan
     .filter((p) => (p.name || '').trim())
@@ -158,7 +162,7 @@ export function buildLumpSumAgreement(h: AgreementHeader, input: LumpSumInput): 
           ? r2((totalNet * (p.percentage || 0)) / 100)
           : r2(toNet(p.amount || 0, h.priceBasis, h.vatRate));
       return {
-        id: p.id || `pi${Date.now()}_${i}`,
+        id: p.id || stableId('pi'),
         description: p.name.trim(),
         amount: amountNet,
         currency: h.currency,
@@ -208,15 +212,67 @@ export function readPriceBasis(c: WorkEntry): StoredBasis {
   return b === 'kdv_haric' || b === 'kdv_dahil' ? b : 'bilinmiyor';
 }
 
-/** Anlaşma bedeli kesin mi? Birim fiyatta miktarı bilinmeyen kalem varsa tahmini/eksik. */
-export function agreementValueStatus(c: WorkEntry): 'kesin' | 'tahmini_eksik' | 'bedel_yok' {
+export type AgreementValueStatus = 'kesin' | 'tahmini_tam' | 'tahmini_kismi' | 'yalniz_birim_fiyat' | 'bedel_yok';
+
+/**
+ * Anlaşma bedelinin niteliği (mevcut kayıttan hesaplanır, saklanmaz):
+ *  - kesin: götürü bedel (toplam bedel girilmiş)
+ *  - tahmini_tam: birim fiyat, bütün kalemlerde tahmini miktar var → bedel tahmini
+ *  - tahmini_kismi: bazı kalemlerde miktar yok → yalnızca kısmi tahmini tutar
+ *  - yalniz_birim_fiyat: hiçbir kalemde miktar yok → yalnızca fiyat anlaşması
+ *  - bedel_yok: kalem/bedel girilmemiş
+ * Birim fiyatlı bir anlaşmanın bedeli için "kesin" ayrımı kalıcı alan olmadan yapılamaz.
+ */
+export function agreementValueStatus(c: WorkEntry): AgreementValueStatus {
   if (c.contractType === 'birim_fiyat') {
-    const items = c.workItemEntries || [];
-    if (!items.length) return 'bedel_yok';
-    if (items.some((i) => i.quantityUnknown || !(i.quantity > 0))) return 'tahmini_eksik';
-    return 'kesin';
+    const items = (c.workItemEntries || []).filter((i) => i && (i.description || i.unitPrice));
+    if (!items.length) return c.totalAmount > 0 ? 'tahmini_tam' : 'bedel_yok';
+    const known = items.filter((i) => !i.quantityUnknown && i.quantity > 0).length;
+    if (known === items.length) return 'tahmini_tam';
+    return known === 0 ? 'yalniz_birim_fiyat' : 'tahmini_kismi';
   }
   return c.totalAmount > 0 ? 'kesin' : 'bedel_yok';
+}
+
+/** Sözleşme bedeli toplamlarına (anlaşılan bedel, sözleşmeye kalan) dahil edilebilir mi */
+export function countsInContractTotal(c: WorkEntry): boolean {
+  const s = agreementValueStatus(c);
+  return s === 'kesin' || s === 'tahmini_tam';
+}
+
+export const valueStatusLabels: Record<AgreementValueStatus, string> = {
+  kesin: 'Kesin bedel',
+  tahmini_tam: 'Tahmini bedel (metrajlar girilmiş)',
+  tahmini_kismi: 'Kısmi tahmini tutar — bazı metrajlar eksik',
+  yalniz_birim_fiyat: 'Yalnızca birim fiyat anlaşması — bedel belirsiz',
+  bedel_yok: 'Bedel girilmemiş',
+};
+
+/** Bedel bilinmiyorsa gösterilecek etiket; biliniyorsa null (tutar gösterilir) */
+export function valueKnownLabel(s?: AgreementValueStatus): string | null {
+  if (s === 'tahmini_kismi') return 'Bedel kısmi';
+  if (s === 'yalniz_birim_fiyat') return 'Bedel belirsiz';
+  return null;
+}
+
+/** Kalıcı benzersiz kimlik (aşama/kalem bağlantıları için) */
+export function stableId(prefix: string): string {
+  const u = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  return `${prefix}_${u}`;
+}
+
+/** Hakediş kalemi için anlaşma fiyatının DEĞİŞMEZ kopyası (Aşama 4'te kullanılacak) */
+export function snapshotItemForHakedis(w: WorkItemEntry, quantity: number) {
+  return {
+    id: stableId('hi'),
+    workItemEntryId: w.id,
+    workCategory: w.workCategory,
+    description: w.description,
+    unit: w.unit,
+    unitPrice: w.unitPrice,
+    quantity,
+    amount: r2(quantity * w.unitPrice),
+  };
 }
 
 /**

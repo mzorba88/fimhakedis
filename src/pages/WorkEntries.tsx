@@ -210,9 +210,12 @@ export default function WorkEntries() {
   };
 
   const updatePaymentInstallment = (id: string, field: keyof PaymentInstallment, value: any) => {
-    setPaymentPlan(paymentPlan.map(p => 
-      p.id === id ? { ...p, [field]: value } : p
-    ));
+    setPaymentPlan(paymentPlan.map(p => {
+      if (p.id !== id) return p;
+      const next: PaymentInstallment = { ...p, [field]: value };
+      if (field === 'amount') { delete next.percentage; delete next.agreementTotalNet; delete next.enteredAgreementTotal; delete next.priceBasis; }
+      return next;
+    }));
   };
 
   const addWorkItemEntry = () => {
@@ -235,9 +238,14 @@ export default function WorkEntries() {
   };
 
   const updateWorkItemEntry = (id: string, field: keyof WorkItemEntry, value: any) => {
-    setWorkItemEntries(workItemEntries.map(w => 
-      w.id === id ? { ...w, [field]: value } : w
-    ));
+    setWorkItemEntries(workItemEntries.map(w => {
+      if (w.id !== id) return w;
+      const next: WorkItemEntry = { ...w, [field]: value };
+      // Eski formda fiyat değişirse İş Anlaşması'ndan gelen esas bilgisi artık güvenilir değil
+      if (field === 'unitPrice') { delete next.priceBasis; delete next.enteredUnitPrice; delete next.priceSource; }
+      if (field === 'quantity') next.quantityUnknown = !(Number(value) > 0);
+      return next;
+    }));
   };
 
   const handleCreateEntry = async () => {
