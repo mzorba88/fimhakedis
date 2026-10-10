@@ -1,3 +1,4 @@
+import { valueKnownLabel } from '@/utils/agreements';
 import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { sortNatural } from '@/lib/utils';
@@ -591,14 +592,14 @@ export function MultiProjectHakedisDialog({ open, onOpenChange }: Props) {
                     {row.rowMode === 'contract' && contract && account && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border bg-muted/30 p-2.5 text-xs">
                         <div><div className="text-muted-foreground">Sözleşme</div>
-                          <div className="font-medium">{formatCurrencyWithType(account.contractTotal, account.currency)}</div></div>
+                          <div className="font-medium">{valueKnownLabel(account.valueStatus) ?? formatCurrencyWithType(account.contractTotal, account.currency)}</div></div>
                         <div><div className="text-muted-foreground">Önceki hakediş</div>
                           <div className="font-medium">{formatCurrencyWithType(account.hakedisTotal, account.currency)}</div></div>
                         <div><div className="text-muted-foreground">Ödenen</div>
                           <div className="font-medium">{formatCurrencyWithType(account.paidTotal, account.currency)}</div></div>
                         <div><div className="text-muted-foreground">Sözleşmeye kalan</div>
                           <div className={`font-semibold ${account.remainingContract < 0 ? 'text-destructive' : 'text-primary'}`}>
-                            {formatCurrencyWithType(account.remainingContract, account.currency)}</div></div>
+                            {valueKnownLabel(account.valueStatus) ?? formatCurrencyWithType(account.remainingContract, account.currency)}</div></div>
                       </div>
                     )}
 

@@ -1,3 +1,4 @@
+import { valueKnownLabel } from '@/utils/agreements';
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/MainLayout';
@@ -1482,7 +1483,7 @@ export default function SubcontractorHakedis() {
                               : 'text-emerald-600'
                           }`}
                         >
-                          {formatCurrencyWithType(contractAccount.remainingContract, hakedisCurrency)}
+                          {valueKnownLabel(contractAccount.valueStatus) ?? formatCurrencyWithType(contractAccount.remainingContract, hakedisCurrency)}
                         </p>
                       </div>
                     </div>
