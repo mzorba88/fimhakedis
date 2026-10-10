@@ -37,6 +37,11 @@ export interface HakedisBreakdown {
   /** paid_amount alanında yazan ham değer — değiştirilmeden korunur */
   rawPaidAmount: number;
   reasons: string[];
+  /**
+   * Kesin hesap mahsubu yalnızca ara hakedişlerle eşleşiyorsa, aynı dosyadaki
+   * alelhesaplar tahakkuk değil AVANS ödemesi kabul edilir.
+   */
+  alelhesapAsAdvance?: boolean;
 }
 
 export interface CalcOptions {
@@ -78,6 +83,7 @@ export function analyzeHakedis(
   let basis: InputBasis;
   let periodAmount: number | null;
   let cumulativeProduction: number | null = null;
+  let alelAdvance = false;
 
   const override = opts.basisOverrides?.[h.id];
 
@@ -91,6 +97,10 @@ export function analyzeHakedis(
     const before = prev.filter((o) => (o.date || '') <= (h.date || ''));
     const after = prev.filter((o) => (o.date || '') > (h.date || ''));
     const prevSum = before.reduce((s, o) => s + (o.totalAmount || 0), 0);
+    const araSum = before
+      .filter((o) => o.hakedisType !== 'alelhesap')
+      .reduce((s, o) => s + (o.totalAmount || 0), 0);
+    const hasAlel = before.some((o) => o.hakedisType === 'alelhesap');
 
     if (after.length > 0) {
       basis = 'belirsiz';
@@ -105,6 +115,10 @@ export function analyzeHakedis(
       reasons.push('Önceki kayıtlar var ama mahsup 0 — tutar dönem mi kümülatif mi belli değil');
     } else if (Math.abs(offset - prevSum) <= tolFor(prevSum, opts.tolerance)) {
       basis = 'kumulatif';
+    } else if (hasAlel && araSum > 0 && Math.abs(offset - araSum) <= tolFor(araSum, opts.tolerance)) {
+      // Mahsup yalnızca ara hakedişleri düşmüş: alelhesaplar avans ödemesidir
+      basis = 'kumulatif';
+      alelAdvance = true;
     } else {
       basis = 'belirsiz';
       reasons.push('Mahsup tutarı önceki kayıtların toplamıyla uyuşmuyor');
@@ -147,6 +161,7 @@ export function analyzeHakedis(
     recordedPayment,
     rawPaidAmount: h.paidAmount || 0,
     reasons,
+    alelhesapAsAdvance: alelAdvance || undefined,
   };
 }
 
@@ -154,16 +169,36 @@ export interface FileSummary {
   subcontractor: string;
   projectId: string;
   currency: Currency;
+  /** Anlaşılan sözleşme bedeli */
   contractTotal: number;
+  /** Kümülatif gerçekleşen (onaylı) imalat */
   cumulativeProduction: number;
+  /** Onaylı dönem tahakkukları toplamı (avans niteliğindeki alelhesaplar hariç) */
   approvedAccrual: number;
+  araAccrual: number;
+  alelhesapAccrual: number;
+  kesinAccrual: number;
+  /** Avans niteliğindeki alelhesap ödemeleri (tahakkuk değil, yalnızca ödeme) */
+  advancePayments: number;
+  /** Onay bekleyen / revize — kesinleşmiş borç değil */
   pendingAmount: number;
+  /** Kayıtlı fiili ödemeler (avanslar dahil) */
   recordedPayment: number;
+  /** Kalan ödeme bakiyesi; negatifse fazla ödeme */
   remainingPayment: number;
+  /** Fazla Ödeme / Devreden Avans (pozitif sayı) */
+  overpayment: number;
   remainingContract: number;
+  /** Aynı tutarlar KDV dahil (her kaydın kendi KDV oranıyla) */
+  vat: { approvedAccrual: number; recordedPayment: number; remainingPayment: number; contractTotal: number };
   unresolved: HakedisBreakdown[];
   items: HakedisBreakdown[];
+  /** Belirsiz kayıt yoksa true — false ise bakiye kesin gösterilmemeli */
+  reliable: boolean;
 }
+
+const vatF = (r?: number | null) => 1 + (r && r > 0 ? r : 0) / 100;
+const fileKey = (sub: string, projectId: string, currency: string) => `${sub}__${projectId || 'none'}__${currency}`;
 
 /** Altyüklenici + proje + para birimi dosyası özeti. Para birimleri asla karışmaz. */
 export function summarizeFiles(
@@ -173,42 +208,148 @@ export function summarizeFiles(
 ): FileSummary[] {
   const map = new Map<string, FileSummary>();
   const ensure = (sub: string, projectId: string, currency: Currency) => {
-    const key = `${sub}__${projectId || 'none'}__${currency}`;
+    const key = fileKey(sub, projectId, currency);
     if (!map.has(key))
       map.set(key, {
         subcontractor: sub, projectId, currency,
-        contractTotal: 0, cumulativeProduction: 0, approvedAccrual: 0, pendingAmount: 0,
-        recordedPayment: 0, remainingPayment: 0, remainingContract: 0, unresolved: [], items: [],
+        contractTotal: 0, cumulativeProduction: 0, approvedAccrual: 0,
+        araAccrual: 0, alelhesapAccrual: 0, kesinAccrual: 0, advancePayments: 0,
+        pendingAmount: 0, recordedPayment: 0, remainingPayment: 0, overpayment: 0, remainingContract: 0,
+        vat: { approvedAccrual: 0, recordedPayment: 0, remainingPayment: 0, contractTotal: 0 },
+        unresolved: [], items: [], reliable: true,
       });
     return map.get(key)!;
   };
 
   contracts.forEach((c) => {
-    ensure(c.subcontractor, c.projectId, c.currency).contractTotal += c.totalAmount || 0;
+    const f = ensure(c.subcontractor, c.projectId, c.currency);
+    f.contractTotal += c.totalAmount || 0;
+    f.vat.contractTotal += (c.totalAmount || 0) * vatF(c.vatRate);
+  });
+
+  const breakdowns = new Map<string, HakedisBreakdown>();
+  hakedisler.forEach((h) => breakdowns.set(h.id, analyzeHakedis(h, hakedisler, opts)));
+
+  // Avans niteliğindeki alelhesaplar: mahsubu yalnız ara hakedişlerle eşleşen kesin hesabın dosyası
+  const advanceIds = new Set<string>();
+  hakedisler.forEach((h) => {
+    if (h.hakedisType === 'kesin_hesap' && breakdowns.get(h.id)?.alelhesapAsAdvance) {
+      sameFile(h, hakedisler)
+        .filter((o) => o.hakedisType === 'alelhesap' && (o.date || '') <= (h.date || ''))
+        .forEach((o) => advanceIds.add(o.id));
+    }
   });
 
   hakedisler.forEach((h) => {
     const f = ensure(h.subcontractor, h.projectId || '', h.currency);
-    const b = analyzeHakedis(h, hakedisler, opts);
+    const b = breakdowns.get(h.id)!;
     f.items.push(b);
     if (b.basis === 'belirsiz' || b.reasons.length > 0) f.unresolved.push(b);
     if (b.periodAmount === null) return;
+    const vf = vatF(h.vatRate);
+    const isAdvance = advanceIds.has(h.id);
     if (b.isApproved) {
-      f.approvedAccrual += b.periodAmount;
+      if (isAdvance) {
+        f.advancePayments += b.recordedPayment;
+      } else {
+        f.approvedAccrual += b.periodAmount;
+        f.vat.approvedAccrual += b.periodAmount * vf;
+        if (h.hakedisType === 'alelhesap') f.alelhesapAccrual += b.periodAmount;
+        else if (h.hakedisType === 'kesin_hesap') f.kesinAccrual += b.periodAmount;
+        else f.araAccrual += b.periodAmount;
+      }
+      // Ödeme her kayıtta bir kez sayılır (avans da olsa tahakkuk da olsa) — mükerrer düşüm yok
       f.recordedPayment += b.recordedPayment;
-    } else if (b.isPendingOrRevise) {
+      f.vat.recordedPayment += b.recordedPayment * vf;
+    } else if (b.isPendingOrRevise && !isAdvance) {
       f.pendingAmount += b.periodAmount;
     }
   });
 
   map.forEach((f) => {
-    // Kümülatif üretim: onaylı kesin hesap varsa onun kümülatifi + sonrası, yoksa onaylı dönemler toplamı
     f.cumulativeProduction = f.approvedAccrual;
     f.remainingPayment = f.approvedAccrual - f.recordedPayment;
+    f.vat.remainingPayment = f.vat.approvedAccrual - f.vat.recordedPayment;
+    f.overpayment = f.remainingPayment < -0.0049 ? -f.remainingPayment : 0;
     f.remainingContract = f.contractTotal > 0 ? f.contractTotal - f.cumulativeProduction : 0;
+    f.reliable = f.unresolved.length === 0;
   });
 
   return Array.from(map.values());
+}
+
+/* =========================================================================
+ * KESİN HESAP ÖZETİ (gelecek kesin hesap ekranı için — Aşama 1C)
+ * Girdi: nihai kümülatif imalat (KDV hariç). Önceki onaylı ara hakedişler
+ * tahakkuktan, avans niteliğindeki alelhesaplar yalnızca ödemeden düşülür.
+ * ========================================================================= */
+export interface FinalSettlementSummary {
+  finalProduction: number;
+  previousAraAccrual: number;
+  /** Tahakkuk niteliğindeki alelhesaplar (mahsuba girer) */
+  previousAlelhesapAccrual: number;
+  /** Onay bekleyen önceki kayıtlar — mahsuba girmez, uyarı verilir */
+  previousPending: number;
+  newPeriodAccrual: number;
+  advancePayments: number;
+  otherPayments: number;
+  /** Önceki ara hakedişlerden ödenmemiş kalan */
+  previousUnpaid: number;
+  remainingPayment: number;
+  overpayment: number;
+  vatRate: number;
+  excl: number;
+  vatAmount: number;
+  incl: number;
+  warnings: string[];
+}
+
+export function computeFinalSettlementSummary(params: {
+  finalProduction: number;
+  vatRate?: number;
+  /** Aynı dosyadaki önceki kayıtlar (ara/alelhesap) */
+  previous: SubcontractorHakedis[];
+  /** 'tahakkuk': alelhesap ölçülmüş işe karşılık; 'avans': yalnızca ödeme; undefined: belirsiz */
+  alelhesapNature?: 'tahakkuk' | 'avans';
+}): FinalSettlementSummary {
+  const { finalProduction, vatRate = 0, previous, alelhesapNature } = params;
+  const warnings: string[] = [];
+  const approved = previous.filter((h) => h.approvalStatus === 'onaylandi' && h.hakedisType !== 'kesin_hesap');
+  const pending = previous.filter(
+    (h) => (h.approvalStatus === 'onay_bekliyor' || h.approvalStatus === 'revize') && h.hakedisType !== 'kesin_hesap'
+  );
+  const ara = approved.filter((h) => h.hakedisType !== 'alelhesap');
+  const alel = approved.filter((h) => h.hakedisType === 'alelhesap');
+  const pay = (h: SubcontractorHakedis) => h.paidAmount || 0;
+
+  if (alel.length > 0 && !alelhesapNature)
+    warnings.push('Alelhesabın niteliği (avans / tahakkuk) belirlenmedi — otomatik mahsup yapılmadı, manuel inceleme gerekli');
+  if (pending.length > 0)
+    warnings.push(`${pending.length} önceki kayıt onay bekliyor — onaylanınca mahsuba eklenmeli`);
+
+  const previousAraAccrual = ara.reduce((s, h) => s + (h.totalAmount || 0), 0);
+  const previousAlelhesapAccrual = alelhesapNature === 'tahakkuk' ? alel.reduce((s, h) => s + (h.totalAmount || 0), 0) : 0;
+  const advancePayments = alelhesapNature === 'avans' ? alel.reduce((s, h) => s + pay(h), 0) : 0;
+  const alelPaidAsAccrual = alelhesapNature === 'tahakkuk' ? alel.reduce((s, h) => s + pay(h), 0) : 0;
+  const otherPayments = ara.reduce((s, h) => s + pay(h), 0) + alelPaidAsAccrual;
+  const previousUnpaid = ara.reduce((s, h) => s + Math.max(0, (h.totalAmount || 0) - pay(h)), 0);
+
+  const newPeriodAccrual = finalProduction - previousAraAccrual - previousAlelhesapAccrual;
+  if (newPeriodAccrual < 0) warnings.push('Nihai imalat önceki tahakkuklardan küçük — manuel inceleme gerekli');
+
+  const blocked = alel.length > 0 && !alelhesapNature;
+  const remainingRaw = finalProduction - otherPayments - advancePayments;
+  const remainingPayment = blocked ? NaN : remainingRaw;
+  const overpayment = !blocked && remainingRaw < -0.0049 ? -remainingRaw : 0;
+  const excl = newPeriodAccrual;
+  const vatAmount = excl * (vatRate > 0 ? vatRate : 0) / 100;
+
+  return {
+    finalProduction, previousAraAccrual, previousAlelhesapAccrual,
+    previousPending: pending.reduce((s, h) => s + (h.totalAmount || 0), 0),
+    newPeriodAccrual, advancePayments, otherPayments, previousUnpaid,
+    remainingPayment, overpayment, vatRate, excl, vatAmount, incl: excl + vatAmount, warnings,
+  };
 }
 
 /* =========================================================================
@@ -347,7 +488,7 @@ export function compareOldNew(
         difference: f.remainingPayment - oldRemaining,
         pendingAmount: f.pendingAmount,
         unresolved: f.unresolved,
-        reliable: f.unresolved.length === 0,
+        reliable: f.reliable,
       };
     });
 }
