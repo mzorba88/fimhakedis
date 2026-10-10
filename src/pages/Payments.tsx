@@ -10,6 +10,7 @@ import { useHakedisStore } from '@/store/hakedisStore';
 import { formatCurrencyWithType, formatDate, contractTypeLabels, formatCurrency, Currency } from '@/types/hakedis';
 import { generateHakedisPDF } from '@/utils/pdfGenerator';
 import { exportSingleHakedisToExcel } from '@/utils/excelExport';
+import { planPayment, buildFullPaymentUpdate, buildPartialPaymentUpdate } from '@/utils/hakedisCalculations';
 import {
   Search,
   Wallet,
@@ -208,22 +209,25 @@ export default function Payments() {
 
   const handleMarkHakedisAsPaid = async (hakedisId: string) => {
     const hakedis = subcontractorHakedisler.find(h => h.id === hakedisId);
+    if (!hakedis) return;
+    // Yalnızca bu hakedişin kalan dönem tahakkuku ödenir (KDV hariç); brüt kümülatif tutar yazılmaz
+    const { update, plan } = buildFullPaymentUpdate(hakedis, subcontractorHakedisler);
+    if (!update) {
+      toast.error(plan.reason || 'Bu hakediş için otomatik ödeme yapılamaz');
+      return;
+    }
     try {
       await updateSubcontractorHakedis(hakedisId, {
-        paymentStatus: 'odendi',
-        paidAmount: hakedis?.totalAmount || 0,
+        ...update,
         paidDate: new Date().toISOString(),
-        isUrgent: false,
       });
-      if (hakedis) {
-        await addActivityLog(
-          'hakedis_paid',
-          `${hakedis.hakedisNo} hakediş tam ödendi olarak işaretlendi`,
-          `Altyüklenici: ${hakedis.subcontractor} - Tutar: ${formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}`,
-          hakedisId,
-          'hakedis'
-        );
-      }
+      await addActivityLog(
+        'hakedis_paid',
+        `${hakedis.hakedisNo} hakediş tam ödendi olarak işaretlendi`,
+        `Altyüklenici: ${hakedis.subcontractor} - Bu işlemde ödenen: ${formatCurrencyWithType(plan.remaining || 0, hakedis.currency)} - Ödemeye esas tutar: ${formatCurrencyWithType(update.paidAmount, hakedis.currency)}`,
+        hakedisId,
+        'hakedis'
+      );
       toast.success('Hakediş tam ödendi olarak işaretlendi');
     } catch (error) {
       console.error('Error marking hakedis as paid:', error);
@@ -237,32 +241,28 @@ export default function Payments() {
     if (!hakedis) return;
 
     const amount = parseFloat(partialPaymentAmount);
-    const remaining = hakedis.totalAmount - (hakedis.paidAmount || 0);
-    
-    if (isNaN(amount) || amount <= 0) {
-      toast.error('Geçerli bir tutar giriniz');
-      return;
-    }
-    if (amount > remaining) {
-      toast.error(`Tutar kalan bakiyeden (${formatCurrencyWithType(remaining, hakedis.currency)}) fazla olamaz`);
+    const { update, plan, error } = buildPartialPaymentUpdate(hakedis, subcontractorHakedisler, amount);
+    if (!update) {
+      toast.error(
+        error === 'Tutar bu hakedişin kalan ödemesinden fazla olamaz' && plan.remaining != null
+          ? `Tutar kalan bakiyeden (${formatCurrencyWithType(plan.remaining, hakedis.currency)}) fazla olamaz`
+          : error || 'Ödeme yapılamaz'
+      );
       return;
     }
 
     try {
-      const newPaidAmount = (hakedis.paidAmount || 0) + amount;
-      const isFullyPaid = newPaidAmount >= hakedis.totalAmount;
-      
+      const newPaidAmount = update.paidAmount;
+      const isFullyPaid = update.paymentStatus === 'odendi';
       await updateSubcontractorHakedis(selectedHakedisForPartial, {
-        paidAmount: newPaidAmount,
-        paymentStatus: isFullyPaid ? 'odendi' : 'kismen_odendi',
+        ...update,
         paidDate: new Date().toISOString(),
-        ...(isFullyPaid ? { isUrgent: false } : {}),
       });
 
       await addActivityLog(
         'hakedis_paid',
         `${hakedis.hakedisNo} hakediş kısmi ödeme yapıldı`,
-        `Altyüklenici: ${hakedis.subcontractor} - Ödenen: ${formatCurrencyWithType(amount, hakedis.currency)} - Kalan: ${formatCurrencyWithType(hakedis.totalAmount - newPaidAmount, hakedis.currency)}`,
+        `Altyüklenici: ${hakedis.subcontractor} - Ödenen: ${formatCurrencyWithType(amount, hakedis.currency)} - Kalan: ${formatCurrencyWithType((plan.payableAmount || 0) - newPaidAmount, hakedis.currency)}`,
         selectedHakedisForPartial,
         'hakedis'
       );
@@ -641,6 +641,8 @@ export default function Payments() {
                                 const isPaid = hakedis.paymentStatus === 'odendi';
                                 const paidAmount = hakedis.paidAmount || 0;
                                 const remainingAmount = hakedis.totalAmount - paidAmount;
+                                const payPlan = planPayment(hakedis, subcontractorHakedisler);
+                                const payBlocked = !isPaid && !payPlan.allowed;
 
                                 return (
                                   <motion.tr
@@ -713,10 +715,20 @@ export default function Payments() {
                                     {canManagePayments && (
                                       <td className="px-4 py-3 text-center">
                                         <div className="flex items-center justify-end gap-1.5">
-                                          {!isPaid && (
+                                          {payBlocked && (
+                                            <span
+                                              className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                              title={payPlan.reason}
+                                            >
+                                              <AlertTriangle className="h-3.5 w-3.5" />
+                                              Manuel inceleme
+                                            </span>
+                                          )}
+                                          {!isPaid && !payBlocked && (
                                             <>
                                               <Button
                                                 size="sm"
+                                                title={payPlan.payableAmount != null && Math.abs(payPlan.payableAmount - hakedis.totalAmount) > 0.01 ? `Ödemeye esas (mahsup sonrası): ${formatCurrencyWithType(payPlan.payableAmount, hakedis.currency)}` : undefined}
                                                 onClick={() => handleMarkHakedisAsPaid(hakedis.id)}
                                                 className="gap-1.5 bg-status-paid hover:bg-status-paid/90"
                                               >
@@ -893,9 +905,15 @@ export default function Payments() {
               const contract = workEntries.find(c => c.id === hakedis.contractId);
               const contractAmount = contract?.totalAmount || 0;
               const paidSoFar = hakedis.paidAmount || 0;
-              const remaining = hakedis.totalAmount - paidSoFar;
+              const pPlan = planPayment(hakedis, subcontractorHakedisler);
+              const remaining = pPlan.remaining ?? 0;
               return (
                 <div className="space-y-4">
+                  {pPlan.payableAmount != null && Math.abs(pPlan.payableAmount - hakedis.totalAmount) > 0.01 && (
+                    <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                      Kesin hesap: ödemeye esas tutar önceki hakedişler mahsup edildikten sonra {formatCurrencyWithType(pPlan.payableAmount, hakedis.currency)} (KDV hariç).
+                    </p>
+                  )}
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
                     <h3 className="text-sm font-semibold text-foreground mb-3">Genel Bilgiler</h3>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">

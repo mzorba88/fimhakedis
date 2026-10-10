@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { SubcontractorHakedis, WorkEntry } from '@/types/hakedis';
-import { analyzeHakedis, summarizeFiles } from './hakedisCalculations';
+import { analyzeHakedis, summarizeFiles, planPayment, buildFullPaymentUpdate, buildPartialPaymentUpdate, compareOldNew } from './hakedisCalculations';
 import { getSubcontractorLedgers, computeFinalSettlement } from './contractAccounting';
 import { sumByCurrency, formatCurrencyTotals } from './currencyTotals';
 
@@ -50,10 +50,12 @@ describe('B. kesin hesap 30.000 ödendiğinde', () => {
     const [f] = summarizeFiles(list, [contract]);
     expect(f.remainingPayment).toBe(20000);
   });
-  it('ESKİ hesap: odendi durumunda brüt 100.000 ödenmiş sayılıyor', () => {
+  it('1B: paidOf artık odendi kesin hesabın brüt tutarını ödeme saymıyor (eskiden 150.000)', () => {
     const list = scenarioAB({ paidAmount: 0, paymentStatus: 'odendi' });
     const [led] = getSubcontractorLedgers('ACME', [contract], list, info);
-    expect(led.paidTotal).toBe(150000); // 50.000 + 100.000 brüt
+    expect(led.paidTotal).toBe(50000);
+    const legacy = compareOldNew(list, [contract])[0];
+    expect(legacy.oldPaid).toBe(150000); // eski mantık karşılaştırma için korunuyor
     const [f] = summarizeFiles(list, [contract]);
     expect(f.recordedPayment).toBe(80000); // 50.000 + 30.000 net
   });
@@ -163,5 +165,85 @@ describe('Şüpheli kayıt kalıpları', () => {
     const b = analyzeHakedis(list[1], list);
     expect(b.rawPaidAmount).toBe(38181.82);
     expect(b.reasons.join()).toContain('Kayıtlı ödeme dönem hakedişinden büyük');
+  });
+});
+
+/* ======================= Aşama 1B: ödeme güvenliği ======================= */
+describe('1B. Tam Ödeme güvenliği', () => {
+  it('kısmen ödenmiş kesin hesapta yalnızca kalan güvenilir tutar ödenir', () => {
+    const list = scenarioAB({ paidAmount: 10000, paymentStatus: 'kismen_odendi' });
+    const { update, plan } = buildFullPaymentUpdate(list[1], list);
+    expect(plan.remaining).toBe(20000);
+    expect(update).toEqual({ paymentStatus: 'odendi', paidAmount: 30000, isUrgent: false });
+  });
+  it('kümülatif kesin hesabın brüt tutarı ödeme olarak yazılmaz', () => {
+    const list = scenarioAB();
+    const { update } = buildFullPaymentUpdate(list[1], list);
+    expect(update?.paidAmount).toBe(30000);
+    expect(update?.paidAmount).not.toBe(100000);
+  });
+  it('önceki ara hakedişlerden kalan borç silinmez', () => {
+    const list = scenarioAB();
+    const { update } = buildFullPaymentUpdate(list[1], list);
+    const after = list.map((x) => (x.id === list[1].id ? { ...x, ...update! } : x));
+    expect(after[0].paidAmount).toBe(50000);
+    expect(summarizeFiles(after, [contract])[0].remainingPayment).toBe(20000);
+  });
+  it('zaten ödenmiş hakedişe tekrar ödeme yazılmaz', () => {
+    const list = [h({ totalAmount: 1000, paidAmount: 1000, paymentStatus: 'odendi' })];
+    expect(buildFullPaymentUpdate(list[0], list).update).toBeNull();
+    expect(buildPartialPaymentUpdate(list[0], list, 10).update).toBeNull();
+  });
+  it('belirsiz kesin hesap için otomatik ödeme engellenir', () => {
+    const list = [h({ hakedisType: 'kesin_hesap', totalAmount: 4500, offsetAmount: 4500, currency: 'GBP' })];
+    const r = buildFullPaymentUpdate(list[0], list);
+    expect(r.update).toBeNull();
+    expect(r.plan.reason).toContain('Manuel inceleme');
+    expect(buildPartialPaymentUpdate(list[0], list, 100).update).toBeNull();
+  });
+  it('KDV: ödeme KDV hariç matrah üzerinden yazılır, KDV dahil tutar karışmaz', () => {
+    const list = [h({ totalAmount: 10000, vatRate: 20 })];
+    const { update } = buildFullPaymentUpdate(list[0], list);
+    expect(update?.paidAmount).toBe(10000); // 12.000 değil
+    expect(buildPartialPaymentUpdate(list[0], list, 12000).update).toBeNull();
+  });
+  it('eski ödeme kayıtları değiştirilmez (girdi nesneleri mutasyona uğramaz)', () => {
+    const list = scenarioAB({ paidAmount: 38000, paymentStatus: 'odendi' });
+    const snap = JSON.stringify(list);
+    summarizeFiles(list, [contract]); compareOldNew(list, [contract]);
+    list.forEach((x) => planPayment(x, list));
+    expect(JSON.stringify(list)).toBe(snap);
+  });
+  it('normal ara hakediş, alelhesap ve sözleşmesiz hakediş eskisi gibi tam tutarı öder', () => {
+    const ara = h({ totalAmount: 5000 });
+    const alel = h({ hakedisType: 'alelhesap', totalAmount: 3000 });
+    const small = h({ contractId: '', contractNo: '', totalAmount: 800 });
+    const list = [ara, alel, small];
+    list.forEach((x) => expect(buildFullPaymentUpdate(x, list).update?.paidAmount).toBe(x.totalAmount));
+    expect(buildPartialPaymentUpdate(ara, list, 2000).update).toEqual({ paymentStatus: 'kismen_odendi', paidAmount: 2000 });
+    expect(buildPartialPaymentUpdate(ara, list, 5000).update?.paymentStatus).toBe('odendi');
+  });
+  it('onay bekleyen / revize hakedişe ödeme yapılamaz', () => {
+    const list = [h({ totalAmount: 1000, approvalStatus: 'onay_bekliyor' }), h({ totalAmount: 1000, approvalStatus: 'revize' })];
+    list.forEach((x) => expect(buildFullPaymentUpdate(x, list).update).toBeNull());
+  });
+  it('kayıtlı ödeme net tutardan büyükse (SZ-1037 tipi) kısmi ödeme de engellenir', () => {
+    const list = scenarioAB({ paidAmount: 90000, paymentStatus: 'kismen_odendi' });
+    const p = planPayment(list[1], list);
+    expect(p.allowed).toBe(false);
+    expect(p.reason).toContain('manuel inceleme');
+  });
+});
+
+describe('1B. Eski/yeni karşılaştırma', () => {
+  it('belirsiz kayıt varsa satır güvenilir değil olarak işaretlenir', () => {
+    const list = [
+      h({ date: '2026-01-10', totalAmount: 70000 }),
+      h({ hakedisType: 'kesin_hesap', date: '2026-03-01', totalAmount: 30000 }),
+    ];
+    const [r] = compareOldNew(list, [contract]);
+    expect(r.reliable).toBe(false);
+    expect(r.oldApproved).toBe(100000);
+    expect(r.newApprovedAccrual).toBe(70000);
   });
 });
