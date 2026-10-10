@@ -53,7 +53,7 @@ describe('B. kesin hesap 30.000 ödendiğinde', () => {
   it('1B: paidOf artık odendi kesin hesabın brüt tutarını ödeme saymıyor (eskiden 150.000)', () => {
     const list = scenarioAB({ paidAmount: 0, paymentStatus: 'odendi' });
     const [led] = getSubcontractorLedgers('ACME', [contract], list, info);
-    expect(led.paidTotal).toBe(50000);
+    expect(led.paidTotal).toBe(80000); // 1C: merkezi motor — net 30.000 (brüt 100.000 değil)
     const legacy = compareOldNew(list, [contract])[0];
     expect(legacy.oldPaid).toBe(150000); // eski mantık karşılaştırma için korunuyor
     const [f] = summarizeFiles(list, [contract]);
