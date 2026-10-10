@@ -124,6 +124,6 @@ describe('Aşama 4A — yeni hakediş', () => {
     const p = previousQuantities('c1', [oldH, { ...oldH, id: 'x', approvalStatus: 'revize' }, { ...oldH, id: 'y', approvalStatus: 'onay_bekliyor' }]);
     expect(p.approved.get('wie_a')).toBe(10); expect(p.pending.get('wie_a')).toBe(10);
     expect(JSON.stringify(oldH)).toBe(snap);
-    expect(summarizeFiles([unitC], [oldH]).length).toBeGreaterThan(0);
+    expect(summarizeFiles([oldH], [unitC]).length).toBeGreaterThan(0);
   });
 });
