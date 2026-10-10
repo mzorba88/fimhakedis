@@ -68,6 +68,7 @@ import {
 } from '@/components/ui/select';
 import { SubcontractorCombobox } from '@/components/SubcontractorCombobox';
 import { toast } from 'sonner';
+import { legacyPricingChanged, readPriceBasis, reconcileLegacyEdit, type LegacyBasisChoice } from '@/utils/agreements';
 
 export default function WorkEntries() {
   const { 
@@ -111,6 +112,8 @@ export default function WorkEntries() {
 
   // VAT inclusive checkbox
   const [vatInclusive, setVatInclusive] = useState(false);
+  // Fiyat değiştiğinde mevcut KDV esası için kullanıcı seçimi (Aşama 3E)
+  const [basisChoice, setBasisChoice] = useState<LegacyBasisChoice | ''>('');
 
   // Götürü Bedel - Payment Plan
   const [paymentPlan, setPaymentPlan] = useState<PaymentInstallment[]>([]);
@@ -266,8 +269,23 @@ export default function WorkEntries() {
 
     try {
       if (isEditMode && selectedEntry) {
+        const editedPricing = {
+          contractType: newEntry.contractType,
+          vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+          totalAmount: amounts.totalAmount,
+          paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+          workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+        };
+        let agreementFields;
+        try {
+          agreementFields = reconcileLegacyEdit(selectedEntry, editedPricing, basisChoice || undefined);
+        } catch (e: any) {
+          toast.error(e?.message || 'KDV fiyat esasını seçin');
+          return;
+        }
         // Update existing entry
         await updateWorkEntry(selectedEntry.id, {
+          ...agreementFields,
           projectId: newEntry.projectId,
           workCategory: newEntry.workCategory,
           subcontractor: selectedSubcontractor,
@@ -358,6 +376,7 @@ export default function WorkEntries() {
     setIsEditMode(false);
     setSelectedEntry(null);
     setVatInclusive(false);
+    setBasisChoice('');
     setNewEntry({
       projectId: '',
       workCategory: '',
@@ -1046,6 +1065,27 @@ export default function WorkEntries() {
               </div>
             )}
           </div>
+          {isEditMode && selectedEntry && readPriceBasis(selectedEntry) !== 'bilinmiyor' && legacyPricingChanged(selectedEntry, {
+            contractType: newEntry.contractType,
+            vatRate: newEntry.vatRate !== '' ? Number(newEntry.vatRate) : undefined,
+            totalAmount: amounts.totalAmount,
+            paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
+            workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
+          }) && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="mb-2 font-medium">Fiyat bilgisi değişti — KDV fiyat esası (kayıtlı: {readPriceBasis(selectedEntry) === 'kdv_dahil' ? 'KDV dahil' : 'KDV hariç'})</p>
+              <Select value={basisChoice || undefined} onValueChange={(v) => setBasisChoice(v as LegacyBasisChoice)}>
+                <SelectTrigger className="bg-background"><SelectValue placeholder="Seçin (zorunlu)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="koru">Mevcut esası koru</SelectItem>
+                  <SelectItem value="kdv_haric">KDV hariç olarak güncelle</SelectItem>
+                  <SelectItem value="kdv_dahil">KDV dahil olarak güncelle</SelectItem>
+                  <SelectItem value="bilinmiyor">Bilinmiyor olarak işaretle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseDialog}>
               İptal
