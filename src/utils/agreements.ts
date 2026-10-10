@@ -354,3 +354,84 @@ export function validatePlanLinks(contract: WorkEntry, links: PlanLink[], hakedi
 export function linkedPlanItems(contractId: string, hakedisler: { contractId: string; planLinks?: PlanLink[]; approvalStatus: string }[]) {
   return new Set(hakedisler.filter((h) => h.contractId === contractId && h.approvalStatus !== 'revize').flatMap((h) => (h.planLinks || []).map((l) => l.planItemId)));
 }
+
+// ---------------- Maliyet raporu: bedel türüne göre ayrım (Aşama 3E) ----------------
+export interface ValueBucket { amount: number; count: number; contractNos: string[] }
+export interface CurrencyValueBreakdown {
+  currency: Currency;
+  kesin: ValueBucket;            // götürü bedel + kesin beyanlı birim fiyat
+  tahmini: ValueBucket;          // tüm metrajlar var, kesin değil
+  kismi: ValueBucket;            // girilmiş kısmi tutar (bazı metrajlar yok)
+  belirsiz: ValueBucket;         // yalnızca birim fiyat — tutar yok
+  bedelYok: ValueBucket;
+}
+const emptyBucket = (): ValueBucket => ({ amount: 0, count: 0, contractNos: [] });
+
+/**
+ * Sözleşmeleri para birimi + bedel türüne göre ayırır. Yalnızca GÖSTERİM içindir:
+ * cari hesap, hakediş ve ödeme toplamlarını değiştirmez. Revize (reddedilmiş) sözleşmeler hariç.
+ */
+export function contractValueBreakdown(contracts: WorkEntry[]): CurrencyValueBreakdown[] {
+  const map = new Map<Currency, CurrencyValueBreakdown>();
+  contracts.forEach((c) => {
+    if (c.approvalStatus === 'revize') return;
+    if (!map.has(c.currency)) map.set(c.currency, { currency: c.currency, kesin: emptyBucket(), tahmini: emptyBucket(), kismi: emptyBucket(), belirsiz: emptyBucket(), bedelYok: emptyBucket() });
+    const b = map.get(c.currency)!;
+    const s = agreementValueStatus(c);
+    const key = s === 'kesin' ? 'kesin' : s === 'tahmini_tam' ? 'tahmini' : s === 'tahmini_kismi' ? 'kismi' : s === 'yalniz_birim_fiyat' ? 'belirsiz' : 'bedelYok';
+    const bucket = b[key];
+    bucket.count++;
+    bucket.contractNos.push(c.contractNo);
+    if (key !== 'belirsiz' && key !== 'bedelYok') bucket.amount = r2(bucket.amount + (c.totalAmount || 0));
+  });
+  return [...map.values()];
+}
+
+// ---------------- Eski Sözleşmeler formu uyumu (Aşama 3E) ----------------
+export type LegacyBasisChoice = 'koru' | 'kdv_haric' | 'kdv_dahil' | 'bilinmiyor';
+
+const pricingSignature = (e: Pick<WorkEntry, 'contractType' | 'vatRate' | 'totalAmount' | 'paymentPlan' | 'workItemEntries'>) =>
+  JSON.stringify({
+    t: e.contractType,
+    v: e.vatRate ?? null,
+    a: r2(e.totalAmount || 0),
+    p: (e.paymentPlan || []).map((x) => r2(x.amount || 0)),
+    w: (e.workItemEntries || []).map((x) => [r2(x.unitPrice || 0), x.quantity || 0]),
+  });
+
+/** Eski formda fiyat, miktar, KDV oranı, tür veya toplam değişti mi */
+export function legacyPricingChanged(original: WorkEntry, edited: Pick<WorkEntry, 'contractType' | 'vatRate' | 'totalAmount' | 'paymentPlan' | 'workItemEntries'>): boolean {
+  return pricingSignature(original) !== pricingSignature(edited);
+}
+
+/**
+ * Eski Sözleşmeler formundan kaydedilirken price_basis / value_status güncellemesi.
+ * - Fiyatlandırma değişmediyse alanlara DOKUNULMAZ (boş nesne) → açıklama/tarih düzenlemesi esası silmez.
+ * - Değiştiyse kullanıcı seçimi zorunludur (choice yoksa hata).
+ * - Bedel durumu yeniden değerlendirilir; "kesin" yalnızca metrajlar tam kaldıysa ve kullanıcı esası koruduysa sürer.
+ * - Eski NULL değerler asla otomatik doldurulmaz.
+ */
+export function reconcileLegacyEdit(
+  original: WorkEntry,
+  edited: Pick<WorkEntry, 'contractType' | 'vatRate' | 'totalAmount' | 'paymentPlan' | 'workItemEntries'>,
+  choice?: LegacyBasisChoice,
+): Pick<WorkEntry, 'priceBasis' | 'valueStatus'> {
+  if (!legacyPricingChanged(original, edited)) return {};
+  const hadBasis = readPriceBasis(original) !== 'bilinmiyor';
+  const hadStatus = original.valueStatus != null;
+  if (!hadBasis && !hadStatus) return {}; // eski kayıt: bilinmiyor kalır
+  if (hadBasis && !choice) throw new Error('Fiyat değişti: mevcut KDV fiyat esasını koruyun veya güncelleyin');
+  const out: Pick<WorkEntry, 'priceBasis' | 'valueStatus'> = {};
+  if (hadBasis || choice) {
+    if (choice === 'kdv_haric' || choice === 'kdv_dahil') out.priceBasis = choice;
+    else if (choice === 'bilinmiyor') out.priceBasis = null;
+    else if (choice === 'koru' && original.priceBasis) out.priceBasis = original.priceBasis;
+    else if (choice === 'koru') { const b = readPriceBasis(original); out.priceBasis = b === 'bilinmiyor' ? null : b; }
+  }
+  if (hadStatus) {
+    const probe = { ...original, ...edited, valueStatus: choice === 'koru' ? original.valueStatus : null } as WorkEntry;
+    const s = agreementValueStatus(probe);
+    out.valueStatus = s === 'bedel_yok' ? null : s;
+  }
+  return out;
+}
