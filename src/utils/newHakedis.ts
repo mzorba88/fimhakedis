@@ -220,6 +220,10 @@ export function buildNewHakedis(i: BuildInput): BuildResult {
   if (i.kind === 'kesin_hesap') errors.push('Kesin hesap bu ekranda hazırlanmaz; mevcut formu kullanın (Aşama 4B)');
   if (i.kind !== 'sozlesmesiz' && !i.contract) errors.push('İş anlaşması seçilmedi');
   if (!i.projectId) errors.push('Proje seçilmedi');
+  if (i.basis === 'kdv_dahil' && !(Number(i.vatRate) > 0)) {
+    errors.push('KDV dahil giriş için KDV oranı gerekli');
+    return { data: null, errors, warnings, mainNet: 0, extraNet: 0 };
+  }
 
   const extraItems = buildExtraItems(i.extraRows, i.basis, i.vatRate);
   const extraNet = r2(extraItems.reduce((s, x) => s + x.amount, 0));

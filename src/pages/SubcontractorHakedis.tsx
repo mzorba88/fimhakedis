@@ -987,6 +987,9 @@ export default function SubcontractorHakedis() {
               <Plus className="h-4 w-4" />
               Yeni Hakediş
             </Button>
+            <Button variant="outline" asChild className="gap-2 w-full sm:w-auto touch-target">
+              <Link to="/hakedis-yeni"><Plus className="h-4 w-4" />Hızlı Hakediş (Anlaşmadan)</Link>
+            </Button>
           </div>
         </div>
 
