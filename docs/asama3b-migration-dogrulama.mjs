@@ -10,7 +10,6 @@ INSERT INTO contracts (contract_no, total_amount) VALUES ('SZ-ESKI', 1000);
 INSERT INTO hakedisler (hakedis_no) VALUES ('KH-ESKI');`);
 const sql = readFileSync(new URL('./asama3b-migration-taslagi.sql', import.meta.url), 'utf8');
 await db.exec(sql);
-await db.exec(sql.replace(/ADD CONSTRAINT/g, 'ADD CONSTRAINT IF NOT EXISTS_SKIP').includes('x') ? '' : ''); // no-op
 const r = await db.query(`SELECT price_basis, value_status FROM contracts WHERE contract_no='SZ-ESKI'`);
 if (r.rows[0].price_basis !== null || r.rows[0].value_status !== null) throw new Error('eski kayıt NULL değil');
 await db.exec(`INSERT INTO contracts (contract_no, price_basis, value_status) VALUES ('SZ-YENI','kdv_dahil','kesin');
