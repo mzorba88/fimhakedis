@@ -21,6 +21,7 @@ export interface ContractAccount {
   paidTotal: number;           // Gerçekten ödenen tutar
   remainingApproved: number;   // Onaylanan - Ödenen (ödenmeyi bekleyen)
   remainingContract: number;   // Sözleşme - Hakediş Toplamı (sözleşmeye kalan)
+  valueStatus?: import('@/utils/agreements').AgreementValueStatus;
   currency: Currency;
   hakedisCount: number;
   isOverPaid: boolean;
