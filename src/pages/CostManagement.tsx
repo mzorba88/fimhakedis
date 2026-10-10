@@ -19,7 +19,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, ArrowUpDown, ExternalLink } f
 type VatMode = 'excl' | 'incl';
 type SortKey = 'subcontractor' | 'contract' | 'approved' | 'paid' | 'remaining';
 
-const fmt = (n: number, c: Currency) => formatCurrencyWithType(n || 0, c);
+const fmt = (n: number, c: Currency) => formatCurrencyWithType(Math.abs(n || 0) < 0.005 ? 0 : n, c);
 
 function Num({ value, currency, className }: { value: number; currency: Currency; className?: string }) {
   return <span className={cn('tabular-nums whitespace-nowrap', className)}>{fmt(value, currency)}</span>;
@@ -268,7 +268,7 @@ export default function CostManagement() {
                             </div>
                           </td>
                           <td className="hidden px-3 py-2 text-muted-foreground md:table-cell">{r.category || '—'}</td>
-                          <td className="px-3 py-2 text-right">{r.contract.excl > 0 ? <Num value={v(r.contract)} currency={r.currency} /> : <span className="text-muted-foreground">Sözleşmesiz</span>}</td>
+                          <td className="px-3 py-2 text-right">{r.contract.excl > 0 ? <Num value={v(r.contract)} currency={r.currency} /> : <span className="text-muted-foreground">{r.contracts.length ? 'Bedel girilmemiş' : 'Sözleşmesiz'}</span>}</td>
                           <td className="px-3 py-2 text-right"><Num value={v(r.approved)} currency={r.currency} /></td>
                           <td className="px-3 py-2 text-right"><Num value={v(r.paid)} currency={r.currency} /></td>
                           <td className="px-3 py-2 text-right font-medium">
