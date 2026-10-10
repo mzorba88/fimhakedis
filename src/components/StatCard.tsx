@@ -26,7 +26,7 @@ export function StatCard({ title, value, subtitle, icon, trend, className }: Sta
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
           <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="text-lg sm:text-2xl font-semibold tracking-tight text-foreground truncate">{value}</p>
+          <p className="text-lg sm:text-2xl font-semibold tracking-tight text-foreground break-words">{value}</p>
           {subtitle && (
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{subtitle}</p>
           )}

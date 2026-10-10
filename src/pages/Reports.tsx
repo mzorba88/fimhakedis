@@ -1,3 +1,4 @@
+import { sumByCurrency, subtractTotals, formatCurrencyTotals } from '@/utils/currencyTotals';
 import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural } from '@/lib/utils';
@@ -292,11 +293,11 @@ export default function Reports() {
   // Calculate summary for each project
   const projectSummaries = projects.map(project => {
     const contracts = workEntries.filter(e => e.projectId === project.id);
-    const contractTotal = contracts.reduce((sum, e) => sum + e.totalAmount, 0);
+    const contractTotal = sumByCurrency(contracts, e => e.totalAmount, e => e.currency);
     const hakedisler = getProjectHakedisler(project.id);
-    const hakedisTotal = hakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
-    const paidTotal = hakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-    const remainingBalance = hakedisTotal - paidTotal;
+    const hakedisTotal = sumByCurrency(hakedisler, h => h.totalAmount, h => h.currency);
+    const paidTotal = sumByCurrency(hakedisler, h => h.paidAmount || 0, h => h.currency);
+    const remainingBalance = subtractTotals(hakedisTotal, paidTotal);
     
     return {
       project,
@@ -352,19 +353,19 @@ export default function Reports() {
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Sözleşme Tutarı</span>
-                  <span className="font-medium">{formatCurrency(summary.contractTotal)}</span>
+                  <span className="font-medium">{formatCurrencyTotals(summary.contractTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Hakediş Tutarı</span>
-                  <span className="font-medium">{formatCurrency(summary.hakedisTotal)}</span>
+                  <span className="font-medium">{formatCurrencyTotals(summary.hakedisTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Ödenen</span>
-                  <span className="font-medium text-status-paid">{formatCurrency(summary.paidTotal)}</span>
+                  <span className="font-medium text-status-paid">{formatCurrencyTotals(summary.paidTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Kalan Bakiye</span>
-                  <span className="font-medium text-status-pending">{formatCurrency(summary.remainingBalance)}</span>
+                  <span className="font-medium text-status-pending">{formatCurrencyTotals(summary.remainingBalance)}</span>
                 </div>
               </div>
 
