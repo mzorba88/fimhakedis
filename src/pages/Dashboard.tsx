@@ -3,7 +3,8 @@ import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useHakedisStore } from '@/store/hakedisStore';
 import { calculateDashboardStats } from '@/data/mockData';
-import { formatCurrency, formatDate, projectStatusLabels } from '@/types/hakedis';
+import { formatCurrencyWithType, formatDate, projectStatusLabels, type Currency } from '@/types/hakedis';
+import { sumByCurrency, subtractTotals, formatCurrencyTotals } from '@/utils/currencyTotals';
 import { 
   FolderKanban, 
   Clock, 
@@ -19,6 +20,12 @@ import { motion } from 'framer-motion';
 export default function Dashboard() {
   const { projects, workEntries } = useHakedisStore();
   const stats = calculateDashboardStats(projects, workEntries);
+  // Para birimleri ayrı tutulur; kur olmadan dönüşüm/toplama yapılmaz
+  const approvedList = workEntries.filter(e => e.approvalStatus === 'onaylandi');
+  const approvedByCur = sumByCurrency(approvedList, e => e.totalAmount, e => e.currency);
+  const paidByCur = sumByCurrency(approvedList.filter(e => e.paymentStatus === 'odendi'), e => e.totalAmount, e => e.currency);
+  const remainingByCur = subtractTotals(approvedByCur, paidByCur);
+  const fmt = (amount: number, currency?: string) => formatCurrencyWithType(amount || 0, (currency || 'TRY') as Currency);
 
   const recentEntries = [...workEntries]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -53,14 +60,14 @@ export default function Dashboard() {
           />
           <StatCard
             title="Onaylanan Hakediş"
-            value={formatCurrency(stats.approvedTotal)}
+            value={formatCurrencyTotals(approvedByCur)}
             icon={<CheckCircle2 className="h-5 w-5" />}
             trend={{ value: 12, label: 'bu ay', positive: true }}
           />
           <StatCard
             title="Gerçekleşen Ödeme"
-            value={formatCurrency(stats.paidTotal)}
-            subtitle={`Kalan: ${formatCurrency(stats.remainingBalance)}`}
+            value={formatCurrencyTotals(paidByCur)}
+            subtitle={`Kalan: ${formatCurrencyTotals(remainingByCur)}`}
             icon={<Wallet className="h-5 w-5" />}
           />
         </div>
@@ -98,7 +105,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                       <span className="text-xs sm:text-sm font-medium text-foreground">
-                        {formatCurrency(entry.totalAmount)}
+                        {fmt(entry.totalAmount, entry.currency)}
                       </span>
                       <StatusBadge status={entry.approvalStatus} size="sm" />
                     </div>
@@ -144,7 +151,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-2 text-right">
                       <p className="text-xs sm:text-sm font-medium text-foreground">
-                        {formatCurrency(entry.totalAmount)}
+                        {fmt(entry.totalAmount, entry.currency)}
                       </p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {formatDate(entry.date)}
@@ -181,9 +188,11 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 sm:grid-cols-2 lg:grid-cols-3">
             {activeProjects.slice(0, 6).map((project) => {
               const projectEntries = workEntries.filter(e => e.projectId === project.id);
-              const approvedTotal = projectEntries
-                .filter(e => e.approvalStatus === 'onaylandi')
-                .reduce((sum, e) => sum + e.totalAmount, 0);
+              const approvedTotal = sumByCurrency(
+                projectEntries.filter(e => e.approvalStatus === 'onaylandi'),
+                e => e.totalAmount,
+                e => e.currency
+              );
 
               return (
                 <Link
@@ -208,7 +217,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-2 sm:mt-3 flex justify-between text-[10px] sm:text-xs">
                     <span className="text-muted-foreground">Onaylanan</span>
-                    <span className="font-medium">{formatCurrency(approvedTotal)}</span>
+                    <span className="font-medium">{formatCurrencyTotals(approvedTotal)}</span>
                   </div>
                 </Link>
               );
