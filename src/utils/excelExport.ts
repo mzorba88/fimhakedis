@@ -1,3 +1,4 @@
+import { getSubcontractorLedgers } from '@/utils/contractAccounting';
 import { 
   formatCurrencyWithType, 
   formatDate, 
@@ -272,21 +273,35 @@ export async function exportSubcontractorReportToExcel(
   if (filters?.paymentStatus && filters.paymentStatus !== 'all') summary.push(['Ödeme Durumu Filtresi', filters.paymentStatus]);
   if (filters?.search) summary.push(['Arama', filters.search]);
 
-  summary.push([], ['FİNANSAL ÖZET (KDV DAHİL)']);
-  summary.push(['Para Birimi', 'Sözleşme Toplamı', 'Hakediş Toplamı', 'Ödenen', 'Kalan Bakiye']);
-  if (currencies.length === 0) {
-    summary.push(['-', 0, 0, 0, 0]);
+  // Merkezi hesap: proje + para birimi bazında iş dosyaları (para birimleri karışmaz)
+  const ledgers = getSubcontractorLedgers(subcontractorName, contracts, hakedisler, (id?: string) => {
+    const p = projects.find(x => x.id === id);
+    return { name: p?.projectName || 'Proje belirtilmemiş', code: p?.projectCode };
+  });
+  summary.push([], ['FİNANSAL ÖZET (KDV DAHİL — her kaydın kendi KDV oranıyla)']);
+  summary.push(['Proje', 'Para Birimi', 'Sözleşme Toplamı', 'Onaylı Tahakkuk', 'Kayıtlı Ödeme', 'Kalan Ödeme Bakiyesi', 'Sözleşmeye Kalan', 'Not']);
+  if (ledgers.length === 0) {
+    summary.push(['-', '-', 0, 0, 0, 0, 0, '']);
   } else {
-    currencies.forEach(cur => {
-      const ct = contractTotals[cur] || 0;
-      const ht = hakedisTotals[cur] || 0;
-      const pt = paidTotals[cur] || 0;
-      summary.push([cur, ct, ht, pt, ct - pt]);
+    ledgers.forEach(led => {
+      summary.push([
+        `${led.projectCode ? led.projectCode + ' - ' : ''}${led.projectName}`,
+        led.currency,
+        led.contractTotalIncl,
+        led.approvedTotalIncl,
+        led.paidTotalIncl,
+        led.reliable ? led.remainingApprovedIncl : 'KESİN DEĞİL',
+        led.remainingContractIncl,
+        !led.reliable
+          ? `Manuel inceleme: ${led.unresolvedReasons.join('; ')}`
+          : led.overpayment > 0 ? 'Fazla Ödeme / Devreden Avans' : '',
+      ]);
     });
   }
+  void currencies; void paidTotals; void contractTotals; void hakedisTotals;
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summary);
-  wsSummary['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
+  wsSummary['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 50 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Özet');
 
   // ---- Sözleşmeler sheet ----

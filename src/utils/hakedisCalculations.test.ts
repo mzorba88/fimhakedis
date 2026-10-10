@@ -38,9 +38,10 @@ describe('A. kümülatif kesin hesap', () => {
     expect(f.remainingPayment).toBe(50000);
     expect(f.remainingContract).toBe(50000);
   });
-  it('ESKİ hesap: brüt + ara düz toplanıyor (170.000) — fark belgelendi', () => {
+  it('1C: cari hesap artık brüt + arayı düz toplamıyor (eskiden 170.000, şimdi 100.000)', () => {
     const [led] = getSubcontractorLedgers('ACME', [contract], scenarioAB(), info);
-    expect(led.hakedisTotal).toBe(170000);
+    expect(led.hakedisTotal).toBe(100000);
+    expect(compareOldNew(scenarioAB(), [contract])[0].oldApproved).toBe(170000);
   });
 });
 
@@ -53,7 +54,7 @@ describe('B. kesin hesap 30.000 ödendiğinde', () => {
   it('1B: paidOf artık odendi kesin hesabın brüt tutarını ödeme saymıyor (eskiden 150.000)', () => {
     const list = scenarioAB({ paidAmount: 0, paymentStatus: 'odendi' });
     const [led] = getSubcontractorLedgers('ACME', [contract], list, info);
-    expect(led.paidTotal).toBe(50000);
+    expect(led.paidTotal).toBe(80000); // 1C: merkezi motor — net 30.000 (brüt 100.000 değil)
     const legacy = compareOldNew(list, [contract])[0];
     expect(legacy.oldPaid).toBe(150000); // eski mantık karşılaştırma için korunuyor
     const [f] = summarizeFiles(list, [contract]);

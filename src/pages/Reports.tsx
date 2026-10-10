@@ -1,4 +1,5 @@
-import { sumByCurrency, subtractTotals, formatCurrencyTotals } from '@/utils/currencyTotals';
+import { subtractTotals, formatCurrencyTotals, type CurrencyTotals } from '@/utils/currencyTotals';
+import { summarizeFiles } from '@/utils/hakedisCalculations';
 import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
 import { sortNatural } from '@/lib/utils';
@@ -48,6 +49,27 @@ export default function Reports() {
     );
   };
 
+  // Merkezi hesap motoru: proje bazında, para birimleri ayrı
+  const projectFinance = (projectId: string) => {
+    const files = summarizeFiles(
+      subcontractorHakedisler.filter(h => h.projectId === projectId),
+      workEntries.filter(e => e.projectId === projectId)
+    );
+    const contractTotal: CurrencyTotals = {};
+    const hakedisTotal: CurrencyTotals = {};
+    const paidTotal: CurrencyTotals = {};
+    files.forEach(f => {
+      contractTotal[f.currency] = (contractTotal[f.currency] || 0) + f.contractTotal;
+      hakedisTotal[f.currency] = (hakedisTotal[f.currency] || 0) + f.approvedAccrual;
+      paidTotal[f.currency] = (paidTotal[f.currency] || 0) + f.recordedPayment;
+    });
+    return {
+      contractTotal, hakedisTotal, paidTotal,
+      remainingBalance: subtractTotals(hakedisTotal, paidTotal),
+      reliable: files.every(f => f.reliable),
+    };
+  };
+
   const getProjectHakedisler = (projectId: string) => {
     return subcontractorHakedisler.filter(
       h => h.projectId === projectId && h.approvalStatus === 'onaylandi'
@@ -76,12 +98,13 @@ export default function Reports() {
     const cumulativeTotal = previousTotal + currentPeriodTotal;
 
     // Financial summary
-    const allContracts = workEntries.filter(e => e.projectId === selectedProjectId);
-    const contractTotal = allContracts.reduce((sum, e) => sum + e.totalAmount, 0);
-    const allHakedisler = getProjectHakedisler(selectedProjectId);
-    const hakedisTotal = allHakedisler.reduce((sum, h) => sum + h.totalAmount, 0);
-    const paidTotal = allHakedisler.reduce((sum, h) => sum + (h.paidAmount || 0), 0);
-    const remainingBalance = hakedisTotal - paidTotal;
+    const fin = projectFinance(selectedProjectId);
+    const contractTotal = formatCurrencyTotals(fin.contractTotal);
+    const hakedisTotal = formatCurrencyTotals(fin.hakedisTotal);
+    const paidTotal = formatCurrencyTotals(fin.paidTotal);
+    const remainingBalance = fin.reliable
+      ? formatCurrencyTotals(fin.remainingBalance)
+      : `${formatCurrencyTotals(fin.remainingBalance)} (KESIN DEGIL - manuel inceleme)`;
 
     return {
       project: selectedProject,
@@ -162,10 +185,10 @@ export default function Reports() {
       autoTable(doc, {
         startY: y,
         body: [
-          ['Toplam Sozlesme Tutari', formatCurrency(data.contractTotal)],
-          ['Toplam Hakedis Tutari', formatCurrency(data.hakedisTotal)],
-          ['Odenen Tutar', formatCurrency(data.paidTotal)],
-          ['Kalan Bakiye', formatCurrency(data.remainingBalance)],
+          ['Toplam Sozlesme Tutari (KDV haric)', data.contractTotal],
+          ['Onayli Tahakkuk (KDV haric)', data.hakedisTotal],
+          ['Kayitli Odeme (KDV haric)', data.paidTotal],
+          ['Kalan Odeme Bakiyesi (KDV haric)', data.remainingBalance],
         ],
         theme: 'grid',
         styles: { font: 'Roboto', fontSize: 9, cellPadding: 3 },
@@ -241,10 +264,10 @@ export default function Reports() {
     const financialData = [
       [],
       ['FİNANSAL ÖZET'],
-      ['Toplam Sözleşme Tutarı', data.contractTotal],
-      ['Toplam Hakediş Tutarı', data.hakedisTotal],
-      ['Ödenen Tutar', data.paidTotal],
-      ['Kalan Bakiye', data.remainingBalance],
+      ['Toplam Sözleşme Tutarı (KDV hariç)', data.contractTotal],
+      ['Onaylı Tahakkuk (KDV hariç)', data.hakedisTotal],
+      ['Kayıtlı Ödeme (KDV hariç)', data.paidTotal],
+      ['Kalan Ödeme Bakiyesi (KDV hariç)', data.remainingBalance],
     ];
 
     // Period summary
@@ -293,13 +316,9 @@ export default function Reports() {
   // Calculate summary for each project
   const projectSummaries = projects.map(project => {
     const contracts = workEntries.filter(e => e.projectId === project.id);
-    const contractTotal = sumByCurrency(contracts, e => e.totalAmount, e => e.currency);
-    const hakedisler = getProjectHakedisler(project.id);
-    const hakedisTotal = sumByCurrency(hakedisler, h => h.totalAmount, h => h.currency);
-    const paidTotal = sumByCurrency(hakedisler, h => h.paidAmount || 0, h => h.currency);
-    const remainingBalance = subtractTotals(hakedisTotal, paidTotal);
-    
+    const { contractTotal, hakedisTotal, paidTotal, remainingBalance, reliable } = projectFinance(project.id);
     return {
+      reliable,
       project,
       contractTotal,
       hakedisTotal,
@@ -356,16 +375,18 @@ export default function Reports() {
                   <span className="font-medium">{formatCurrencyTotals(summary.contractTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Hakediş Tutarı</span>
+                  <span className="text-muted-foreground">Onaylı Tahakkuk</span>
                   <span className="font-medium">{formatCurrencyTotals(summary.hakedisTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ödenen</span>
+                  <span className="text-muted-foreground">Kayıtlı Ödeme</span>
                   <span className="font-medium text-status-paid">{formatCurrencyTotals(summary.paidTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Kalan Bakiye</span>
-                  <span className="font-medium text-status-pending">{formatCurrencyTotals(summary.remainingBalance)}</span>
+                  <span className="font-medium text-status-pending text-right">
+                    {summary.reliable ? formatCurrencyTotals(summary.remainingBalance) : <span className="text-amber-600">Kesin değil — manuel inceleme</span>}
+                  </span>
                 </div>
               </div>
 
