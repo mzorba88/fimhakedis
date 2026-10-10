@@ -1,5 +1,17 @@
 import type { WorkEntry, SubcontractorHakedis, Currency } from '@/types/hakedis';
 
+/**
+ * Kayıtlı ödeme: paid_amount alanı esastır. 'odendi' durumu brüt total_amount'u
+ * otomatik ödeme saymaz. Yalnızca paid_amount hiç yazılmamış eski 'odendi'
+ * kayıtlarda (kesin hesap değilse) total_amount kullanılır.
+ */
+export const paidOf = (h: SubcontractorHakedis): number => {
+  const raw = h.paidAmount || 0;
+  if (raw > 0) return raw;
+  if (h.paymentStatus === 'odendi' && h.hakedisType !== 'kesin_hesap') return h.totalAmount || 0;
+  return 0;
+};
+
 export interface ContractAccount {
   contractTotal: number;
   hakedisTotal: number;        // Tüm hakedişlerin toplamı (onaya bakılmaksızın)
@@ -31,8 +43,7 @@ export function getContractAccount(
     .reduce((s, h) => s + (h.totalAmount || 0), 0);
 
   const paidTotal = related.reduce((s, h) => {
-    if (h.paymentStatus === 'odendi') return s + (h.totalAmount || 0);
-    return s + (h.paidAmount || 0);
+    return s + paidOf(h);
   }, 0);
 
   const contractTotal = contract.totalAmount || 0;
@@ -150,7 +161,7 @@ export function getSubcontractorProjectAccounts(
         acc.approvedTotal += h.totalAmount || 0;
         acc.approvedTotalIncl += withVat(h.totalAmount || 0, h.vatRate);
       }
-      const paid = h.paymentStatus === 'odendi' ? (h.totalAmount || 0) : (h.paidAmount || 0);
+      const paid = paidOf(h);
       acc.paidTotal += paid;
       acc.paidTotalIncl += withVat(paid, h.vatRate);
     });
@@ -237,8 +248,6 @@ export interface SubcontractorLedger {
 const vatFactor = (vatRate?: number | null) =>
   1 + (vatRate && vatRate > 0 ? vatRate : 0) / 100;
 
-const paidOf = (h: SubcontractorHakedis) =>
-  h.paymentStatus === 'odendi' ? (h.totalAmount || 0) : (h.paidAmount || 0);
 
 const typeLabels: Record<string, string> = {
   ara_hakedis: 'Ara Hakediş',
