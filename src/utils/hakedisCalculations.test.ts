@@ -38,9 +38,10 @@ describe('A. kümülatif kesin hesap', () => {
     expect(f.remainingPayment).toBe(50000);
     expect(f.remainingContract).toBe(50000);
   });
-  it('ESKİ hesap: brüt + ara düz toplanıyor (170.000) — fark belgelendi', () => {
+  it('1C: cari hesap artık brüt + arayı düz toplamıyor (eskiden 170.000, şimdi 100.000)', () => {
     const [led] = getSubcontractorLedgers('ACME', [contract], scenarioAB(), info);
-    expect(led.hakedisTotal).toBe(170000);
+    expect(led.hakedisTotal).toBe(100000);
+    expect(compareOldNew(scenarioAB(), [contract])[0].oldApproved).toBe(170000);
   });
 });
 
