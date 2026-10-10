@@ -108,6 +108,10 @@ export interface WorkEntry {
   paymentPlan?: PaymentInstallment[];
   // For Birim Fiyat
   workItemEntries?: WorkItemEntry[];
+  /** Anlaşma düzeyi fiyat esası (contracts.price_basis). Eski kayıtlarda yok = bilinmiyor */
+  priceBasis?: 'kdv_haric' | 'kdv_dahil';
+  /** Beyan edilen bedel niteliği (contracts.value_status). Yoksa kayıttan hesaplanır */
+  valueStatus?: 'kesin' | 'tahmini_tam' | 'tahmini_kismi' | 'yalniz_birim_fiyat';
   createdBy: string;
   approvalStatus: ApprovalStatus;
   approvedBy?: string;
@@ -140,6 +144,8 @@ export interface SubcontractorHakedis {
   hakedisItems?: HakedisItem[];
   // Extra work items outside contract
   extraItems?: ExtraWorkItem[];
+  /** Götürü bedel ödeme aşaması bağlantıları (hakedisler.plan_links). Eski kayıtlarda yok */
+  planLinks?: PlanLink[];
   totalAmount: number;
   paidAmount: number; // Amount paid so far (for partial payments)
   /** Kesin hesapta önceki hakediş/alelhesaplardan mahsup edilen tutar (KDV hariç) */
@@ -157,6 +163,12 @@ export interface SubcontractorHakedis {
   updatedAt: string;
   // Warning note when total hakedis exceeds contract amount
   contractExceededNote?: string;
+}
+
+/** Hakediş ↔ ödeme aşaması bağlantısı; amount KDV hariç, kısmi olabilir */
+export interface PlanLink {
+  planItemId: string;
+  amount: number;
 }
 
 // Hakediş item for Birim Fiyat contracts

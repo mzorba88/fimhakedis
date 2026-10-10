@@ -1,3 +1,4 @@
+import { SCHEMA_3B_APPLIED } from '@/config/schemaFeatures';
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Project, 
@@ -27,6 +28,17 @@ const toProject = (row: any): Project => ({
   updatedAt: row.updated_at,
 });
 
+/** Yeni kolonlar yalnızca şema uygulandığında ve değer verildiğinde yazılır */
+export const schema3bContractFields = (e: Partial<WorkEntry>, applied = SCHEMA_3B_APPLIED): Record<string, unknown> => {
+  if (!applied) return {};
+  const out: Record<string, unknown> = {};
+  if (e.priceBasis !== undefined) out.price_basis = e.priceBasis;
+  if (e.valueStatus !== undefined) out.value_status = e.valueStatus;
+  return out;
+};
+export const schema3bHakedisFields = (h: Partial<SubcontractorHakedis>, applied = SCHEMA_3B_APPLIED): Record<string, unknown> =>
+  applied && h.planLinks !== undefined ? { plan_links: h.planLinks } : {};
+
 // Helper to convert database row to WorkEntry type
 const toWorkEntry = (row: any): WorkEntry => ({
   id: row.id,
@@ -42,6 +54,9 @@ const toWorkEntry = (row: any): WorkEntry => ({
   vatRate: row.vat_rate,
   paymentPlan: row.payment_plan as PaymentInstallment[] | undefined,
   workItemEntries: row.work_item_entries as WorkItemEntry[] | undefined,
+  // Aşama 3B kolonları: yoksa / NULL ise undefined (= bilinmiyor / hesapla)
+  priceBasis: row.price_basis === 'kdv_haric' || row.price_basis === 'kdv_dahil' ? row.price_basis : undefined,
+  valueStatus: ['kesin', 'tahmini_tam', 'tahmini_kismi', 'yalniz_birim_fiyat'].includes(row.value_status) ? row.value_status : undefined,
   createdBy: row.created_by,
   approvalStatus: row.approval_status as ApprovalStatus,
   approvedBy: row.approved_by,
@@ -71,6 +86,7 @@ const toHakedis = (row: any): SubcontractorHakedis => ({
   paymentAmount: row.payment_amount ? Number(row.payment_amount) : undefined,
   hakedisItems: row.hakedis_items as HakedisItem[] | undefined,
   extraItems: row.extra_items as ExtraWorkItem[] | undefined,
+  planLinks: Array.isArray(row.plan_links) ? row.plan_links : undefined,
   totalAmount: Number(row.total_amount),
   paidAmount: Number(row.paid_amount || 0),
   offsetAmount: row.offset_amount !== null && row.offset_amount !== undefined ? Number(row.offset_amount) : undefined,
@@ -185,7 +201,8 @@ export const createContract = async (entry: Omit<WorkEntry, 'id' | 'createdAt' |
       approval_status: entry.approvalStatus,
       total_amount: entry.totalAmount,
       payment_status: entry.paymentStatus,
-    })
+      ...schema3bContractFields(entry),
+    } as any)
     .select()
     .single();
   
@@ -206,6 +223,7 @@ export const updateContract = async (id: string, updates: Partial<WorkEntry>): P
   if (updates.vatRate !== undefined) dbUpdates.vat_rate = updates.vatRate;
   if (updates.paymentPlan !== undefined) dbUpdates.payment_plan = updates.paymentPlan;
   if (updates.workItemEntries !== undefined) dbUpdates.work_item_entries = updates.workItemEntries;
+  Object.assign(dbUpdates, schema3bContractFields(updates));
   if (updates.approvalStatus !== undefined) dbUpdates.approval_status = updates.approvalStatus;
   if (updates.approvedBy !== undefined) dbUpdates.approved_by = updates.approvedBy;
   if (updates.approvalDate !== undefined) dbUpdates.approval_date = updates.approvalDate;
@@ -262,6 +280,7 @@ export const createHakedis = async (hakedis: Omit<SubcontractorHakedis, 'id' | '
     paid_amount: hakedis.paidAmount || 0,
     offset_amount: hakedis.offsetAmount ?? 0,
     is_urgent: hakedis.isUrgent ?? false,
+    ...schema3bHakedisFields(hakedis),
     contract_exceeded_note: hakedis.contractExceededNote,
   };
   // Only set nullable FK fields if they have values
@@ -304,6 +323,7 @@ export const updateHakedis = async (id: string, updates: Partial<SubcontractorHa
   if (updates.offsetAmount !== undefined) dbUpdates.offset_amount = updates.offsetAmount;
   if (updates.paidDate !== undefined) dbUpdates.paid_date = updates.paidDate;
   if (updates.isUrgent !== undefined) dbUpdates.is_urgent = updates.isUrgent;
+  Object.assign(dbUpdates, schema3bHakedisFields(updates));
   if (updates.contractExceededNote !== undefined) dbUpdates.contract_exceeded_note = updates.contractExceededNote;
 
   const { error } = await supabase

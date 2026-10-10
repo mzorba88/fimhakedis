@@ -7,7 +7,8 @@
  * (mevcut sistemle aynı). Kullanıcının girdiği orijinal fiyat ve esası
  * `enteredUnitPrice` / `priceBasis` olarak ayrıca saklanır.
  */
-import type { Currency, PaymentInstallment, WorkEntry, WorkItemEntry } from '@/types/hakedis';
+import type { Currency, PaymentInstallment, PlanLink, WorkEntry, WorkItemEntry } from '@/types/hakedis';
+import { SCHEMA_3B_APPLIED } from '@/config/schemaFeatures';
 
 export type EnteredBasis = 'kdv_haric' | 'kdv_dahil';
 
@@ -59,7 +60,15 @@ export interface UnitPriceResult {
   missingQuantityCount: number;
 }
 
-export function buildUnitPriceAgreement(h: AgreementHeader, rows: UnitPriceRowInput[]): UnitPriceResult {
+export interface UnitPriceOptions {
+  /** Kullanıcı bedeli "kesin" beyan etti (yalnızca tüm metrajlar girilmişse geçerli) */
+  declaredFixed?: boolean;
+  /** Anlaşma düzeyi alanlar yazılabilir mi (şema uygulandı mı) */
+  schemaApplied?: boolean;
+}
+
+export function buildUnitPriceAgreement(h: AgreementHeader, rows: UnitPriceRowInput[], opts: UnitPriceOptions = {}): UnitPriceResult {
+  const schemaApplied = opts.schemaApplied ?? SCHEMA_3B_APPLIED;
   const clean = rows.filter((r) => (r.description || '').trim());
   if (!h.projectId || !h.subcontractor) throw new Error('Proje ve altyüklenici zorunlu');
   if (!clean.length) throw new Error('En az bir fiyat kalemi girin');
@@ -87,8 +96,12 @@ export function buildUnitPriceAgreement(h: AgreementHeader, rows: UnitPriceRowIn
   });
   const total = r2(items.reduce((s, w) => s + w.quantity * w.unitPrice, 0));
   const categories = [...new Set(items.map((i) => i.workCategory).filter(Boolean))];
+  if (opts.declaredFixed && missing > 0) throw new Error('Kesin bedel beyanı için tüm kalemlerde metraj girilmeli');
+  if (opts.declaredFixed && !schemaApplied) throw new Error('Kesin bedel beyanı veritabanı alanı (value_status) uygulanmadan saklanamıyor');
+  const valueStatus: WorkEntry['valueStatus'] = missing === 0 ? (opts.declaredFixed ? 'kesin' : 'tahmini_tam') : missing === items.length ? 'yalniz_birim_fiyat' : 'tahmini_kismi';
   return {
     payload: {
+      ...(schemaApplied ? { priceBasis: h.priceBasis, valueStatus } : {}),
       contractNo: h.contractNo,
       projectId: h.projectId,
       workCategory: categories[0] || 'Sınıflandırılmamış',
@@ -146,12 +159,16 @@ export interface LumpSumInput {
   planComplete: boolean;
 }
 
-export function buildLumpSumAgreement(h: AgreementHeader, input: LumpSumInput): { payload: AgreementPayload; check: PlanCheck } {
+export function buildLumpSumAgreement(
+  h: AgreementHeader, input: LumpSumInput, opts: { schemaApplied?: boolean } = {},
+): { payload: AgreementPayload; check: PlanCheck } {
+  const schemaApplied = opts.schemaApplied ?? SCHEMA_3B_APPLIED;
   if (!h.projectId || !h.subcontractor) throw new Error('Proje ve altyüklenici zorunlu');
   if (!(input.totalAmount > 0)) throw new Error('Anlaşılan toplam bedeli girin');
-  // Mevcut veri yapısında fiyat esası yalnızca aşama satırlarında saklanabiliyor.
+  // Şema uygulanmadıysa fiyat esası yalnızca aşama satırlarında saklanabilir.
   // Aşama yoksa esas kaydedilemez → başarılı görünüp bilgiyi kaybetmek yerine reddet.
-  if (!input.plan.some((p) => (p.name || '').trim()))
+  // Şema uygulandıysa esas contracts.price_basis'te tutulur; plan opsiyoneldir.
+  if (!schemaApplied && !input.plan.some((p) => (p.name || '').trim()))
     throw new Error('Fiyat esası (KDV dahil/hariç) ödeme planı olmadan kalıcı saklanamıyor. En az bir aşama ekleyin (örn. "Tek ödeme — %100"). Anlaşma düzeyinde alan için veritabanı onayı bekleniyor.');
   const totalNet = r2(toNet(input.totalAmount, h.priceBasis, h.vatRate));
   const plan: PaymentInstallment[] = input.plan
@@ -193,6 +210,7 @@ export function buildLumpSumAgreement(h: AgreementHeader, input: LumpSumInput): 
       vatRate: h.vatRate,
       description: h.description || undefined,
       paymentPlan: plan,
+      ...(schemaApplied ? { priceBasis: h.priceBasis, valueStatus: 'kesin' as const } : {}),
       createdBy: h.createdBy,
       approvalStatus: 'onay_bekliyor',
       totalAmount: totalNet,
@@ -207,6 +225,8 @@ export type StoredBasis = EnteredBasis | 'bilinmiyor';
 
 /** Kaydedilmiş fiyat esasını okur. Eski kayıtlarda 'bilinmiyor' döner — varsayım yapılmaz. */
 export function readPriceBasis(c: WorkEntry): StoredBasis {
+  // Öncelik: anlaşma düzeyi kolon (Aşama 3B); yoksa JSON satırları; o da yoksa bilinmiyor
+  if (c.priceBasis === 'kdv_haric' || c.priceBasis === 'kdv_dahil') return c.priceBasis;
   const src = c.contractType === 'birim_fiyat' ? c.workItemEntries : c.paymentPlan;
   const b = (src || []).map((x: any) => x?.priceBasis).find(Boolean);
   return b === 'kdv_haric' || b === 'kdv_dahil' ? b : 'bilinmiyor';
@@ -228,7 +248,9 @@ export function agreementValueStatus(c: WorkEntry): AgreementValueStatus {
     const items = (c.workItemEntries || []).filter((i) => i && (i.description || i.unitPrice));
     if (!items.length) return c.totalAmount > 0 ? 'tahmini_tam' : 'bedel_yok';
     const known = items.filter((i) => !i.quantityUnknown && i.quantity > 0).length;
-    if (known === items.length) return 'tahmini_tam';
+    // Kayıttaki metraj durumu esastır; "kesin" beyanı yalnızca tüm metrajlar varsa kabul edilir
+    // (beyan ile kayıt çelişirse daha temkinli olan kayıt durumu kullanılır).
+    if (known === items.length) return c.valueStatus === 'kesin' && c.totalAmount > 0 ? 'kesin' : 'tahmini_tam';
     return known === 0 ? 'yalniz_birim_fiyat' : 'tahmini_kismi';
   }
   return c.totalAmount > 0 ? 'kesin' : 'bedel_yok';
@@ -241,7 +263,7 @@ export function countsInContractTotal(c: WorkEntry): boolean {
 }
 
 export const valueStatusLabels: Record<AgreementValueStatus, string> = {
-  kesin: 'Kesin bedel',
+  kesin: 'Kesin bedel',  // birim fiyatta: kullanıcı beyanı + tüm metrajlar
   tahmini_tam: 'Tahmini bedel (metrajlar girilmiş)',
   tahmini_kismi: 'Kısmi tahmini tutar — bazı metrajlar eksik',
   yalniz_birim_fiyat: 'Yalnızca birim fiyat anlaşması — bedel belirsiz',
@@ -275,10 +297,60 @@ export function snapshotItemForHakedis(w: WorkItemEntry, quantity: number) {
   };
 }
 
+// ---------------- Ödeme aşaması bağlantıları (Aşama 4 hazırlığı) ----------------
+type LinkSource = { id: string; contractId: string; approvalStatus: string; hakedisNo?: string; planLinks?: PlanLink[] };
+
+export interface PlanItemUsage {
+  planItemId: string;
+  name: string;
+  planned: number;        // aşama tutarı (KDV hariç)
+  approved: number;       // onaylı hakedişlere bağlanan
+  pending: number;        // onay bekleyenlere bağlanan
+  remaining: number;      // planned − approved − pending (negatif olmaz değil; aşım görünür kalır)
+  hakedisNos: string[];
+}
+
 /**
- * Hakedişe bağlanmış götürü aşamaları (sonraki aşama için hazır).
- * Bağlantı hakediş kalemindeki `planItemId` alanından okunur; mevcut kayıtlarda yoktur.
+ * Aşama başına bağlanan tutarlar. "revize" (reddedilmiş) hakedişler sayılmaz — bağlantıyı serbest bırakır.
+ * Eski kayıtlarda planLinks yoktur → tüm aşamalar "bağlanmamış" görünür, hata oluşmaz.
  */
-export function linkedPlanItems(contractId: string, hakedisler: { contractId: string; planItemId?: string; approvalStatus: string }[]) {
-  return new Set(hakedisler.filter((h) => h.contractId === contractId && h.planItemId).map((h) => h.planItemId as string));
+export function planItemUsage(contract: WorkEntry, hakedisler: LinkSource[], excludeHakedisId?: string): PlanItemUsage[] {
+  const usage = new Map<string, PlanItemUsage>();
+  (contract.paymentPlan || []).forEach((p) => {
+    if (!p?.id) return;
+    usage.set(p.id, { planItemId: p.id, name: p.name || p.description || '', planned: Number(p.amount) || 0, approved: 0, pending: 0, remaining: 0, hakedisNos: [] });
+  });
+  hakedisler.forEach((h) => {
+    if (h.contractId !== contract.id || h.id === excludeHakedisId || h.approvalStatus === 'revize') return;
+    (h.planLinks || []).forEach((l) => {
+      const u = usage.get(l?.planItemId);
+      if (!u || !(Number(l.amount) > 0)) return;
+      if (h.approvalStatus === 'onaylandi') u.approved = r2(u.approved + Number(l.amount));
+      else u.pending = r2(u.pending + Number(l.amount));
+      if (h.hakedisNo && !u.hakedisNos.includes(h.hakedisNo)) u.hakedisNos.push(h.hakedisNo);
+    });
+  });
+  return [...usage.values()].map((u) => ({ ...u, remaining: r2(u.planned - u.approved - u.pending) }));
+}
+
+/** Yeni/düzenlenen hakedişin aşama bağlantılarını doğrular: mükerrer tahakkuk ve aşım engellenir */
+export function validatePlanLinks(contract: WorkEntry, links: PlanLink[], hakedisler: LinkSource[], editingHakedisId?: string): string[] {
+  const errors: string[] = [];
+  const usage = new Map(planItemUsage(contract, hakedisler, editingHakedisId).map((u) => [u.planItemId, u]));
+  const seen = new Set<string>();
+  links.forEach((l) => {
+    const u = usage.get(l.planItemId);
+    if (!u) { errors.push('Bağlanan aşama bu anlaşmada bulunamadı'); return; }
+    if (seen.has(l.planItemId)) errors.push(`"${u.name}" aşaması aynı hakedişte iki kez bağlanmış`);
+    seen.add(l.planItemId);
+    if (!(l.amount > 0)) errors.push(`"${u.name}" için bağlanan tutar sıfırdan büyük olmalı`);
+    else if (l.amount - u.remaining > 0.01)
+      errors.push(`"${u.name}" aşamasında kalan ${u.remaining.toFixed(2)}; ${l.amount.toFixed(2)} bağlanamaz (mükerrer tahakkuk)`);
+  });
+  return errors;
+}
+
+/** Geriye uyumluluk: daha önce bağlanmış aşama kimlikleri */
+export function linkedPlanItems(contractId: string, hakedisler: { contractId: string; planLinks?: PlanLink[]; approvalStatus: string }[]) {
+  return new Set(hakedisler.filter((h) => h.contractId === contractId && h.approvalStatus !== 'revize').flatMap((h) => (h.planLinks || []).map((l) => l.planItemId)));
 }
