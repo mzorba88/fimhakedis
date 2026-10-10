@@ -46,6 +46,7 @@ const App = () => (
             <Route path="/raporlar" element={<Reports />} />
             <Route path="/islem-gecmisi" element={<ActivityHistory />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/is-anlasmalari" element={<Agreements />} />
             <Route path="/maliyet" element={<CostManagement />} />
             <Route path="/cari-dogrulama" element={<AccountVerification />} />
             <Route path="*" element={<NotFound />} />

@@ -30,7 +30,8 @@ import { collectPriceObservations, suggestUnitPrice, PriceObservation } from '@/
 
 const CURRENCIES: Currency[] = ['TRY', 'GBP', 'USD', 'EUR'];
 const parseNum = (s: string) => {
-  const t = (s || '').replace(/\s/g, '').replace(/\./g, (m, i, str) => (str.includes(',') ? '' : m)).replace(',', '.');
+  const raw = (s || '').replace(/\s/g, '');
+  const t = raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw;
   const n = parseFloat(t);
   return isFinite(n) ? n : NaN;
 };
