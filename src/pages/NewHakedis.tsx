@@ -101,7 +101,6 @@ export default function NewHakedis() {
   }, [contractId]);
 
   useEffect(() => { if (contracts.length === 1 && !contractId && kind !== 'sozlesmesiz') setContractId(contracts[0].id); }, [contracts, contractId, kind]);
-  useEffect(() => { setContractId(''); }, [projectId, subcontractor]);
   useEffect(() => { if (kind === 'sozlesmesiz') { setContractId(''); if (!extraRows.length) setExtraRows([makeExtra()]); } }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const vr = num(vatRate) ?? undefined;
@@ -177,10 +176,10 @@ export default function NewHakedis() {
             <section className="rounded-lg border bg-card p-4 space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5"><Label>1. Proje</Label>
-                  <ProjectCombobox projects={projects.filter((p) => p.status === 'aktif' || p.id === projectId)} value={projectId} onChange={setProjectId} placeholder="Proje seçin" />
+                  <ProjectCombobox projects={projects.filter((p) => p.status === 'aktif' || p.id === projectId)} value={projectId} onChange={(v) => { setProjectId(v); setContractId(''); }} placeholder="Proje seçin" />
                 </div>
                 <div className="space-y-1.5"><Label>2. Altyüklenici</Label>
-                  <SubcontractorCombobox names={subNames} value={subcontractor} onChange={(v) => setSubcontractor(v)} />
+                  <SubcontractorCombobox names={subNames} value={subcontractor} onChange={(v) => { setSubcontractor(v); setContractId(''); }} />
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
