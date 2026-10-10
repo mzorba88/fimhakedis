@@ -1,4 +1,5 @@
 import type { WorkEntry, SubcontractorHakedis, Currency } from '@/types/hakedis';
+import { agreementValueStatus, countsInContractTotal } from '@/utils/agreements';
 import { analyzeHakedis, summarizeFiles, type FileSummary } from '@/utils/hakedisCalculations';
 
 /**
@@ -50,7 +51,9 @@ export function getContractAccount(
     return s + paidOf(h);
   }, 0);
 
-  const contractTotal = contract.totalAmount || 0;
+  // Kısmi metraj / yalnızca birim fiyat anlaşmalarında bedel bilinmiyor → 0 varsayılmaz, kalan hesaplanmaz
+  const valueKnown = countsInContractTotal(contract);
+  const contractTotal = valueKnown ? contract.totalAmount || 0 : 0;
 
   return {
     contractTotal,
@@ -58,7 +61,8 @@ export function getContractAccount(
     approvedTotal,
     paidTotal,
     remainingApproved: approvedTotal - paidTotal,
-    remainingContract: contractTotal - hakedisTotal,
+    remainingContract: valueKnown ? contractTotal - hakedisTotal : 0,
+    valueStatus: agreementValueStatus(contract),
     currency: contract.currency as Currency,
     hakedisCount: related.length,
     isOverPaid: hakedisTotal > contractTotal && contractTotal > 0,
@@ -151,6 +155,7 @@ export function getSubcontractorProjectAccounts(
     .forEach((c) => {
       const acc = ensure(c.projectId, c.currency as Currency);
       acc.contractCount += 1;
+      if (!countsInContractTotal(c)) return;
       acc.contractTotal += c.totalAmount || 0;
       acc.contractTotalIncl += withVat(c.totalAmount || 0, c.vatRate);
     });
@@ -329,6 +334,7 @@ export function getSubcontractorLedgers(
     .forEach((c) => {
       const led = ensure(c.projectId, c.currency as Currency);
       led.contracts.push(c);
+      if (!countsInContractTotal(c)) return;
       led.contractTotal += c.totalAmount || 0;
       led.contractTotalIncl += (c.totalAmount || 0) * vatFactor(c.vatRate);
     });
