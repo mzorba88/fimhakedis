@@ -74,6 +74,7 @@ const toHakedis = (row: any): SubcontractorHakedis => ({
   id: row.id,
   hakedisNo: row.hakedis_no,
   hakedisType: row.hakedis_type || 'ara_hakedis',
+  alelhesapNature: row.alelhesap_nature === 'avans' || row.alelhesap_nature === 'tahakkuk' ? row.alelhesap_nature : null,
   projectId: row.project_id,
   subcontractor: row.subcontractor,
   contractId: row.contract_id,
