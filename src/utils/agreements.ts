@@ -8,7 +8,7 @@
  * `enteredUnitPrice` / `priceBasis` olarak ayrıca saklanır.
  */
 import type { Currency, PaymentInstallment, PlanLink, WorkEntry, WorkItemEntry } from '@/types/hakedis';
-import { SCHEMA_3B_APPLIED } from '@/config/schemaFeatures';
+import { CONTRACT_AGREEMENT_FIELDS_ENABLED as SCHEMA_3B_APPLIED } from '@/config/schemaFeatures';
 
 export type EnteredBasis = 'kdv_haric' | 'kdv_dahil';
 
