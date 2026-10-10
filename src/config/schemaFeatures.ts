@@ -13,3 +13,6 @@ export const CONTRACT_AGREEMENT_FIELDS_ENABLED = true;
  * NOT: aşım kontrolü tarayıcıda yapılır, veritabanında atomik kontrol yoktur.
  */
 export const PLAN_LINKS_WRITE_ENABLED = true;
+
+/** Aşama 4B: ancak hakedisler.alelhesap_nature migration doğrulandıktan sonra true yapılır. */
+export const ALELHESAP_NATURE_WRITE_ENABLED = false;
