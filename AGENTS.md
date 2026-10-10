@@ -5,3 +5,5 @@
 - Agreement line items and payment-plan stages use persistent `wie_<uuid>` / `pi_<uuid>` ids inside the contract JSON. Why: future hakediş links must survive edits.
 - Hakediş items copy the unit price at creation (`snapshotItemForHakedis`); never recompute approved hakedişler from contract prices. Why: past prices are immutable.
 - Schema drafts awaiting approval live in `docs/`, never in `supabase/migrations`. Why: production system; migrations need explicit user approval.
+- New DB columns are read defensively and written only when the flag in `src/config/schemaFeatures.ts` is true (via `schema3b*Fields` in supabaseService). Why: code can ship before the user approves the migration.
+- Götürü plan links live in `hakedisler.plan_links`; validate with `validatePlanLinks`, revize hakedişler release their share. Why: prevents duplicate accrual of a payment stage.
