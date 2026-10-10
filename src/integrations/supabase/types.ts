@@ -64,11 +64,13 @@ export type Database = {
           paid_date: string | null
           payment_plan: Json | null
           payment_status: string
+          price_basis: string | null
           project_id: string
           rejection_reason: string | null
           subcontractor: string
           total_amount: number
           updated_at: string
+          value_status: string | null
           vat_rate: number | null
           work_category: string
           work_item_entries: Json | null
@@ -89,11 +91,13 @@ export type Database = {
           paid_date?: string | null
           payment_plan?: Json | null
           payment_status?: string
+          price_basis?: string | null
           project_id: string
           rejection_reason?: string | null
           subcontractor: string
           total_amount?: number
           updated_at?: string
+          value_status?: string | null
           vat_rate?: number | null
           work_category: string
           work_item_entries?: Json | null
@@ -114,11 +118,13 @@ export type Database = {
           paid_date?: string | null
           payment_plan?: Json | null
           payment_status?: string
+          price_basis?: string | null
           project_id?: string
           rejection_reason?: string | null
           subcontractor?: string
           total_amount?: number
           updated_at?: string
+          value_status?: string | null
           vat_rate?: number | null
           work_category?: string
           work_item_entries?: Json | null
@@ -173,6 +179,7 @@ export type Database = {
           paid_date: string | null
           payment_amount: number | null
           payment_status: string
+          plan_links: Json | null
           project_id: string | null
           rejection_reason: string | null
           subcontractor: string
@@ -204,6 +211,7 @@ export type Database = {
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
+          plan_links?: Json | null
           project_id?: string | null
           rejection_reason?: string | null
           subcontractor: string
@@ -235,6 +243,7 @@ export type Database = {
           paid_date?: string | null
           payment_amount?: number | null
           payment_status?: string
+          plan_links?: Json | null
           project_id?: string | null
           rejection_reason?: string | null
           subcontractor?: string
