@@ -186,6 +186,9 @@ export interface HakedisItem {
   agreementUnitPrice?: number;
   /** Fiyat değiştirildiyse kısa gerekçe */
   priceOverrideReason?: string;
+  /** Kesin hesap kümülatif snapshot: eski satırlar yeniden tahakkuk değildir. */
+  settlementSnapshot?: 'cumulative_v4b';
+  settlementPeriodAmount?: number;
 }
 
 // Extra work item outside contract (Sözleşme Harici Ek İş)
@@ -198,6 +201,9 @@ export interface ExtraWorkItem {
   unitPrice: number;
   quantity: number;
   amount: number;
+  /** Kesin hesap kümülatif snapshot: eski ek işler yeniden tahakkuk değildir. */
+  settlementSnapshot?: 'cumulative_v4b';
+  settlementPeriodAmount?: number;
 }
 
 export interface HakedisReport {
