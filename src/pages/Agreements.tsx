@@ -79,10 +79,11 @@ export default function Agreements() {
   const [lumpCategory, setLumpCategory] = useState('');
   const [plan, setPlan] = useState<PRow[]>([]);
   const [planComplete, setPlanComplete] = useState(false);
+  const [declaredFixed, setDeclaredFixed] = useState(false);
 
   const reset = () => {
     setProjectId(''); setSub(''); setSubIsNew(false); setType('birim_fiyat'); setCurrency('GBP'); setVatRate('20');
-    setBasis('kdv_haric'); setDesc(''); setRows([newRow()]); setLumpTotal(''); setLumpCategory(''); setPlan([]); setPlanComplete(false);
+    setBasis('kdv_haric'); setDesc(''); setRows([newRow()]); setLumpTotal(''); setLumpCategory(''); setPlan([]); setPlanComplete(false); setDeclaredFixed(false);
   };
 
   const observations = useMemo(() => collectPriceObservations(workEntries, subcontractorHakedisler), [workEntries, subcontractorHakedisler]);
@@ -130,7 +131,7 @@ export default function Agreements() {
           id: r.id, description: r.description, workCategory: r.workCategory, unit: r.unit,
           unitPrice: parseNum(r.price), estimatedQuantity: r.qty.trim() ? parseNum(r.qty) : null, priceSource: r.source,
         }));
-        payload = buildUnitPriceAgreement(header, input).payload;
+        payload = buildUnitPriceAgreement(header, input, { declaredFixed }).payload;
       } else {
         const input: PlanRowInput[] = plan.map((p) => ({
           id: p.id, name: p.name, mode: p.mode,
@@ -331,6 +332,17 @@ export default function Agreements() {
                     <TotalsLine net={unitSummary.known} vatRate={vr} currency={currency} label={unitSummary.missing ? 'Tahmini (eksik)' : 'Tahmini toplam'} />
                   )}
                   {unitSummary.missing > 0 && <p className="text-xs text-amber-700">{unitSummary.missing} kalemde miktar yok — birim fiyat geçerli, toplam kesin değildir.</p>}
+                  {unitSummary.filled > 0 && (
+                    <label className={cn('mt-1 flex items-center justify-end gap-2 text-xs', unitSummary.missing > 0 && 'opacity-50')}>
+                      <Checkbox checked={declaredFixed && unitSummary.missing === 0} disabled={unitSummary.missing > 0} onCheckedChange={(v) => setDeclaredFixed(!!v)} />
+                      Toplam bedel kesin olarak kararlaştırıldı
+                    </label>
+                  )}
+                  {unitSummary.filled > 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Bedel durumu: {unitSummary.missing === unitSummary.filled ? 'Yalnızca birim fiyat' : unitSummary.missing > 0 ? 'Kısmi tahmini' : declaredFixed ? 'Kesin bedel (beyan)' : 'Tahmini bedel'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -351,7 +363,7 @@ export default function Agreements() {
 
               <div className="rounded-md border">
                 <div className="flex items-center justify-between border-b px-3 py-2">
-                  <span className="text-sm font-medium">Ödeme / hakediş aşamaları <span className="font-normal text-muted-foreground">(en az bir aşama — fiyat esası için gerekli)</span></span>
+                  <span className="text-sm font-medium">Ödeme / hakediş aşamaları <span className="font-normal text-muted-foreground">(isteğe bağlı)</span></span>
                   <div className="flex gap-2">
                     {!plan.length && <Button size="sm" variant="ghost" onClick={() => setPlan([newPRow('Tek ödeme', '100')])}>Tek ödeme %100</Button>}
                     {!plan.length && <Button size="sm" variant="ghost" onClick={() => setPlan([newPRow('İş başlangıcı', '20'), newPRow('İmalatın tamamlanması', '60'), newPRow('Nihai kabul', '20')])}>Örnek: 20/60/20</Button>}
