@@ -35,11 +35,14 @@ export default function CostManagement() {
   );
   const projectId = params.get('proje') || '';
   useEffect(() => {
-    if (!projectId && sortedProjects.length) {
-      const firstActive = sortedProjects.find((p) => p.status === 'aktif') || sortedProjects[0];
-      setParams({ proje: firstActive.id }, { replace: true });
+    if (!projectId && sortedProjects.length && subcontractorHakedisler.length) {
+      // Varsayılan: en çok hakediş kaydı olan aktif proje
+      const count = (id: string) => subcontractorHakedisler.filter((h) => h.projectId === id).length;
+      const pool = sortedProjects.filter((p) => p.status === 'aktif');
+      const best = [...(pool.length ? pool : sortedProjects)].sort((a, b) => count(b.id) - count(a.id))[0];
+      setParams({ proje: best.id }, { replace: true });
     }
-  }, [projectId, sortedProjects, setParams]);
+  }, [projectId, sortedProjects, subcontractorHakedisler, setParams]);
 
   const [vat, setVat] = useState<VatMode>('excl');
   const [cur, setCur] = useState<'all' | Currency>('all');
