@@ -210,3 +210,144 @@ export function summarizeFiles(
 
   return Array.from(map.values());
 }
+
+/* =========================================================================
+ * ÖDEME GÜVENLİĞİ (Aşama 1B)
+ * Tüm tutarlar KDV HARİÇ. Mevcut sistem paid_amount'u her zaman KDV hariç
+ * total_amount ile karşılaştırarak yazmıştır (Payments.tsx tam/kısmi ödeme).
+ * ========================================================================= */
+
+export interface PaymentPlan {
+  allowed: boolean;
+  /** Bu hakediş için ödemeye esas tutar (dönem tahakkuku, KDV hariç) */
+  payableAmount: number | null;
+  /** Daha önce bu hakedişe kayıtlı ödeme */
+  alreadyPaid: number;
+  /** Bu hakediş için kalan ödeme */
+  remaining: number | null;
+  basis: InputBasis;
+  reason?: string;
+}
+
+export function planPayment(
+  h: SubcontractorHakedis,
+  all: SubcontractorHakedis[],
+  opts: CalcOptions = {}
+): PaymentPlan {
+  const b = analyzeHakedis(h, all, opts);
+  const alreadyPaid = h.paidAmount || 0;
+  const base = { alreadyPaid, basis: b.basis, payableAmount: b.periodAmount };
+
+  if (h.approvalStatus !== 'onaylandi')
+    return { ...base, allowed: false, remaining: null, reason: 'Onaylanmamış hakedişe ödeme yapılamaz' };
+  if (b.periodAmount === null)
+    return {
+      ...base, allowed: false, remaining: null,
+      reason: `Manuel inceleme gerekli: ${b.reasons.join('; ') || 'giriş esası belirsiz'}`,
+    };
+  const remaining = b.periodAmount - alreadyPaid;
+  const tol = tolFor(b.periodAmount, opts.tolerance);
+  if (h.paymentStatus === 'odendi' || remaining <= 0.0049) {
+    if (remaining < -tol)
+      return { ...base, allowed: false, remaining, reason: 'Kayıtlı ödeme ödemeye esas tutardan büyük — manuel inceleme gerekli' };
+    return { ...base, allowed: false, remaining: Math.max(0, remaining), reason: 'Bu hakediş zaten ödenmiş' };
+  }
+  return { ...base, allowed: true, remaining };
+}
+
+export interface PaymentUpdate {
+  paymentStatus: 'odendi' | 'kismen_odendi';
+  paidAmount: number;
+  isUrgent?: boolean;
+}
+
+/** "Tam Ödeme" butonunun veritabanına göndereceği değerler; izin yoksa null. */
+export function buildFullPaymentUpdate(
+  h: SubcontractorHakedis,
+  all: SubcontractorHakedis[],
+  opts: CalcOptions = {}
+): { update: PaymentUpdate | null; plan: PaymentPlan } {
+  const plan = planPayment(h, all, opts);
+  if (!plan.allowed || plan.payableAmount === null) return { update: null, plan };
+  return {
+    plan,
+    update: { paymentStatus: 'odendi', paidAmount: plan.payableAmount, isUrgent: false },
+  };
+}
+
+/** "Kısmi Ödeme" için gönderilecek değerler; geçersizse error döner. */
+export function buildPartialPaymentUpdate(
+  h: SubcontractorHakedis,
+  all: SubcontractorHakedis[],
+  amount: number,
+  opts: CalcOptions = {}
+): { update: PaymentUpdate | null; plan: PaymentPlan; error?: string } {
+  const plan = planPayment(h, all, opts);
+  if (!plan.allowed || plan.remaining === null || plan.payableAmount === null)
+    return { update: null, plan, error: plan.reason };
+  if (!Number.isFinite(amount) || amount <= 0) return { update: null, plan, error: 'Geçerli bir tutar giriniz' };
+  if (amount > plan.remaining + 0.0049)
+    return { update: null, plan, error: 'Tutar bu hakedişin kalan ödemesinden fazla olamaz' };
+  const newPaid = plan.alreadyPaid + amount;
+  const full = newPaid >= plan.payableAmount - 0.0049;
+  return {
+    plan,
+    update: full
+      ? { paymentStatus: 'odendi', paidAmount: newPaid, isUrgent: false }
+      : { paymentStatus: 'kismen_odendi', paidAmount: newPaid },
+  };
+}
+
+/* ---------- Eski / yeni cari hesap karşılaştırması (salt okunur) ---------- */
+export interface ComparisonRow {
+  key: string;
+  subcontractor: string;
+  projectId: string;
+  currency: Currency;
+  oldApproved: number;
+  oldPaid: number;
+  oldRemaining: number;
+  newApprovedAccrual: number;
+  recordedPayment: number;
+  newRemaining: number;
+  difference: number;
+  pendingAmount: number;
+  unresolved: HakedisBreakdown[];
+  /** Belirsiz kayıt varsa yeni bakiye kesin değildir */
+  reliable: boolean;
+}
+
+export function compareOldNew(
+  hakedisler: SubcontractorHakedis[],
+  contracts: WorkEntry[],
+  opts: CalcOptions = {}
+): ComparisonRow[] {
+  const files = summarizeFiles(hakedisler, contracts, opts);
+  return files
+    .filter((f) => f.items.length > 0)
+    .map((f) => {
+      const recs = hakedisler.filter(
+        (h) => h.subcontractor === f.subcontractor && (h.projectId || '') === f.projectId && h.currency === f.currency
+      );
+      const appr = recs.filter((h) => h.approvalStatus === 'onaylandi');
+      const oldApproved = appr.reduce((s, h) => s + (h.totalAmount || 0), 0);
+      const oldPaid = recs.reduce(
+        (s, h) => s + (h.paymentStatus === 'odendi' ? h.totalAmount || 0 : h.paidAmount || 0), 0
+      );
+      const oldRemaining = oldApproved - oldPaid;
+      return {
+        key: `${f.subcontractor}__${f.projectId}__${f.currency}`,
+        subcontractor: f.subcontractor,
+        projectId: f.projectId,
+        currency: f.currency,
+        oldApproved, oldPaid, oldRemaining,
+        newApprovedAccrual: f.approvedAccrual,
+        recordedPayment: f.recordedPayment,
+        newRemaining: f.remainingPayment,
+        difference: f.remainingPayment - oldRemaining,
+        pendingAmount: f.pendingAmount,
+        unresolved: f.unresolved,
+        reliable: f.unresolved.length === 0,
+      };
+    });
+}
