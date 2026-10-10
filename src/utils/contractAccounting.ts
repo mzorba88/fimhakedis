@@ -1,4 +1,5 @@
 import type { WorkEntry, SubcontractorHakedis, Currency } from '@/types/hakedis';
+import { analyzeHakedis, summarizeFiles, type FileSummary } from '@/utils/hakedisCalculations';
 
 /**
  * Kayıtlı ödeme: paid_amount alanı esastır. 'odendi' durumu brüt total_amount'u
@@ -37,10 +38,13 @@ export function getContractAccount(
     (h) => h.contractId === contract.id && h.id !== excludeHakedisId
   );
 
-  const hakedisTotal = related.reduce((s, h) => s + (h.totalAmount || 0), 0);
+  // Kesin hesaplarda brüt kümülatif yerine dönem tahakkuku kullanılır (belirsizse ham tutar)
+  const periodOf = (h: SubcontractorHakedis) =>
+    analyzeHakedis(h, allHakedisler).periodAmount ?? (h.totalAmount || 0);
+  const hakedisTotal = related.reduce((s, h) => s + periodOf(h), 0);
   const approvedTotal = related
     .filter((h) => h.approvalStatus === 'onaylandi')
-    .reduce((s, h) => s + (h.totalAmount || 0), 0);
+    .reduce((s, h) => s + periodOf(h), 0);
 
   const paidTotal = related.reduce((s, h) => {
     return s + paidOf(h);
@@ -243,6 +247,16 @@ export interface SubcontractorLedger {
   hasKesinHesap: boolean;
   isOverPaid: boolean;
   movements: LedgerMovement[];
+  /** Merkezi hesap (hakedisCalculations) — false ise bakiye kesin gösterilmemeli */
+  reliable: boolean;
+  unresolvedNos: string[];
+  unresolvedReasons: string[];
+  /** Fazla Ödeme / Devreden Avans (KDV hariç, pozitif) */
+  overpayment: number;
+  /** Avans niteliğindeki alelhesap ödemeleri (tahakkuk değil) */
+  advancePayments: number;
+  /** Onay bekleyen / revize tutar — borç sayılmaz */
+  pendingTotal: number;
 }
 
 const vatFactor = (vatRate?: number | null) =>
@@ -299,6 +313,12 @@ export function getSubcontractorLedgers(
         hasKesinHesap: false,
         isOverPaid: false,
         movements: [],
+        reliable: true,
+        unresolvedNos: [],
+        unresolvedReasons: [],
+        overpayment: 0,
+        advancePayments: 0,
+        pendingTotal: 0,
       });
     }
     return map.get(key)!;
@@ -317,7 +337,8 @@ export function getSubcontractorLedgers(
     .filter((h) => h.subcontractor === subcontractor)
     .forEach((h) => {
       const led = ensure(h.projectId || '', h.currency as Currency);
-      const amount = h.totalAmount || 0;
+      // Dönem tahakkuku: kesin hesapta mahsup sonrası; belirsizse ham tutar (dosya güvenilmez işaretlenir)
+      const amount = analyzeHakedis(h, hakedisler).periodAmount ?? (h.totalAmount || 0);
       const amountIncl = amount * vatFactor(h.vatRate);
       const paid = paidOf(h);
       const paidIncl = paid * vatFactor(h.vatRate);
@@ -362,9 +383,29 @@ export function getSubcontractorLedgers(
       });
     });
 
+  // Merkezi hesap motoru: onaylı tahakkuk, kayıtlı ödeme, kalan bakiye
+  const files = new Map<string, FileSummary>();
+  summarizeFiles(
+    hakedisler.filter((h) => h.subcontractor === subcontractor),
+    contracts.filter((c) => c.subcontractor === subcontractor)
+  ).forEach((f) => files.set(`${f.projectId || 'none'}__${f.currency}`, f));
+
   map.forEach((led) => {
+    const f = files.get(led.key);
+    if (f) {
+      led.approvedTotal = f.approvedAccrual;
+      led.approvedTotalIncl = f.vat.approvedAccrual;
+      led.paidTotal = f.recordedPayment;
+      led.paidTotalIncl = f.vat.recordedPayment;
+      led.reliable = f.reliable;
+      led.unresolvedNos = f.unresolved.map((u) => u.hakedisNo);
+      led.unresolvedReasons = f.unresolved.map((u) => `${u.hakedisNo}: ${u.reasons.join('; ') || 'giriş esası belirsiz'}`);
+      led.advancePayments = f.advancePayments;
+      led.pendingTotal = f.pendingAmount;
+    }
     led.remainingApproved = led.approvedTotal - led.paidTotal;
     led.remainingApprovedIncl = led.approvedTotalIncl - led.paidTotalIncl;
+    led.overpayment = led.remainingApproved < -0.0049 ? -led.remainingApproved : 0;
     led.remainingContract = led.contractTotal - led.hakedisTotal;
     led.remainingContractIncl = led.contractTotalIncl - led.hakedisTotalIncl;
     led.isOverPaid = led.contractTotal > 0 && led.hakedisTotal > led.contractTotal;
