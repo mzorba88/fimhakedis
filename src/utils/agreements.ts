@@ -415,18 +415,23 @@ export function reconcileLegacyEdit(
   original: WorkEntry,
   edited: Pick<WorkEntry, 'contractType' | 'vatRate' | 'totalAmount' | 'paymentPlan' | 'workItemEntries'>,
   choice?: LegacyBasisChoice,
-): Pick<WorkEntry, 'priceBasis' | 'valueStatus'> {
+): Pick<WorkEntry, 'priceBasis' | 'valueStatus' | 'workItemEntries' | 'paymentPlan'> {
   if (!legacyPricingChanged(original, edited)) return {};
   const hadBasis = readPriceBasis(original) !== 'bilinmiyor';
   const hadStatus = original.valueStatus != null;
   if (!hadBasis && !hadStatus) return {}; // eski kayıt: bilinmiyor kalır
   if (hadBasis && !choice) throw new Error('Fiyat değişti: mevcut KDV fiyat esasını koruyun veya güncelleyin');
-  const out: Pick<WorkEntry, 'priceBasis' | 'valueStatus'> = {};
+  const out: Pick<WorkEntry, 'priceBasis' | 'valueStatus' | 'workItemEntries' | 'paymentPlan'> = {};
   if (hadBasis || choice) {
     if (choice === 'kdv_haric' || choice === 'kdv_dahil') out.priceBasis = choice;
     else if (choice === 'bilinmiyor') out.priceBasis = null;
     else if (choice === 'koru' && original.priceBasis) out.priceBasis = original.priceBasis;
     else if (choice === 'koru') { const b = readPriceBasis(original); out.priceBasis = b === 'bilinmiyor' ? null : b; }
+  }
+  // Esas güncellendi/bilinmiyor yapıldıysa satır düzeyindeki eski esas ve girilen fiyat artık geçerli değil
+  if (choice && choice !== 'koru') {
+    if (edited.workItemEntries) out.workItemEntries = edited.workItemEntries.map(({ priceBasis: _b, enteredUnitPrice: _e, ...w }) => w);
+    if (edited.paymentPlan) out.paymentPlan = edited.paymentPlan.map(({ priceBasis: _b, enteredAgreementTotal: _e, ...p }) => p);
   }
   if (hadStatus) {
     const probe = { ...original, ...edited, valueStatus: choice === 'koru' ? original.valueStatus : null } as WorkEntry;

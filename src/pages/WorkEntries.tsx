@@ -285,7 +285,6 @@ export default function WorkEntries() {
         }
         // Update existing entry
         await updateWorkEntry(selectedEntry.id, {
-          ...agreementFields,
           projectId: newEntry.projectId,
           workCategory: newEntry.workCategory,
           subcontractor: selectedSubcontractor,
@@ -297,6 +296,7 @@ export default function WorkEntries() {
           paymentPlan: newEntry.contractType === 'goturu_bedel' ? paymentPlan : undefined,
           workItemEntries: newEntry.contractType === 'birim_fiyat' ? workItemEntries : undefined,
           totalAmount: amounts.totalAmount,
+          ...agreementFields,
         });
         toast.success('Sözleşme güncellendi');
       } else {

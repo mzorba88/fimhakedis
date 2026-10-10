@@ -120,7 +120,8 @@ describe('Aşama 3E', () => {
     expect(() => reconcileLegacyEdit(c, edited)).toThrow(/esas/);
     expect(reconcileLegacyEdit(c, edited, 'koru')).toEqual({ priceBasis: 'kdv_dahil', valueStatus: 'kesin' });
     const unknown = reconcileLegacyEdit(c, edited, 'bilinmiyor');
-    expect(unknown).toEqual({ priceBasis: null, valueStatus: 'tahmini_tam' });
+    expect(unknown).toMatchObject({ priceBasis: null, valueStatus: 'tahmini_tam' });
+    expect(unknown.workItemEntries!.every((w) => !w.priceBasis)).toBe(true);
     await updateContract(c.id, { workItemEntries: items, totalAmount: 125, ...unknown });
     const again = (await fetchContracts())[0];
     expect(readPriceBasis(again)).toBe('bilinmiyor');
