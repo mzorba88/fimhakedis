@@ -157,8 +157,8 @@ export default function CostManagement() {
                     <tr key={c.currency}>
                       <td className="px-3 py-2 font-medium">{c.currency}</td>
                       <td className="px-3 py-2 text-right"><Num value={v(c.contract)} currency={c.currency} /></td>
-                      <td className="px-3 py-2 text-right"><Num value={v(c.approved)} currency={c.currency} /></td>
-                      <td className="px-3 py-2 text-right"><Num value={v(c.paid)} currency={c.currency} /></td>
+                      <td className="px-3 py-2 text-right"><Num value={v(c.approved)} currency={c.currency} />{data.unverifiedAlelhesap.some((a) => a.currency === c.currency) && <div className="text-[10px] text-amber-700">geçici · alelhesap sınıflandırma bekliyor</div>}</td>
+                      <td className="px-3 py-2 text-right"><Num value={c.paid.excl} currency={c.currency} /></td>
                       <td className="px-3 py-2 text-right">
                         {c.fullyReliable ? (
                           <Num value={v(c.remaining)} currency={c.currency} className="font-semibold" />
@@ -179,7 +179,7 @@ export default function CostManagement() {
                 </tbody>
               </table>
               <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
-                {vat === 'excl' ? 'Tutarlar KDV hariç.' : 'KDV dahil: her kaydın kendi KDV oranı kullanılır; oranı girilmemiş kayıtlara KDV eklenmez.'}{' '}
+                {vat === 'excl' ? 'Tutarlar KDV hariç.' : 'KDV dahil: her kaydın kendi KDV oranı kullanılır; oranı girilmemiş kayıtlara KDV eklenmez. Kayıtlı ödeme her zaman saklanan gerçek değeriyle (KDV eklenmeden) gösterilir; KDV dahil kalan ödeme yalnızca teorik/vergi bazlı karşılıktır, fiili nakit çıkışı değildir.'}{' '}
                 Anlaşılan bedel yalnızca sözleşmelerden gelir; sözleşmesiz hakedişler onaylı hakedişe dahildir ama bedel oluşturmaz. Onay bekleyen tutar KDV hariçtir ve borç sayılmaz.
                 {vat === 'incl' && data.recordsWithoutVatRate > 0 && ` (${data.recordsWithoutVatRate} kayıtta KDV oranı yok.)`}
               </p>
@@ -192,7 +192,7 @@ export default function CostManagement() {
                   <span className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     İnceleme bekleyen finansal kayıtlar: {data.unresolved.length} belirsiz kesin hesap / ödeme
-                    {data.unverifiedAlelhesap.length > 0 && `, ${data.unverifiedAlelhesap.length} niteliği doğrulanmamış alelhesap`}
+                    {data.unverifiedAlelhesap.length > 0 && `, ${data.unverifiedAlelhesap.length} Alelhesap — Sınıflandırma Bekliyor (ilgili toplamlar geçicidir)`}
                   </span>
                   <ChevronDown className="h-4 w-4" />
                 </CollapsibleTrigger>
@@ -212,7 +212,7 @@ export default function CostManagement() {
                   )}
                   {data.unverifiedAlelhesap.length > 0 && (
                     <div>
-                      <p className="mb-1 font-medium">Alelhesaplar — avans mı tahakkuk mu doğrulanmadı (şimdilik onaylı hakediş içinde sayılıyor)</p>
+                      <p className="mb-1 font-medium">Alelhesap — Sınıflandırma Bekliyor: avans mı imalat mı doğrulanmadı. Şimdilik onaylı hakediş içinde sayılıyor; bu toplamlar GEÇİCİDİR.</p>
                       <ul className="space-y-1 text-xs">
                         {data.unverifiedAlelhesap.map((h) => (
                           <li key={h.id}>
@@ -263,14 +263,14 @@ export default function CostManagement() {
                               <Badge variant="outline" className="text-[10px]">{r.currency}</Badge>
                               {!r.reliable && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-label="İnceleme gerekli" />}
                               {r.unresolvedAlelhesap.length > 0 && r.reliable && (
-                                <span className="text-[10px] text-amber-700">alelhesap doğrulanmadı</span>
+                                <span className="text-[10px] text-amber-700">Alelhesap — Sınıflandırma Bekliyor · geçici</span>
                               )}
                             </div>
                           </td>
                           <td className="hidden px-3 py-2 text-muted-foreground md:table-cell">{r.category || '—'}</td>
                           <td className="px-3 py-2 text-right">{r.contract.excl > 0 ? <Num value={v(r.contract)} currency={r.currency} /> : <span className="text-muted-foreground">{r.contracts.length ? 'Bedel girilmemiş' : 'Sözleşmesiz'}</span>}</td>
                           <td className="px-3 py-2 text-right"><Num value={v(r.approved)} currency={r.currency} /></td>
-                          <td className="px-3 py-2 text-right"><Num value={v(r.paid)} currency={r.currency} /></td>
+                          <td className="px-3 py-2 text-right"><Num value={r.paid.excl} currency={r.currency} /></td>
                           <td className="px-3 py-2 text-right font-medium">
                             {!r.reliable ? (
                               <span className="text-amber-700">Kesin değil</span>
@@ -318,8 +318,8 @@ export default function CostManagement() {
                                 </div>
                               </td>
                               <td className="px-3 py-2 text-right">{c.committed.excl > 0 ? <Num value={v(c.committed)} currency={c.currency} /> : '—'}</td>
-                              <td className="px-3 py-2 text-right"><Num value={v(c.approved)} currency={c.currency} /></td>
-                              <td className="px-3 py-2 text-right"><Num value={v(c.paid)} currency={c.currency} /></td>
+                              <td className="px-3 py-2 text-right"><Num value={v(c.approved)} currency={c.currency} />{data.unverifiedAlelhesap.some((a) => a.currency === c.currency) && <div className="text-[10px] text-amber-700">geçici · alelhesap sınıflandırma bekliyor</div>}</td>
+                              <td className="px-3 py-2 text-right"><Num value={c.paid.excl} currency={c.currency} /></td>
                               <td className="hidden px-3 py-2 text-right text-xs text-muted-foreground md:table-cell">{c.budget ? <Num value={v(c.budget)} currency={c.currency} /> : 'Bütçe tanımlanmadı'}</td>
                               <td className="hidden px-3 py-2 text-right text-xs text-muted-foreground md:table-cell">{c.budget ? <Num value={v(c.budget) - v(c.approved)} currency={c.currency} /> : '—'}</td>
                             </tr>
@@ -454,14 +454,14 @@ export default function CostManagement() {
                 )}
                 {selected.unresolvedAlelhesap.length > 0 && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
-                    Niteliği doğrulanmamış alelhesap: {selected.unresolvedAlelhesap.map((a) => a.hakedisNo).join(', ')}
+                    Alelhesap — Sınıflandırma Bekliyor (toplamlar geçici): {selected.unresolvedAlelhesap.map((a) => a.hakedisNo).join(', ')}
                   </div>
                 )}
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
                   {[
                     ['Anlaşılan bedel', selected.contract],
                     ['Onaylı hakediş', selected.approved],
-                    ['Kayıtlı ödeme', selected.paid],
+                    ['Kayıtlı ödeme (saklanan)', { excl: selected.paid.excl, incl: selected.paid.excl }],
                   ].map(([l, m]) => (
                     <Fragment key={l as string}>
                       <dt className="text-muted-foreground">{l as string}</dt>

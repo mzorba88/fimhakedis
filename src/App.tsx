@@ -16,6 +16,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const ActivityHistory = lazy(() => import("./pages/ActivityHistory"));
 const Subcontractors = lazy(() => import("./pages/Subcontractors"));
 const AccountVerification = lazy(() => import("./pages/AccountVerification"));
+const Agreements = lazy(() => import("./pages/Agreements"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
