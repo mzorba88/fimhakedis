@@ -129,6 +129,8 @@ export interface SubcontractorHakedis {
   id: string;
   hakedisNo: string; // Auto-generated hakediş number
   hakedisType: HakedisRecordType; // ara_hakedis, alelhesap, kesin_hesap
+  /** Alelhesapın kalıcı niteliği; geçmiş kayıtlar belirsiz/null kalır. */
+  alelhesapNature?: 'avans' | 'tahakkuk' | null;
   projectId: string;
   subcontractor: string;
   contractId: string; // Reference to WorkEntry (contract)
