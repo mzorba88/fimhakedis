@@ -236,8 +236,8 @@ export default function NewHakedis() {
             {kind === 'kesin_hesap' && (
               <section className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm flex gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-                <div>Kesin hesap bu ekranda hazırlanmaz. Yeni kesin hesap ekranı Aşama 4B'de gelecek. Şimdilik mevcut güvenilir formu kullanın:{' '}
-                  <Link to="/hakedisler" className="underline font-medium">Hakedişler → Yeni Hakediş</Link>.</div>
+                <div>Kesin hesabı yeni nihai metraj ekranında hazırlayabilirsiniz:{' '}
+                  <Link to="/kesin-hesap-yeni" className="underline font-medium">Kesin Hesap ve Ek İşler</Link>.</div>
               </section>
             )}
 
