@@ -68,8 +68,8 @@ describe('İş anlaşması kaydet → yeniden aç (sahte veritabanı)', () => {
     expect(agreementValueStatus(c)).toBe('kesin');
   });
 
-  it('ödeme planı olmayan götürü: esas saklanamayacağı için kayıt reddedilir (sahte başarı yok)', () => {
-    expect(() => buildLumpSumAgreement({ ...H, priceBasis: 'kdv_dahil' }, { totalAmount: 1200, workCategory: '', planComplete: false, plan: [] }))
+  it('alan kapalıyken ödeme planı olmayan götürü: esas saklanamayacağı için kayıt reddedilir (sahte başarı yok)', () => {
+    expect(() => buildLumpSumAgreement({ ...H, priceBasis: 'kdv_dahil' }, { totalAmount: 1200, workCategory: '', planComplete: false, plan: [] }, { schemaApplied: false }))
       .toThrow(/ödeme planı olmadan/);
     expect(db.length).toBe(0);
   });
