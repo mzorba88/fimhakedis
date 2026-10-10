@@ -442,8 +442,15 @@ export const generateSubcontractorPDF = async (
       body: [
         ['Sozlesme Tutari', formatCurrencyWithType(led.contractTotalIncl, led.currency), 'Toplam Hakedis', formatCurrencyWithType(led.hakedisTotalIncl, led.currency)],
         ['Ara Hakedis', formatCurrencyWithType(led.araTotal, led.currency), 'Alelhesap (mahsup)', formatCurrencyWithType(led.alelhesapTotal, led.currency)],
-        ['Kesin Hesap', formatCurrencyWithType(led.kesinHesapTotal, led.currency), 'Odenen', formatCurrencyWithType(led.paidTotalIncl, led.currency)],
-        ['Onayli Odenmemis', formatCurrencyWithType(led.remainingApprovedIncl, led.currency), 'Sozlesmeye Kalan', formatCurrencyWithType(led.remainingContractIncl, led.currency)],
+        ['Kesin Hesap (donem)', formatCurrencyWithType(led.kesinHesapTotal, led.currency), 'Kayitli Odeme', formatCurrencyWithType(led.paidTotalIncl, led.currency)],
+        [
+          led.overpayment > 0 ? 'Fazla Odeme / Devreden Avans' : 'Kalan Odeme Bakiyesi',
+          !led.reliable ? 'KESIN DEGIL - manuel inceleme' : formatCurrencyWithType(led.overpayment > 0 ? -led.remainingApprovedIncl : led.remainingApprovedIncl, led.currency),
+          'Sozlesmeye Kalan',
+          formatCurrencyWithType(led.remainingContractIncl, led.currency),
+        ],
+        ['Esas', 'Sozlesme, toplam hakedis, odeme ve bakiye KDV dahil (her kaydin kendi KDV orani); ara/alelhesap/kesin satirlari KDV haric', '', ''],
+        ...(led.reliable ? [] : [['Inceleme', led.unresolvedReasons.join('; '), '', '']]),
       ],
       theme: 'grid',
       styles: { font: 'Roboto', fontSize: 8, cellPadding: 2 },

@@ -1003,10 +1003,15 @@ function LedgerCard({
           </div>
         </div>
 
+        {!ledger.reliable && (
+          <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+            Manuel inceleme gerekli: {ledger.unresolvedReasons.join(' · ')}
+          </div>
+        )}
         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs tabular-nums">
           <div className="space-y-1">
             <Row label="Sözleşme tutarı" excl={ledger.contractTotal} incl={ledger.contractTotalIncl} />
-            <Row label="Toplam hakediş" excl={ledger.hakedisTotal} incl={ledger.hakedisTotalIncl} />
+            <Row label="Toplam hakediş (dönem tahakkukları)" excl={ledger.hakedisTotal} incl={ledger.hakedisTotalIncl} />
             <div className="pl-3 space-y-0.5 text-[11px] text-muted-foreground">
               <div className="flex justify-between">
                 <span>· Ara hakediş</span>
@@ -1026,24 +1031,51 @@ function LedgerCard({
           </div>
           <div className="space-y-1">
             <Row
-              label="Onaylanan"
+              label="Onaylı tahakkuk"
               excl={ledger.approvedTotal}
               incl={ledger.approvedTotalIncl}
               valueClass="text-emerald-600"
             />
             <Row
-              label="Ödenen"
+              label="Kayıtlı ödeme"
               excl={ledger.paidTotal}
               incl={ledger.paidTotalIncl}
               valueClass="text-primary"
             />
-            <Row
-              label="Onaylı ama ödenmemiş"
-              excl={ledger.remainingApproved}
-              incl={ledger.remainingApprovedIncl}
-              valueClass={ledger.remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
-              bordered
-            />
+            {!ledger.reliable ? (
+              <div className="flex justify-between border-t pt-1 font-medium" title={ledger.unresolvedReasons.join('\n')}>
+                <span>Kalan ödeme bakiyesi</span>
+                <span className="text-amber-600">Kesin değil — manuel inceleme</span>
+              </div>
+            ) : ledger.overpayment > 0 ? (
+              <Row
+                label="Fazla Ödeme / Devreden Avans"
+                excl={ledger.overpayment}
+                incl={-ledger.remainingApprovedIncl}
+                valueClass="text-destructive"
+                bordered
+              />
+            ) : (
+              <Row
+                label="Kalan ödeme bakiyesi"
+                excl={ledger.remainingApproved}
+                incl={ledger.remainingApprovedIncl}
+                valueClass={ledger.remainingApproved > 0 ? 'text-amber-600' : 'text-foreground'}
+                bordered
+              />
+            )}
+            {ledger.advancePayments > 0 && (
+              <div className="flex justify-between text-[11px] text-muted-foreground">
+                <span>· İçindeki avans (alelhesap) ödemeleri</span>
+                <span>{formatCurrencyWithType(ledger.advancePayments, c)}</span>
+              </div>
+            )}
+            {ledger.pendingTotal > 0 && (
+              <div className="flex justify-between text-[11px] text-muted-foreground">
+                <span>· Onay bekleyen (borç sayılmaz)</span>
+                <span>{formatCurrencyWithType(ledger.pendingTotal, c)}</span>
+              </div>
+            )}
             <Row
               label="Sözleşmeye kalan"
               excl={ledger.remainingContract}
