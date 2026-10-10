@@ -63,9 +63,41 @@ describe('Aşama 4B — kesin hesap ve ek işler', () => {
   it('alelhesap varsa otomatik kayıt bloklanır', () => {
     const advance = { ...old, id: 'a1', hakedisNo: 'SZ-1-AH01', hakedisType: 'alelhesap' as const,
       hakedisItems: undefined, extraItems: undefined, totalAmount: 200, paidAmount: 200 };
-    const x = prepareFinalSettlement(input({ all: [old, advance], alelNature: 'avans' }));
+    const x = prepareFinalSettlement(input({ all: [old, advance] }));
     expect(x.data).toBeNull();
     expect(x.errors.join(' ')).toMatch(/Alelhesap/);
+  });
+  it('kayıt bazında sınıflandırılmış avans ödemeden düşer, tahakkuktan düşmez', () => {
+    const advance = { ...old, id: 'a1', hakedisNo: 'SZ-1-AH01', hakedisType: 'alelhesap' as const,
+      alelhesapNature: 'avans' as const, hakedisItems: undefined, extraItems: undefined,
+      totalAmount: 200, paidAmount: 200, paymentStatus: 'kismen_odendi' as const };
+    const x = prepareFinalSettlement(input({ all: [old, advance] }));
+    expect(x.errors).toEqual([]);
+    expect(x.offsetNet).toBe(750);
+    expect(x.periodNet).toBe(360);
+    expect(x.paidNet).toBe(700);
+    expect(x.remainingNet).toBe(410);
+  });
+  it('tahakkuk tipi alelhesap önceki üretim miktarına ve mahsup tutarına eklenir', () => {
+    const accrued = { ...old, id: 'a2', hakedisNo: 'SZ-1-AH02', hakedisType: 'alelhesap' as const,
+      alelhesapNature: 'tahakkuk' as const,
+      totalAmount: 120, paidAmount: 0, hakedisItems: [{
+        id: 'hi2', workItemEntryId: 'w1', description: 'Seramik', unit: 'm2',
+        workCategory: 'Seramik', unitPrice: 12, quantity: 10, amount: 120,
+      }], extraItems: undefined };
+    const x = prepareFinalSettlement(input({ all: [old, accrued] }));
+    expect(x.errors).toEqual([]);
+    expect(x.finalNet).toBe(1090);
+    expect(x.offsetNet).toBe(870);
+    expect(x.periodNet).toBe(220);
+    expect(x.remainingNet).toBe(590);
+  });
+  it('aynı açıklamayla yeni ek iş girilirse eski kayıtla çakışma uyarısı verir', () => {
+    const x = prepareFinalSettlement(input({ newExtras: [{
+      id: 'n', description: 'Eski tamirat', workCategory: 'Tamirat', unit: 'adet',
+      quantity: 1, unitPrice: 30, lumpAmount: null,
+    }] }));
+    expect(x.warnings.some(s => s.includes('önceki hakedişlerde'))).toBe(true);
   });
   it('eksik nihai metrajla ve onay bekleyen kayıtla kayıt oluşturmaz', () => {
     expect(prepareFinalSettlement(input({ rows: [] })).data).toBeNull();
