@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SubcontractorHakedis, WorkEntry } from '@/types/hakedis';
 import { prepareFinalSettlement, type FinalInput } from './finalSettlement4B';
 import { allocateCategories } from './projectCost';
-import { summarizeFiles } from './hakedisCalculations';
+import { summarizeFiles, planPayment } from './hakedisCalculations';
 
 const contract: WorkEntry = {
   id: 'c1', contractNo: 'SZ-1', projectId: 'P', subcontractor: 'USTA',
@@ -115,6 +115,11 @@ describe('Aşama 4B — kesin hesap ve ek işler', () => {
     expect(led.advancePayments).toBe(200);
     expect(led.recordedPayment).toBe(700);
     expect(led.remainingPayment).toBe(410);
+    // Ödeme ekranı kümülatif £1.110 tutarı değil yeni £240 dönemini ödemeye esas almalı.
+    const plan = planPayment(h, [old, accrued, advance, h]);
+    expect(plan.allowed).toBe(true);
+    expect(plan.payableAmount).toBe(240);
+    expect(plan.remaining).toBe(240);
   });
   it('aynı açıklamayla yeni ek iş girilirse eski kayıtla çakışma uyarısı verir', () => {
     const x = prepareFinalSettlement(input({ newExtras: [{
