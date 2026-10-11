@@ -508,6 +508,10 @@ export default function SubcontractorHakedis() {
   };
 
   const handleEditHakedis = (hakedis: HakedisType) => {
+    if (hakedis.planLinks?.length) {
+      toast.error('Bu hakediş ödeme aşamasına bağlıdır. Eski düzenleme formunda mali alanlar değiştirilemez; aşama bağlantısının korunması gerekir.');
+      return;
+    }
     const canEditAny = currentUser.role === 'direktor' || currentUser.role === 'muhasebe';
     // Approved hakedis can only be edited by Direktor or Muhasebe
     if (hakedis.approvalStatus === 'onaylandi' && !canEditAny) {
@@ -677,6 +681,10 @@ export default function SubcontractorHakedis() {
 
 
   const handleSubmit = async () => {
+    if (isEditMode && editingHakedisId && subcontractorHakedisler.find(h => h.id === editingHakedisId)?.planLinks?.length) {
+      toast.error('Ödeme aşamasına bağlı hakediş eski formdan düzenlenemez.');
+      return;
+    }
     if (!selectedProjectId || !selectedSubcontractor || !selectedContractId) {
       toast.error('Lütfen tüm alanları doldurun');
       return;
