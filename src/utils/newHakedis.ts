@@ -200,6 +200,8 @@ export interface BuildInput {
   /** Götürü / alelhesap serbest tutar (giriş esasında) */
   freeAmount: number | null;
   planSelections: PlanSelection[];
+  /** Yeni alelhesaplar için kalıcı sınıflandırma (migration sonrası). */
+  alelhesapNature?: 'avans' | 'tahakkuk';
   user: { id: string; role: string; label: string };
   hakedisler: SubcontractorHakedis[];
   subWorkCategory?: string;
@@ -231,6 +233,7 @@ export function buildNewHakedis(i: BuildInput): BuildResult {
 
   const c = i.contract;
   if (i.kind === 'alelhesap') {
+    if (!i.alelhesapNature) errors.push('Alelhesap için avans veya tahakkuk seçilmelidir');
     mainNet = r2(toNet(Number(i.freeAmount) || 0, i.basis, i.vatRate));
     paymentAmount = mainNet;
   } else if (i.kind === 'ara_hakedis' && c?.contractType === 'birim_fiyat') {
@@ -289,6 +292,7 @@ export function buildNewHakedis(i: BuildInput): BuildResult {
       ...base, hakedisNo: nextContractHakedisNo(contract, i.kind as HakedisRecordType, i.hakedisler),
       hakedisType: i.kind as HakedisRecordType, projectId: i.projectId, contractId: contract.id, contractNo: contract.contractNo,
       contractType: contract.contractType, vatRate: i.vatRate, description: (i.description || '').trim() || undefined,
+      ...(i.kind === 'alelhesap' && i.alelhesapNature ? { alelhesapNature: i.alelhesapNature } : {}),
       paymentAmount, hakedisItems: hakedisItems && hakedisItems.length ? hakedisItems : undefined,
       extraItems: extraItems.length ? extraItems : undefined,
       ...(planLinks ? { planLinks } : {}),
