@@ -16,3 +16,7 @@ export const PLAN_LINKS_WRITE_ENABLED = true;
 
 /** Aşama 4B: ancak hakedisler.alelhesap_nature migration doğrulandıktan sonra true yapılır. */
 export const ALELHESAP_NATURE_WRITE_ENABLED = false;
+
+/** Migration + sunucu doğrulaması yapılana kadar yeni aşama bağlantıları ve kesin hesap kaydı kapalı. */
+export const PLAN_LINKS_ATOMIC_GUARD_ENABLED = false;
+export const FINAL_SETTLEMENT_ATOMIC_GUARD_ENABLED = false;
