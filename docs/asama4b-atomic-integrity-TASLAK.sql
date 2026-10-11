@@ -42,19 +42,21 @@ BEGIN
 
   -- Eski form, bağlı aşamaların mali satırlarını ve tutarını bağlantıdan
   -- bağımsız şekilde değiştiremez. Düzeltme ayrı kontrollü iş akışı gerektirir.
-  IF TG_OP = 'UPDATE' AND jsonb_typeof(OLD.plan_links) = 'array'
-    AND jsonb_array_length(OLD.plan_links) > 0
-    AND (
-      NEW.total_amount IS DISTINCT FROM OLD.total_amount OR
-      NEW.plan_links IS DISTINCT FROM OLD.plan_links OR
-      NEW.extra_items IS DISTINCT FROM OLD.extra_items OR
-      NEW.hakedis_items IS DISTINCT FROM OLD.hakedis_items OR
-      NEW.payment_amount IS DISTINCT FROM OLD.payment_amount OR
-      NEW.contract_id IS DISTINCT FROM OLD.contract_id OR
-      NEW.currency IS DISTINCT FROM OLD.currency OR
-      NEW.hakedis_type IS DISTINCT FROM OLD.hakedis_type
-    ) THEN
-    RAISE EXCEPTION 'Aşamaya bağlı hakedişin mali bilgileri eski formdan düzenlenemez';
+  IF TG_OP = 'UPDATE' THEN
+    IF jsonb_typeof(OLD.plan_links) = 'array'
+       AND jsonb_array_length(OLD.plan_links) > 0
+       AND (
+         NEW.total_amount IS DISTINCT FROM OLD.total_amount OR
+         NEW.plan_links IS DISTINCT FROM OLD.plan_links OR
+         NEW.extra_items IS DISTINCT FROM OLD.extra_items OR
+         NEW.hakedis_items IS DISTINCT FROM OLD.hakedis_items OR
+         NEW.payment_amount IS DISTINCT FROM OLD.payment_amount OR
+         NEW.contract_id IS DISTINCT FROM OLD.contract_id OR
+         NEW.currency IS DISTINCT FROM OLD.currency OR
+         NEW.hakedis_type IS DISTINCT FROM OLD.hakedis_type
+       ) THEN
+      RAISE EXCEPTION 'Aşamaya bağlı hakedişin mali bilgileri eski formdan düzenlenemez';
+    END IF;
   END IF;
 
   IF NEW.plan_links IS NULL OR NEW.plan_links = '[]'::jsonb THEN
