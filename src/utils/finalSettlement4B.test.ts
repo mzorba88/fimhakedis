@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SubcontractorHakedis, WorkEntry } from '@/types/hakedis';
 import { prepareFinalSettlement, type FinalInput } from './finalSettlement4B';
 import { allocateCategories } from './projectCost';
+import { summarizeFiles } from './hakedisCalculations';
 
 const contract: WorkEntry = {
   id: 'c1', contractNo: 'SZ-1', projectId: 'P', subcontractor: 'USTA',
@@ -91,6 +92,29 @@ describe('Aşama 4B — kesin hesap ve ek işler', () => {
     expect(x.offsetNet).toBe(870);
     expect(x.periodNet).toBe(240);
     expect(x.remainingNet).toBe(610);
+  });
+  it('avans + tahakkuk alelhesabı birlikteyken cari hesapta üretim ve ödeme ayrı sayılır', () => {
+    const accrued = { ...old, id: 'a2', hakedisNo: 'SZ-1-AH02', hakedisType: 'alelhesap' as const,
+      alelhesapNature: 'tahakkuk' as const, totalAmount: 120, paidAmount: 0,
+      hakedisItems: [{ id: 'hi2', workItemEntryId: 'w1', description: 'Seramik', unit: 'm2',
+        workCategory: 'Seramik', unitPrice: 12, quantity: 10, amount: 120 }],
+      extraItems: undefined };
+    const advance = { ...old, id: 'a3', hakedisNo: 'SZ-1-AH03', hakedisType: 'alelhesap' as const,
+      alelhesapNature: 'avans' as const, totalAmount: 200, paidAmount: 200,
+      hakedisItems: undefined, extraItems: undefined };
+    const final = prepareFinalSettlement(input({ all: [old, accrued, advance] }));
+    expect(final.data).not.toBeNull();
+    expect(final.offsetNet).toBe(870);
+    expect(final.periodNet).toBe(240);
+    expect(final.remainingNet).toBe(410);
+    const h = { ...final.data!, id: 'f1', createdAt: '', updatedAt: '' };
+    const led = summarizeFiles([old, accrued, advance, h], [contract])
+      .find(x => x.projectId === 'P' && x.subcontractor === 'USTA')!;
+    expect(led.reliable).toBe(true);
+    expect(led.approvedAccrual).toBe(1110);
+    expect(led.advancePayments).toBe(200);
+    expect(led.recordedPayment).toBe(700);
+    expect(led.remainingPayment).toBe(410);
   });
   it('aynı açıklamayla yeni ek iş girilirse eski kayıtla çakışma uyarısı verir', () => {
     const x = prepareFinalSettlement(input({ newExtras: [{
