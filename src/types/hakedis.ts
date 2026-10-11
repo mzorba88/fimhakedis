@@ -129,6 +129,8 @@ export interface SubcontractorHakedis {
   id: string;
   hakedisNo: string; // Auto-generated hakediş number
   hakedisType: HakedisRecordType; // ara_hakedis, alelhesap, kesin_hesap
+  /** Alelhesapın kalıcı niteliği; geçmiş kayıtlar belirsiz/null kalır. */
+  alelhesapNature?: 'avans' | 'tahakkuk' | null;
   projectId: string;
   subcontractor: string;
   contractId: string; // Reference to WorkEntry (contract)
@@ -186,6 +188,9 @@ export interface HakedisItem {
   agreementUnitPrice?: number;
   /** Fiyat değiştirildiyse kısa gerekçe */
   priceOverrideReason?: string;
+  /** Kesin hesap kümülatif snapshot: eski satırlar yeniden tahakkuk değildir. */
+  settlementSnapshot?: 'cumulative_v4b';
+  settlementPeriodAmount?: number;
 }
 
 // Extra work item outside contract (Sözleşme Harici Ek İş)
@@ -198,6 +203,9 @@ export interface ExtraWorkItem {
   unitPrice: number;
   quantity: number;
   amount: number;
+  /** Kesin hesap kümülatif snapshot: eski ek işler yeniden tahakkuk değildir. */
+  settlementSnapshot?: 'cumulative_v4b';
+  settlementPeriodAmount?: number;
 }
 
 export interface HakedisReport {

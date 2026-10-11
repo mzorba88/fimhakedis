@@ -85,8 +85,12 @@ export function allocateCategories(
   period: number,
   contract?: WorkEntry
 ): { category: string; amount: number }[] {
-  const items = [...(h.hakedisItems || []), ...((h.extraItems as any[]) || [])]
-    .map((i: any) => ({ cat: (i?.workCategory || '').trim(), amount: Number(i?.amount) || (Number(i?.quantity) || 0) * (Number(i?.unitPrice) || 0) }))
+  const cumulative = h.hakedisType === 'kesin_hesap' &&
+    [...(h.hakedisItems || []), ...(h.extraItems || [])].some(i => i.settlementSnapshot === 'cumulative_v4b');
+  const items = [...(h.hakedisItems || []), ...(h.extraItems || [])]
+    .map((i) => ({ cat: (i?.workCategory || '').trim(), amount: cumulative
+      ? (Number(i.settlementPeriodAmount) || 0)
+      : (Number(i.amount) || (Number(i.quantity) || 0) * (Number(i.unitPrice) || 0)) }))
     .filter((i) => i.amount > 0);
   const itemSum = items.reduce((s, i) => s + i.amount, 0);
   if (items.length && itemSum > 0) {

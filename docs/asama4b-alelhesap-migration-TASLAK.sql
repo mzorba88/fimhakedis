@@ -1,0 +1,3 @@
+-- Bilgilendirme: Bu eski tek-kolon taslağı artık kullanılmamalıdır.
+-- Birleştirilmiş migration taslağı: docs/asama4b-atomic-integrity-TASLAK.sql
+-- Bu dosyanın SQL uygulaması yapılmamalıdır; canlı veritabanı henüz değiştirilmedi.

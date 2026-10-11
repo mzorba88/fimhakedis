@@ -93,6 +93,25 @@ export function analyzeHakedis(
   } else if (override) {
     basis = override;
     reasons.push('Giriş esası manuel olarak teyit edildi');
+  } else if ([...(h.hakedisItems || []), ...(h.extraItems || [])].some(it => it.settlementSnapshot === 'cumulative_v4b')) {
+    // Yeni kesin hesaplarda mahsup kaynağı açıkça işaretlenmiştir; eski kayıtların
+    // belirsiz avans/tahakkuk türünü TAHMİN ETME.
+    const related = sameFile(h, all).filter(o => o.hakedisType !== 'kesin_hesap');
+    const unclassified = related.filter(o => o.hakedisType === 'alelhesap' && !o.alelhesapNature);
+    const after = related.filter(o => (o.date || '') > (h.date || ''));
+    const pending = related.filter(o => o.approvalStatus === 'onay_bekliyor');
+    const accrued = related.filter(o => o.approvalStatus === 'onaylandi' &&
+      (o.hakedisType === 'ara_hakedis' || o.hakedisType === 'alelhesap' && o.alelhesapNature === 'tahakkuk'));
+    const expected = accrued.reduce((s, o) => s + (o.totalAmount || 0), 0);
+    if (unclassified.length || after.length || pending.length || Math.abs(offset - expected) > 0.02) {
+      basis = 'belirsiz';
+      if (unclassified.length) reasons.push('Alelhesap sınıflandırması eksik');
+      if (after.length) reasons.push('Kesin hesaptan sonra başka kayıt var');
+      if (pending.length) reasons.push('Önceki hakediş onayı bekleniyor');
+      if (Math.abs(offset - expected) > 0.02) reasons.push('Önceki onaylı tahakkuklar kesin hesap mahsubuyla uyuşmuyor');
+    } else {
+      basis = 'kumulatif';
+    }
   } else {
     const prev = sameFile(h, all).filter((o) => o.hakedisType !== 'kesin_hesap');
     const before = prev.filter((o) => (o.date || '') <= (h.date || ''));
@@ -254,7 +273,9 @@ export function summarizeFiles(
     if (b.basis === 'belirsiz' || b.reasons.length > 0) f.unresolved.push(b);
     if (b.periodAmount === null) return;
     const vf = vatF(h.vatRate);
-    const isAdvance = advanceIds.has(h.id);
+    const isAdvance = h.hakedisType === 'alelhesap'
+      ? h.alelhesapNature === 'avans' || (!h.alelhesapNature && advanceIds.has(h.id))
+      : advanceIds.has(h.id);
     if (b.isApproved) {
       if (isAdvance) {
         f.advancePayments += b.recordedPayment;

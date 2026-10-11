@@ -19,6 +19,7 @@ const AccountVerification = lazy(() => import("./pages/AccountVerification"));
 const Agreements = lazy(() => import("./pages/Agreements"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
 const NewHakedis = lazy(() => import("./pages/NewHakedis"));
+const FinalSettlement = lazy(() => import("./pages/FinalSettlement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/is-anlasmalari" element={<Agreements />} />
             <Route path="/maliyet" element={<CostManagement />} />
             <Route path="/hakedis-yeni" element={<NewHakedis />} />
+            <Route path="/kesin-hesap-yeni" element={<FinalSettlement />} />
             <Route path="/cari-dogrulama" element={<AccountVerification />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

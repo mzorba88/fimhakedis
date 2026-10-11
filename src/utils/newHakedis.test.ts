@@ -34,6 +34,14 @@ const base = (o: Partial<BuildInput>): BuildInput => ({
 });
 
 describe('Aşama 4A — yeni hakediş', () => {
+  it('yeni alelhesap, kalıcı avans/tahakkuk tercihi olmadan oluşturulmaz', () => {
+    const missing = buildNewHakedis(base({ kind: 'alelhesap', freeAmount: 200 }));
+    expect(missing.data).toBeNull();
+    expect(missing.errors.join(' ')).toMatch(/avans veya tahakkuk/i);
+    const valid = buildNewHakedis(base({ kind: 'alelhesap', freeAmount: 200, alelhesapNature: 'avans' }));
+    expect(valid.errors).toEqual([]);
+    expect(valid.data?.alelhesapNature).toBe('avans');
+  });
   it('1: birim fiyatlı anlaşmanın tüm kalemleri otomatik gelir, miktarlar boş', () => {
     const rows = buildUnitRows(unitC, [oldH]);
     expect(rows.map((r) => r.workItemEntryId)).toEqual(['wie_a', 'wie_b', 'wie_c']);
