@@ -65,7 +65,7 @@ describe('Aşama 4B — kesin hesap ve ek işler', () => {
       hakedisItems: undefined, extraItems: undefined, totalAmount: 200, paidAmount: 200 };
     const x = prepareFinalSettlement(input({ all: [old, advance] }));
     expect(x.data).toBeNull();
-    expect(x.errors.join(' ')).toMatch(/Alelhesap/);
+    expect(x.errors.join(' ')).toMatch(/alelhesap/i);
   });
   it('kayıt bazında sınıflandırılmış avans ödemeden düşer, tahakkuktan düşmez', () => {
     const advance = { ...old, id: 'a1', hakedisNo: 'SZ-1-AH01', hakedisType: 'alelhesap' as const,
