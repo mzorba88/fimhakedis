@@ -30,6 +30,8 @@ DECLARE
   v_link_amount numeric;
   v_planned numeric;
   v_used numeric;
+  v_link_sum numeric := 0;
+  v_extra_sum numeric := 0;
   v_seen text[] := ARRAY[]::text[];
 BEGIN
   IF NEW.hakedis_type = 'alelhesap' AND NEW.alelhesap_nature IS NULL
@@ -53,6 +55,9 @@ BEGIN
          NEW.payment_amount IS DISTINCT FROM OLD.payment_amount OR
          NEW.contract_id IS DISTINCT FROM OLD.contract_id OR
          NEW.currency IS DISTINCT FROM OLD.currency OR
+         NEW.project_id IS DISTINCT FROM OLD.project_id OR
+         NEW.subcontractor IS DISTINCT FROM OLD.subcontractor OR
+         NEW.contract_no IS DISTINCT FROM OLD.contract_no OR
          NEW.hakedis_type IS DISTINCT FROM OLD.hakedis_type
        ) THEN
       RAISE EXCEPTION 'Aşamaya bağlı hakedişin mali bilgileri eski formdan düzenlenemez';
@@ -89,6 +94,7 @@ BEGIN
       RAISE EXCEPTION 'Boş, yinelenen veya sıfır aşama bağlantısı';
     END IF;
     v_seen := array_append(v_seen, v_stage_id);
+    v_link_sum := v_link_sum + v_link_amount;
 
     SELECT (p.value->>'amount')::numeric INTO v_planned
     FROM jsonb_array_elements(v_plan) AS p(value)
@@ -114,9 +120,22 @@ BEGIN
         v_stage_id, v_planned, v_used, v_link_amount;
     END IF;
   END LOOP;
+  IF NEW.extra_items IS NOT NULL AND jsonb_typeof(NEW.extra_items) <> 'array' THEN
+    RAISE EXCEPTION 'Ek iş verisi dizi olmalı';
+  END IF;
+  SELECT COALESCE(SUM((e.value->>'amount')::numeric),0)
+    INTO v_extra_sum
+  FROM jsonb_array_elements(
+    CASE WHEN jsonb_typeof(NEW.extra_items)='array'
+         THEN NEW.extra_items ELSE '[]'::jsonb END
+  ) e(value);
+  -- Aşama bağlantıları yalnızca ana iş tutarını göstermeli; ek işler ayrıdır.
+  IF ABS((NEW.total_amount - v_extra_sum) - v_link_sum) > 0.02 THEN
+    RAISE EXCEPTION 'Aşama bağlantısı, ana iş tutarı ve ek işlerin toplamı tutarsız';
+  END IF;
   RETURN NEW;
 END
-$$;
+$;
 
 CREATE TRIGGER fim_4b_guard_hakedis_trg
 BEFORE INSERT OR UPDATE OF
