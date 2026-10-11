@@ -192,7 +192,8 @@ export default function Payments() {
 
     unpaidHakedisler.forEach((h) => {
       const currency = h.currency as Currency;
-      const remainingAmount = h.totalAmount - (h.paidAmount || 0);
+      const remainingAmount = planPayment(h, subcontractorHakedisler).remaining;
+      if (remainingAmount === null) return; // belirsiz bakiye toplamda kesinmiş gibi sayılmaz
       byCurrency[currency] = (byCurrency[currency] || 0) + remainingAmount;
 
       let amountInGBP = remainingAmount;
@@ -319,7 +320,7 @@ export default function Payments() {
         ['Sozlesme Tutari', formatCurrencyWithType(contractAmount, hakedis.currency)],
         ['Hakedis Tutari', formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)],
         ['Odenen Tutar', formatCurrencyWithType(hakedis.paidAmount || 0, hakedis.currency)],
-        ['Kalan Bakiye', formatCurrencyWithType(hakedis.totalAmount - (hakedis.paidAmount || 0), hakedis.currency)],
+        ['Bu Hakedişin Kalanı', (() => { const rem = planPayment(hakedis, subcontractorHakedisler).remaining; return rem === null ? 'Manuel inceleme' : formatCurrencyWithType(rem, hakedis.currency); })()],
         ['Odeme Durumu', hakedis.paymentStatus === 'odendi' ? 'Odendi' : hakedis.paymentStatus === 'kismen_odendi' ? 'Kismen Odendi' : 'Odenmedi'],
       ];
       if (hakedis.paidDate) finRows.push(['Odeme Tarihi', formatDate(hakedis.paidDate)]);
@@ -598,7 +599,7 @@ export default function Payments() {
                     const subTotals: Record<string, { excl: number; incl: number }> = {};
                     let subHakedisCount = 0;
                     projMap.forEach(arr => arr.forEach(h => {
-                      const remaining = h.totalAmount - (h.paidAmount || 0);
+                      const remaining = planPayment(h, subcontractorHakedisler).remaining ?? 0;
                       const vr = h.vatRate && h.vatRate > 0 ? h.vatRate : 0;
                       const remainingIncl = remaining * (1 + vr / 100);
                       if (!subTotals[h.currency]) subTotals[h.currency] = { excl: 0, incl: 0 };
@@ -640,8 +641,8 @@ export default function Payments() {
                               {hakedisler.map((hakedis) => {
                                 const isPaid = hakedis.paymentStatus === 'odendi';
                                 const paidAmount = hakedis.paidAmount || 0;
-                                const remainingAmount = hakedis.totalAmount - paidAmount;
                                 const payPlan = planPayment(hakedis, subcontractorHakedisler);
+                                const remainingAmount = payPlan.remaining;
                                 const payBlocked = !isPaid && !payPlan.allowed;
 
                                 return (
@@ -687,7 +688,7 @@ export default function Payments() {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                       <p className={`text-sm font-semibold ${remainingAmount > 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                                        {formatCurrencyWithType(remainingAmount, hakedis.currency)}
+                                        {remainingAmount === null ? 'Manuel inceleme' : formatCurrencyWithType(remainingAmount, hakedis.currency)}
                                       </p>
                                     </td>
                                     <td className="px-4 py-3 text-center">
@@ -968,8 +969,8 @@ export default function Payments() {
                     )}
                     {(() => {
                       const vatRate = hakedis.vatRate || 0;
-                      const kdvHaric = vatRate > 0 ? hakedis.totalAmount / (1 + vatRate / 100) : hakedis.totalAmount;
-                      const kdvTutar = hakedis.totalAmount - kdvHaric;
+                      const kdvHaric = hakedis.totalAmount;
+                      const kdvTutar = kdvHaric * vatRate / 100;
                       return (
                         <>
                           <div className="flex justify-between text-sm">
@@ -984,7 +985,7 @@ export default function Payments() {
                           )}
                           <div className="flex justify-between text-sm border-t pt-2">
                             <span className="text-muted-foreground font-medium">KDV Dahil Toplam</span>
-                            <span className="font-bold">{formatCurrencyWithType(hakedis.totalAmount, hakedis.currency)}</span>
+                            <span className="font-bold">{formatCurrencyWithType(kdvHaric + kdvTutar, hakedis.currency)}</span>
                           </div>
                         </>
                       );
@@ -1031,7 +1032,8 @@ export default function Payments() {
               const hakedis = subcontractorHakedisler.find(h => h.id === selectedHakedisForPartial);
               if (!hakedis) return null;
               const paidSoFar = hakedis.paidAmount || 0;
-              const remaining = hakedis.totalAmount - paidSoFar;
+              const payable = planPayment(hakedis, subcontractorHakedisler);
+              const remaining = payable.remaining;
               return (
                 <div className="space-y-4">
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
@@ -1049,7 +1051,7 @@ export default function Payments() {
                     </div>
                     <div className="flex justify-between text-sm border-t pt-2">
                       <span className="text-muted-foreground font-medium">Kalan Bakiye:</span>
-                      <span className="font-semibold text-[hsl(var(--status-pending))]">{formatCurrencyWithType(remaining, hakedis.currency)}</span>
+                      <span className="font-semibold text-[hsl(var(--status-pending))]">{remaining === null ? 'Manuel inceleme' : formatCurrencyWithType(remaining, hakedis.currency)}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
