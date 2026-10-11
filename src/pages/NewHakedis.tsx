@@ -19,6 +19,7 @@ import { AlertTriangle, ChevronDown, History, Info, Plus, Trash2 } from 'lucide-
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import * as api from '@/services/supabaseService';
+import { PLAN_LINKS_ATOMIC_GUARD_ENABLED, ALELHESAP_NATURE_WRITE_ENABLED } from '@/config/schemaFeatures';
 import {
   Currency, SubcontractorHakedis, WorkEntry, contractTypeLabels, currencySymbols, formatCurrencyWithType, hakedisTypeLabels, roleLabels,
 } from '@/types/hakedis';
@@ -72,6 +73,7 @@ export default function NewHakedis() {
   const [extraRows, setExtraRows] = useState<ExtraRow[]>([]);
   const [freeAmount, setFreeAmount] = useState('');
   const [planSel, setPlanSel] = useState<PlanSelection[]>([]);
+  const [alelhesapNature, setAlelhesapNature] = useState<'avans'|'tahakkuk'|''>('');
   const [saving, setSaving] = useState(false);
 
   const subNames = useMemo(() => {
@@ -112,9 +114,10 @@ export default function NewHakedis() {
   const result = useMemo(() => buildNewHakedis({
     kind, contract, projectId, subcontractor, currency, vatRate: vr, date, description, isUrgent, basis,
     unitRows, extraRows, freeAmount: num(freeAmount), planSelections: planSel,
+    alelhesapNature: alelhesapNature || undefined,
     user: { id: currentUser.id, role: currentUser.role, label: roleLabels[currentUser.role] },
     hakedisler: subcontractorHakedisler, subWorkCategory,
-  }), [kind, contract, projectId, subcontractor, currency, vr, date, description, isUrgent, basis, unitRows, extraRows, freeAmount, planSel, currentUser, subcontractorHakedisler, subWorkCategory]);
+  }), [kind, contract, projectId, subcontractor, currency, vr, date, description, isUrgent, basis, unitRows, extraRows, freeAmount, planSel, alelhesapNature, currentUser, subcontractorHakedisler, subWorkCategory]);
   const sum = summarize(result.mainNet + result.extraNet, vr);
   const fmt = (n: number) => formatCurrencyWithType(n, currency);
   const showBasis = (net: number) => (basis === 'kdv_dahil' && vr ? net * (1 + vr / 100) : net);
@@ -135,6 +138,8 @@ export default function NewHakedis() {
 
   async function save() {
     if (!result.data) { toast.error(result.errors[0] || 'Eksik bilgi'); return; }
+    if (result.data.planLinks?.length && !PLAN_LINKS_ATOMIC_GUARD_ENABLED) { toast.error('Aşama bağlantısı DB koruması etkin değil; kaydedilemez'); return; }
+    if (kind === 'alelhesap' && !ALELHESAP_NATURE_WRITE_ENABLED) { toast.error('Alelhesap sınıflandırması migration bekliyor; kaydedilemez'); return; }
     setSaving(true);
     try {
       // Kaydetmeden hemen önce güncel hakedişleri yeniden oku ve kontrolü tekrarla (atomik DEĞİL — eşzamanlı yazımı tamamen engellemez)
@@ -142,6 +147,7 @@ export default function NewHakedis() {
       const recheck = buildNewHakedis({
         kind, contract, projectId, subcontractor, currency, vatRate: vr, date, description, isUrgent, basis,
         unitRows, extraRows, freeAmount: num(freeAmount), planSelections: planSel,
+        alelhesapNature: alelhesapNature || undefined,
         user: { id: currentUser.id, role: currentUser.role, label: roleLabels[currentUser.role] }, hakedisler: fresh, subWorkCategory,
       });
       if (!recheck.data) { setSubcontractorHakedisler(fresh); toast.error(recheck.errors[0] || 'Kontrol başarısız'); return; }
@@ -388,7 +394,12 @@ export default function NewHakedis() {
               <section className="rounded-lg border bg-card p-4 space-y-2">
                 <h2 className="font-semibold">Alelhesap tutarı</h2>
                 <div className="max-w-xs"><Input inputMode="decimal" className={numInputCls} onWheel={noWheel} value={freeAmount} onChange={(e) => setFreeAmount(e.target.value)} placeholder={basis === 'kdv_dahil' ? 'KDV dahil' : 'KDV hariç'} /></div>
-                <p className="text-xs text-muted-foreground">Mevcut çalışma şekli korunur; avans/tahakkuk ayrımı henüz kaydedilmiyor ve tahminle mahsup yapılmaz.</p>
+                <Label>Alelhesap niteliği</Label>
+                <Select value={alelhesapNature} onValueChange={(v) => setAlelhesapNature(v as 'avans'|'tahakkuk')}>
+                  <SelectTrigger className="max-w-xs"><SelectValue placeholder="Avans veya Tahakkuk seçin" /></SelectTrigger>
+                  <SelectContent><SelectItem value="avans">Avans (üretim tahakkuku değildir)</SelectItem><SelectItem value="tahakkuk">Tahakkuk (yapılmış üretim)</SelectItem></SelectContent>
+                </Select>
+                {!ALELHESAP_NATURE_WRITE_ENABLED && <p className="text-xs text-amber-700">Veritabanı alanı hazır olana kadar yeni alelhesap bu ekrandan kaydedilemez; sınıflandırma zorunludur.</p>}
               </section>
             )}
 
@@ -450,7 +461,8 @@ export default function NewHakedis() {
               {contract && <div className="text-xs text-muted-foreground">Numara: {result.data?.hakedisNo || '—'} · {isDir ? 'Direktör kaydı: onaylı olarak açılır' : 'Onaya gönderilir'}</div>}
               {result.errors.length > 0 && <ul className="text-xs text-destructive space-y-0.5">{result.errors.map((e) => <li key={e}>• {e}</li>)}</ul>}
               {result.warnings.length > 0 && <ul className="text-xs text-amber-700 space-y-0.5">{result.warnings.map((e) => <li key={e}>• {e}</li>)}</ul>}
-              <Button className="w-full" disabled={!result.data || saving} onClick={save}>{saving ? 'Kaydediliyor…' : 'Hakedişi kaydet'}</Button>
+              {result.data?.planLinks?.length && !PLAN_LINKS_ATOMIC_GUARD_ENABLED && <p className="text-xs text-amber-700">Aşama bağlantısının eşzamanlı kayıt koruması henüz etkin değil.</p>}
+              <Button className="w-full" disabled={!result.data || saving || (!!result.data?.planLinks?.length && !PLAN_LINKS_ATOMIC_GUARD_ENABLED) || (kind === 'alelhesap' && !ALELHESAP_NATURE_WRITE_ENABLED)} onClick={save}>{saving ? 'Kaydediliyor…' : 'Hakedişi kaydet'}</Button>
               <p className="text-[11px] text-muted-foreground flex gap-1"><Info className="h-3 w-3 mt-0.5 shrink-0" />Tutarlar KDV hariç saklanır; KDV yalnızca gösterimde eklenir.</p>
             </section>
             {recentFile.length > 0 && (
