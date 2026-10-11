@@ -16,6 +16,7 @@ import { stableId } from '@/utils/agreements';
 import { buildUnitRows, type ExtraRow } from '@/utils/newHakedis';
 import { prepareFinalSettlement, type FinalMeter } from '@/utils/finalSettlement4B';
 import * as api from '@/services/supabaseService';
+import { FINAL_SETTLEMENT_ATOMIC_GUARD_ENABLED } from '@/config/schemaFeatures';
 
 const number = (s: string): number | null => {
   if (!s.trim()) return null;
@@ -74,6 +75,7 @@ export default function FinalSettlement() {
     setExtras(p => p.map(x => x.id === id ? { ...x, ...patch } : x));
 
   async function save() {
+    if (!FINAL_SETTLEMENT_ATOMIC_GUARD_ENABLED) { toast.error('Kesin hesap kaydı DB güvenlik migration onayını bekliyor'); return; }
     if (!contract || !analysis?.data) return;
     setSaving(true);
     try {
@@ -178,7 +180,8 @@ export default function FinalSettlement() {
             </div>
             {analysis.errors.map((e,i)=><div key={i} className="text-xs text-destructive flex gap-1"><AlertTriangle className="h-4 w-4 shrink-0"/>{e}</div>)}
             {analysis.warnings.map((e,i)=><p key={i} className="text-xs text-amber-700">{e}</p>)}
-            <Button className="w-full" disabled={!analysis.data||saving} onClick={save}>{saving?'Kaydediliyor…':'Kesin hesabı kaydet'}</Button>
+            {!FINAL_SETTLEMENT_ATOMIC_GUARD_ENABLED && <p className="text-xs text-amber-700">Kesin hesap önizlemesi açık. Eşzamanlı kayıt koruması veritabanında etkinleşmeden kayıt yapılamaz.</p>}
+            <Button className="w-full" disabled={!analysis.data||saving||!FINAL_SETTLEMENT_ATOMIC_GUARD_ENABLED} onClick={save}>{saving?'Kaydediliyor…':'Kesin hesabı kaydet'}</Button>
           </>:<p className="text-sm text-muted-foreground">Proje, altyüklenici ve anlaşma seçiniz.</p>}
         </section>
       </aside>
